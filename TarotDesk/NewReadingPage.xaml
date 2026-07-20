@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="TarotDesk.NewReadingPage"
+    Title="Lưới trải bài mới"
+    BackgroundColor="#1a0a2e">
+
+    <ContentPage.Background>
+        <StaticResource Key="StarfieldBrush" />
+    </ContentPage.Background>
+
+    <VerticalStackLayout Spacing="10">
+
+        <!-- Toolbar -->
+        <HorizontalStackLayout 
+            Padding="15,10" 
+            Spacing="5"
+            BackgroundColor="#2D1B4E80">
+            <Button 
+                Text="← Trở về"
+                Clicked="OnBackClicked"
+                Style="{StaticResource GlassButton}"
+                BackgroundColor="#311B9220"
+                Padding="10,5"
+                FontSize="12" />
+            <Button 
+                Text="♠ Bốc bài"
+                Clicked="OnDrawCardClicked"
+                Style="{StaticResource GlassButton}"
+                BackgroundColor="#512DA820"
+                Padding="10,5"
+                FontSize="12" />
+            <Button 
+                Text="◆ Lưu lưới"
+                Clicked="OnSaveReadingClicked"
+                Style="{StaticResource GlassButton}"
+                BackgroundColor="#512DA820"
+                Padding="10,5"
+                FontSize="12" />
+        </HorizontalStackLayout>
+
+        <!-- Main card display area -->
+        <VerticalStackLayout
+            Padding="20"
+            Spacing="10"
+            HorizontalOptions="Center"
+            VerticalOptions="FillAndExpand">
+
+            <Image 
+                x:Name="CardImage"
+                WidthRequest="150"
+                HeightRequest="200"
+                Aspect="AspectFit" />
+
+            <Label 
+                x:Name="CardNameLabel"
+                FontAttributes="Bold"
+                TextColor="#FFFFFF"
+                FontSize="18"
+                HorizontalTextAlignment="Center" />
+
+            <Label 
+                x:Name="CardMeaningLabel"
+                TextColor="#FFFFFF"
+                FontSize="14"
+                LineBreakMode="WordWrap"
+                HorizontalTextAlignment="Center" />
+
+            <Label 
+                x:Name="NoCardLabel"
+                Text="Bấm 'Bốc bài' để bắt đầu"
+                TextColor="#FFFFFF"
+                FontSize="16"
+                HorizontalTextAlignment="Center"
+                IsVisible="True" />
+
+        </VerticalStackLayout>
+
+        <!-- History of drawn cards -->
+        <Label 
+            Text="✦ Lá đã bốc:"
+            TextColor="#FFFFFF"
+            FontSize="14"
+            Padding="15,5,15,0"
+            FontAttributes="Bold" />
+
+        <CollectionView 
+            x:Name="DrawnCardsCollectionView"
+            SelectionMode="Single">
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout 
+                    Orientation="Horizontal"
+                    ItemSpacing="10" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border
+                        Padding="5"
+                        BackgroundColor="#2D1B4E80"
+                        Stroke="#FFFFFF20"
+                        StrokeThickness="1">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="8" />
+                        </Border.StrokeShape>
+                        <VerticalStackLayout 
+                            Spacing="3"
+                            HorizontalOptions="Center">
+                            <Image 
+                                Source="{Binding ImagePath}"
+                                WidthRequest="60"
+                                HeightRequest="80"
+                                Aspect="AspectFit" />
+                            <Label 
+                                Text="{Binding Name}"
+                                TextColor="#FFFFFF"
+                                FontSize="10"
+                                LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </VerticalStackLayout>
+
+</ContentPage>

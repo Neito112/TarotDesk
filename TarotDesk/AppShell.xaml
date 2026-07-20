@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Shell
+    x:Class="TarotDesk.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:TarotDesk"
+    Shell.FlyoutBehavior="Disabled"
+    BackgroundColor="#1a0a2e">
+
+    <ShellContent
+        Title="TarotDesk"
+        ContentTemplate="{DataTemplate local:MainPage}"
+        Route="MainPage" />
+
+    <ShellContent
+        Route="AddDeckPage"
+        ContentTemplate="{DataTemplate local:AddDeckPage}" />
+
+    <ShellContent
+        Route="SelectDeckPage"
+        ContentTemplate="{DataTemplate local:SelectDeckPage}" />
+
+    <ShellContent
+        Route="NewReadingPage"
+        ContentTemplate="{DataTemplate local:NewReadingPage}" />
+
+    <ShellContent
+        Route="OldReadingsPage"
+        ContentTemplate="{DataTemplate local:OldReadingsPage}" />
+
+    <ShellContent
+        Route="ReadingDetailPage"
+        ContentTemplate="{DataTemplate local:ReadingDetailPage}" />
+
+    <ShellContent
+        Route="SettingsPage"
+        ContentTemplate="{DataTemplate local:SettingsPage}" />
+
+</Shell>

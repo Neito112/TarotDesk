@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Starfield Background Brush -->
+    <LinearGradientBrush x:Key="StarfieldBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#0a0514" Offset="0.0" />
+        <GradientStop Color="#1a2d4d" Offset="0.35" />
+        <GradientStop Color="#2d1b4e" Offset="0.65" />
+        <GradientStop Color="#1a1f3a" Offset="1.0" />
+    </LinearGradientBrush>
+
+    <!-- Default Label Style - White Text -->
+    <Style TargetType="Label">
+        <Setter Property="TextColor" Value="#FFFFFF" />
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <!-- Glass Morphism Button Style -->
+    <Style TargetType="Button" x:Key="GlassButton">
+        <Setter Property="TextColor" Value="#FFFFFF" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="BorderWidth" Value="1.5" />
+        <Setter Property="BorderColor" Value="#FFFFFF40" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="16,12" />
+        <Setter Property="MinimumHeightRequest" Value="50" />
+        <Setter Property="HorizontalOptions" Value="Fill" />
+        <Setter Property="Shadow">
+            <Shadow Brush="#000000" Offset="0,8" Radius="16" Opacity="0.35" />
+        </Setter>
+    </Style>
+
+    <!-- Twinkling Title Style -->
+    <Style TargetType="Label" x:Key="TwinklingTitle">
+        <Setter Property="TextColor" Value="#FFD700" />
+        <Setter Property="FontSize" Value="32" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="HorizontalTextAlignment" Value="Center" />
+    </Style>
+
+    <!-- Entry Style - Glass Effect -->
+    <Style TargetType="Entry">
+        <Setter Property="TextColor" Value="#FFFFFF" />
+        <Setter Property="PlaceholderColor" Value="#FFFFFFAA" />
+        <Setter Property="BackgroundColor" Value="#FFFFFF10" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <!-- Picker Style - Glass Effect -->
+    <Style TargetType="Picker">
+        <Setter Property="TextColor" Value="#FFFFFF" />
+        <Setter Property="TitleColor" Value="#FFFFFF" />
+        <Setter Property="BackgroundColor" Value="#FFFFFF10" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <!-- Slider Style -->
+    <Style TargetType="Slider">
+        <Setter Property="ThumbColor" Value="#FFD700" />
+        <Setter Property="MinimumTrackColor" Value="#512DA8" />
+        <Setter Property="MaximumTrackColor" Value="#52FFFFFF" />
+    </Style>
+
+    <!-- Switch Style -->
+    <Style TargetType="Switch">
+        <Setter Property="ThumbColor" Value="#FFFFFF" />
+        <Setter Property="OnColor" Value="#FFD700" />
+        <Setter Property="OffColor" Value="#512DA8" />
+    </Style>
+
+</ResourceDictionary>

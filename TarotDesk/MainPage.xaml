@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:TarotDesk.Controls"
+    x:Class="TarotDesk.MainPage"
+    Title="TarotDesk"
+    BackgroundColor="#1a0a2e">
+
+    <ContentPage.Background>
+        <StaticResource Key="StarfieldBrush" />
+    </ContentPage.Background>
+
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="20"
+            Spacing="15"
+            VerticalOptions="FillAndExpand"
+            HorizontalOptions="Fill">
+
+            <!-- Title with Glass Panel -->
+            <Border 
+                Padding="20" 
+                Margin="0,0,0,10"
+                BackgroundColor="#FFFFFF15"
+                Stroke="#FFFFFF40"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <VerticalStackLayout Spacing="10">
+                    <local:TwinklingLabel 
+                        Text="🔮 TAROT DESK 🔮"
+                        FontSize="32"
+                        FontAttributes="Bold"
+                        TextColor="#FFD700"
+                        HorizontalTextAlignment="Center" />
+
+                    <Label 
+                        Text="Khám phá ý nghĩa của những lá bài"
+                        FontSize="14"
+                        TextColor="#FFFFFF"
+                        HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Buttons with Glass Effect -->
+            <Border 
+                Padding="15" 
+                Margin="0"
+                BackgroundColor="#FFFFFF10"
+                Stroke="#FFFFFF30"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <Button 
+                    Text="🪵 Thêm Bộ Bài"
+                    Clicked="OnAddDeckClicked"
+                    Style="{StaticResource GlassButton}"
+                    BackgroundColor="#512DA820" />
+            </Border>
+
+            <Border 
+                Padding="15" 
+                Margin="0"
+                BackgroundColor="#FFFFFF10"
+                Stroke="#FFFFFF30"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <Button 
+                    Text="🍷 Lưỡi Trải Bài Mới"
+                    Clicked="OnNewReadingClicked"
+                    Style="{StaticResource GlassButton}"
+                    BackgroundColor="#512DA820" />
+            </Border>
+
+            <Border 
+                Padding="15" 
+                Margin="0"
+                BackgroundColor="#FFFFFF10"
+                Stroke="#FFFFFF30"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <Button 
+                    Text="⭐ Lưỡi Trải Bài Cũ"
+                    Clicked="OnOldReadingsClicked"
+                    Style="{StaticResource GlassButton}"
+                    BackgroundColor="#512DA820" />
+            </Border>
+
+            <Border 
+                x:Name="ResumeButtonContainer"
+                Padding="15" 
+                Margin="0"
+                BackgroundColor="#FF8F0010"
+                Stroke="#FF8F0040"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15"
+                IsVisible="False">
+                <Button 
+                    x:Name="ResumeButton"
+                    Text="⚡ Tiếp Tục Trải Bài Cũ"
+                    Clicked="OnResumeReadingClicked"
+                    Style="{StaticResource GlassButton}"
+                    BackgroundColor="#FF8F0020" />
+            </Border>
+
+            <!-- Settings Button -->
+            <Border 
+                Padding="15" 
+                Margin="0,30,0,0"
+                BackgroundColor="#4A148C20"
+                Stroke="#4A148C40"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <Button 
+                    Text="⚙️ Cài Đặt Giao Diện"
+                    Clicked="OnSettingsClicked"
+                    Style="{StaticResource GlassButton}"
+                    BackgroundColor="#4A148C30" />
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

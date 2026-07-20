@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:TarotDesk.Controls"
+    x:Class="TarotDesk.SettingsPage"
+    Title="⚙️ Cài Đặt Giao Diện"
+    BackgroundColor="#0a0514">
+
+    <ContentPage.Background>
+        <StaticResource Key="StarfieldBrush" />
+    </ContentPage.Background>
+
+    <ScrollView Padding="10">
+        <VerticalStackLayout Spacing="15" Padding="10">
+
+            <!-- Header -->
+            <Border 
+                Padding="20"
+                Margin="0,0,0,10"
+                BackgroundColor="#FFFFFF15"
+                Stroke="#FFFFFF40"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <Label 
+                    Text="✦ Tùy Chỉnh Giao Diện Tarot"
+                    FontSize="24"
+                    FontAttributes="Bold"
+                    TextColor="#FFFFFF"
+                    HorizontalTextAlignment="Center" />
+            </Border>
+
+            <!-- Theme Selection -->
+            <Border 
+                Padding="15"
+                Margin="0"
+                BackgroundColor="#FFFFFF15"
+                Stroke="#FFFFFF40"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <VerticalStackLayout Spacing="10">
+                    <Label 
+                        Text="🎨 Chọn Chủ Đề"
+                        FontSize="16"
+                        FontAttributes="Bold"
+                        TextColor="#FFD700" />
+
+                    <Picker 
+                        x:Name="ThemePicker"
+                        Title="Chọn theme..."
+                        TextColor="#FFFFFF"
+                        BackgroundColor="#2D1B4E80" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Glass Effect Toggle -->
+            <Border 
+                Padding="15"
+                Margin="0"
+                BackgroundColor="#FFFFFF15"
+                Stroke="#FFFFFF40"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <VerticalStackLayout Spacing="10">
+                    <HorizontalStackLayout Spacing="10">
+                        <Label 
+                            Text="🔮 Hiệu Ứng Kính Mờ"
+                            FontSize="14"
+                            TextColor="#FFFFFF"
+                            VerticalOptions="Center" />
+                        <Switch 
+                            x:Name="GlassEffectSwitch"
+                            IsOn="True"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Label 
+                        Text="Opacity:"
+                        FontSize="12"
+                        TextColor="#E0E0E0" />
+                    <Slider 
+                        x:Name="GlassOpacitySlider"
+                        Minimum="0"
+                        Maximum="1"
+                        Value="0.15" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Smoke Effect Toggle -->
+            <Border 
+                Padding="15"
+                Margin="0"
+                BackgroundColor="#FFFFFF15"
+                Stroke="#FFFFFF40"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <VerticalStackLayout Spacing="10">
+                    <HorizontalStackLayout Spacing="10">
+                        <Label 
+                            Text="☁️ Hiệu Ứng Khói Sương"
+                            FontSize="14"
+                            TextColor="#FFFFFF"
+                            VerticalOptions="Center" />
+                        <Switch 
+                            x:Name="SmokeEffectSwitch"
+                            IsOn="True"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Text Animation Speed -->
+            <Border 
+                Padding="15"
+                Margin="0"
+                BackgroundColor="#FFFFFF15"
+                Stroke="#FFFFFF40"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <VerticalStackLayout Spacing="10">
+                    <Label 
+                        Text="⚡ Tốc Độ Hiệu Ứng Text"
+                        FontSize="14"
+                        TextColor="#FFFFFF" />
+                    <Slider 
+                        x:Name="AnimationSpeedSlider"
+                        Minimum="0.5"
+                        Maximum="2"
+                        Value="1.0" />
+                    <Label 
+                        x:Name="AnimationSpeedLabel"
+                        Text="1.0x"
+                        FontSize="12"
+                        TextColor="#FFD700" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Background Image -->
+            <Border 
+                Padding="15"
+                Margin="0"
+                BackgroundColor="#FFFFFF15"
+                Stroke="#FFFFFF40"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <VerticalStackLayout Spacing="10">
+                    <Label 
+                        Text="🖼️ Ảnh Nền Tùy Chỉnh"
+                        FontSize="14"
+                        TextColor="#FFFFFF" />
+                    <Label 
+                        x:Name="BackgroundImageLabel"
+                        Text="Chưa chọn ảnh"
+                        FontSize="12"
+                        TextColor="#E0E0E0" />
+                    <Button 
+                        Text="Chọn Ảnh"
+                        Clicked="OnSelectBackgroundImage"
+                        Style="{StaticResource GlassButton}"
+                        BackgroundColor="#512DA820" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Toolbar Text Color -->
+            <Border 
+                Padding="15"
+                Margin="0"
+                BackgroundColor="#FFFFFF15"
+                Stroke="#FFFFFF40"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 15">
+                <VerticalStackLayout Spacing="10">
+                    <Label 
+                        Text="🎯 Màu Text Toolbar"
+                        FontSize="14"
+                        TextColor="#FFFFFF" />
+                    <VerticalStackLayout Spacing="5">
+                        <Button 
+                            Text="⚪ Trắng"
+                            Clicked="OnToolbarColorWhiteClicked"
+                            Style="{StaticResource GlassButton}"
+                            BackgroundColor="#FFFFFF20" />
+                        <Button 
+                            Text="🟡 Vàng"
+                            Clicked="OnToolbarColorGoldenClicked"
+                            Style="{StaticResource GlassButton}"
+                            BackgroundColor="#FFD70020" />
+                        <Button 
+                            Text="🟣 Tím"
+                            Clicked="OnToolbarColorPurpleClicked"
+                            Style="{StaticResource GlassButton}"
+                            BackgroundColor="#DA70D620" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Reset Button -->
+            <Button 
+                Text="🔄 Reset Về Mặc Định"
+                Clicked="OnResetSettings"
+                Style="{StaticResource GlassButton}"
+                BackgroundColor="#FF8F0020"
+                Margin="0,20,0,0" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
