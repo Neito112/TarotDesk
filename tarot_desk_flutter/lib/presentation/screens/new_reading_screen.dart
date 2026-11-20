@@ -21,6 +21,15 @@ import '../widgets/tarot_card_image.dart';
 ///   không chồng lên nhau -> khay bài đã rút ở dưới cùng (section riêng).
 /// Panel chọn bài là một section riêng (dạng bottom-sheet) thay thế
 /// vùng chính, không đè lên khay bài.
+///
+/// PC (desktop): bàn là một BỨC TRANH VẼ 3D (HyperFrames-style —
+/// tranh vẽ phối cảnh góc nhìn thứ nhất, KHÔNG phải engine 3D thời
+/// gian thực, KHÔNG dùng Matrix4 nghiêng mặt phẳng). Ảnh vẽ
+/// `assets/images/table_3d_painted.png` chiếm toàn bộ viewport
+/// (BoxFit.cover), khăn nhung tím và phụ kiện (lư trầm, thạch anh,
+/// quả cầu, nến) đã vẽ sẵn trong tranh — không còn icon decor phẳng
+/// nào đặt lên trên tranh ở bản PC. Các lá bài trải nằm TRÊN vùng
+/// khăn trong tranh. Phone/tablet giữ nền bàn + khăn + decor như cũ.
 class NewReadingScreen extends StatefulWidget {
   const NewReadingScreen({Key? key}) : super(key: key);
 
@@ -233,7 +242,15 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       );
     }
 
-    return Row(
+    // Thanh công cụ nổi trên bức tranh vẽ: nền tối mờ nhẹ để chữ
+    // đọc được, không làm tối cả bức tranh.
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.45),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      child: Row(
       children: [
         Text(
           'Kiểu trải:',
@@ -252,6 +269,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           style: TextStyle(color: theme.secondaryTextColor, fontSize: 12),
         ),
       ],
+      ),
     );
   }
 
@@ -261,8 +279,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Bàn trải bài góc nhìn thứ nhất trên PC: xấp bài ở góc trên-trái,
-  /// các lá đã rút nằm TRÊN bàn theo kiểu trải, panel giải nghĩa gọn
-  /// ở bên phải. Decor do _buildTableBackground đặt ở các góc bàn.
+  /// các lá đã rút nằm TRÊN khăn nhung tím của bức tranh vẽ, panel
+  /// giải nghĩa gọn ở bên phải (đứng thẳng, không nghiêng). Phụ kiện
+  /// đã vẽ sẵn trong tranh nên KHÔNG còn cụm decor icon nào ở đây.
+  /// Khăn trong tranh nằm ở giữa, hơi lệch xuống dưới, nên vùng trải
+  /// được đẩy xuống ~12% chiều cao bàn để lá bài nằm đúng trên khăn.
   Widget _buildDesktopTable(List<TarotCardModel> drawnCards,
       ReadingProvider readingProvider, dynamic theme) {
     final activeCard = drawnCards.isNotEmpty &&
@@ -283,11 +304,21 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       builder: (context, candidateData, rejectedData) {
         return Stack(
           children: [
-            // Các lá đã rút nằm trên bàn (hoặc bàn trống).
+            // Các lá đã rút nằm trên khăn của bức tranh vẽ (hoặc bàn
+            // trống). Đẩy vùng trải xuống ~12% chiều cao bàn để lá bài
+            // nằm đúng trên khăn nhung tím, thay vì ở chính giữa màn.
             Positioned.fill(
-              child: drawnCards.isEmpty
-                  ? _buildDesktopEmptyHint(theme)
-                  : _buildSpread(drawnCards, theme),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Padding(
+                    padding: EdgeInsets.only(
+                        top: constraints.maxHeight * 0.12),
+                    child: drawnCards.isEmpty
+                        ? _buildDesktopEmptyHint(theme)
+                        : _buildSpread(drawnCards, theme),
+                  );
+                },
+              ),
             ),
             // Xấp bài ở MỘT góc bàn: góc trên-trái, luôn hiện diện.
             Positioned(
@@ -549,6 +580,18 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // PC dùng bức tranh vẽ 3D cố định: đổi bàn/khăn/decor
+                  // ở đây chưa vẽ lại tranh (cần thêm bản vẽ khác sau).
+                  // Các lựa chọn vẫn lưu và áp dụng cho bản phone/tablet.
+                  if (Responsive.isDesktop(context))
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Bản PC đang dùng bức tranh vẽ 3D cố định: lư trầm, thạch anh, quả cầu và nến đã vẽ sẵn trong tranh. Đổi bàn/khăn/decor ở đây chưa vẽ lại tranh.',
+                        style: TextStyle(
+                            color: Colors.white70, fontSize: 12, height: 1.5),
+                      ),
+                    ),
                   Text('Mặt bàn', style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 4),
                   DropdownButtonFormField<String>(
@@ -1295,13 +1338,23 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Nền bàn: ảnh bàn -> khăn -> lớp phủ tối (scrim) giúp chữ đọc được
-  /// -> nội dung. PC 4K: scrim nhẹ hơn để thấy vân bàn (góc nhìn thứ
-  /// nhất), khăn margin 8, decor đặt ở góc trên-phải bàn, lớn và phát
-  /// sáng, không chặn chạm (IgnorePointer). Phone/tablet giữ như cũ.
+  /// Nền bàn — PC: bức tranh vẽ 3D góc nhìn thứ nhất
+  /// (`table_3d_painted.png`, BoxFit.cover, chiếm toàn bộ viewport).
+  /// Khăn nhung tím + phụ kiện (lư trầm, thạch anh, quả cầu, nến) đã
+  /// vẽ sẵn trong tranh nên KHÔNG còn lớp khăn màu phẳng, KHÔNG còn
+  /// cụm icon decor, và KHÔNG còn lớp phủ tối toàn màn — chỉ một vệt
+  /// tối nhẹ sát mép dưới (sau khay bài). Tắt "Hiện mặt bàn" thì tranh
+  /// tắt, nền đen. Phone/tablet giữ như cũ: ảnh bàn -> khăn màu phẳng
+  /// -> scrim tối -> nội dung -> hàng icon decor trên cùng.
   Widget _buildTableBackground(UserPreferencesModel prefs, Widget child) {
+    // PC: bức tranh vẽ 3D là toàn bộ mặt bàn — khăn nhung tím và
+    // phụ kiện đã vẽ sẵn trong tranh, các kiểu bàn/khăn cũ không
+    // vẽ lại tranh (xem ghi chú trong dialog đổi bàn).
+    final isDesktop = Responsive.isDesktop(context);
     String tableImage;
-    if (prefs.tableStyle == 'Đá Cổ') {
+    if (isDesktop) {
+      tableImage = 'assets/images/table_3d_painted.png';
+    } else if (prefs.tableStyle == 'Đá Cổ') {
       tableImage = 'assets/images/table_stone_texture.jpg';
     } else if (prefs.tableStyle == 'Vũ Trụ') {
       tableImage = 'assets/images/tarot_main_background.jpg';
@@ -1319,10 +1372,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       clothColor = const Color(0xFF141414).withOpacity(0.85);
     }
 
-    final isDesktop = Responsive.isDesktop(context);
-    final decorSize = isDesktop ? 40.0 : 28.0;
-    final decorWidgets =
-        _buildDynamicDecorWidgets(prefs.decorItems, decorSize);
+    // PC: không build icon decor — phụ kiện đã vẽ sẵn trong tranh.
+    final decorWidgets = isDesktop
+        ? const <Widget>[]
+        : _buildDynamicDecorWidgets(prefs.decorItems, 28.0);
 
     return Container(
       width: double.infinity,
@@ -1340,7 +1393,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       child: Stack(
         children: [
           // LỚP 2: Tấm khăn thảm phủ bàn bói bài bo tròn kéo rộng (Tùy chỉnh bật tắt)
-          if (prefs.showCloth)
+          // PC: bỏ qua — khăn nhung tím đã vẽ sẵn trong tranh.
+          if (prefs.showCloth && !isDesktop)
             Align(
               alignment: Alignment.center,
               child: Container(
@@ -1370,17 +1424,20 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             ),
 
           // Lớp phủ tối: chữ trắng đọc được trên mọi ảnh nền.
-          // PC: nhẹ hơn để vân bàn / khăn vẫn thấy rõ.
+          // PC: KHÔNG làm tối cả bức tranh — chỉ một vệt tối nhẹ ở
+          // sát mép dưới (phía sau khay bài). Tranh giữ nguyên độ
+          // sáng và màu. Panel giải nghĩa đã có nền đen 0.72 riêng.
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
+                stops: isDesktop ? const [0.0, 0.78, 1.0] : null,
                 colors: isDesktop
                     ? const [
+                        Color(0x00000000),
+                        Color(0x00000000),
                         Color(0x66000000),
-                        Color(0x26000000),
-                        Color(0x80000000),
                       ]
                     : const [
                         Color(0x8A000000),
@@ -1394,51 +1451,34 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           // LỚP 3: Nội dung của ứng dụng
           child,
 
-          // LỚP 4: Đồ trang trí — PC: cụm ở góc trên-phải bàn (xấp bài
-          // đã chiếm góc trên-trái), icon lớn 40 + glow. Phone/tablet:
-          // hàng nhỏ ở trên cùng như cũ. Luôn IgnorePointer.
-          if (prefs.showDecor)
-            if (isDesktop)
-              Positioned(
-                top: 10,
-                right: 16,
-                child: IgnorePointer(
+          // LỚP 4: Đồ trang trí — chỉ phone/tablet: hàng icon nhỏ ở
+          // trên cùng, luôn IgnorePointer. PC: không có gì ở đây,
+          // phụ kiện đã vẽ sẵn trong tranh (lư trầm, thạch anh,
+          // quả cầu, nến).
+          if (prefs.showDecor && !isDesktop)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (var i = 0; i < decorWidgets.length; i++) ...[
-                        if (i > 0) const SizedBox(width: 18),
-                        decorWidgets[i],
-                      ],
-                    ],
-                  ),
-                ),
-              )
-            else
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: IgnorePointer(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: decorWidgets,
-                    ),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: decorWidgets,
                   ),
                 ),
               ),
+            ),
         ],
       ),
     );
   }
 
   /// Các biểu tượng trang trí: chỉ trả về widget, vị trí do hàng
-  /// ở trên cùng / góc bàn của _buildTableBackground quyết định.
-  /// Lưu ý: hiện chỉ có icon vẽ sẵn (không có ảnh đồ họa chân thật
-  /// cho phụ kiện trong assets/images/), nên decor được vẽ lớn hơn
-  /// và phát sáng để hiện diện trên bàn.
+  /// ở trên cùng của _buildTableBackground quyết định.
+  /// Chỉ dùng cho phone/tablet. Bản PC dùng bức tranh vẽ 3D
+  /// (phụ kiện vẽ sẵn trong tranh) nên không gọi hàm này nữa.
   List<Widget> _buildDynamicDecorWidgets(List<String> items, [double size = 28]) {
     final widgets = <Widget>[];
     for (final item in items) {
