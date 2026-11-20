@@ -86,6 +86,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     }
                     return Container(
                       decoration: BoxDecoration(
+                        // Nền đen: ảnh lá hiện trọn (contain), không cắt.
+                        color: Colors.black,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: theme.primaryColor, width: 1),
                         boxShadow: [
@@ -98,7 +100,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(7),
-                        child: TarotCardImage(card: card, fit: BoxFit.cover),
+                        child: TarotCardImage(card: card, fit: BoxFit.contain),
                       ),
                     );
                   },
