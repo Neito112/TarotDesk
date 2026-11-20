@@ -10,9 +10,11 @@ import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 
 /// Màn hình Tạo Bộ Bài Mới & Nhập Từng Lá Bài Đầy Đủ
-/// Bố cục: mobile-first Android (1 cột), iPad/PC (Bước 1 + Bước 2 cạnh nhau,
-/// danh sách lá bài nháp 2 cột, nội dung căn giữa, rộng tối đa theo
-/// Responsive.maxContentWidth). Logic, provider và text tiếng Việt giữ nguyên.
+/// Bố cục: tên bộ bài một hàng full-width ở trên cùng; màn rộng
+/// (iPad/PC) thì form thêm lá (trái) + danh sách lá nháp (phải)
+/// cạnh nhau để vừa nhập vừa thấy; điện thoại xếp dọc một cột.
+/// Chọn ảnh gọn (thumbnail 5:8 + nút chọn, không còn hộp trống
+/// lớn). Logic, provider và text tiếng Việt giữ nguyên.
 class AddDeckScreen extends StatefulWidget {
   const AddDeckScreen({Key? key}) : super(key: key);
 
@@ -151,31 +153,44 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
     );
   }
 
-  Widget _step1Panel(dynamic theme, bool isDesktop) {
+  /// Tên bộ bài — đặt riêng một hàng full-width ở trên cùng (đây
+  /// là định danh của bộ, không nhét chung cột với form thêm lá).
+  Widget _deckNamePanel(dynamic theme, bool isDesktop) {
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
       borderColor: theme.glassBorderColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          _stepHeader(theme,
-              icon: Icons.collections,
-              iconColor: theme.primaryColor,
-              title: '1. Đặt Tên Bộ Bài',
-              isDesktop: isDesktop),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _deckNameController,
-            style: TextStyle(color: theme.textColor),
-            decoration: _fieldDecoration(theme, 'Tên bộ bài'),
+          Icon(Icons.collections, color: theme.primaryColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _deckNameController,
+              style: TextStyle(color: theme.textColor),
+              decoration: _fieldDecoration(theme, 'Tên bộ bài'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Chip(
+            label: Text('${_draftCards.length} lá',
+                style: TextStyle(
+                    color: theme.primaryColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
+            backgroundColor: theme.primaryColor.withOpacity(0.15),
+            side: BorderSide(color: theme.primaryColor.withOpacity(0.4)),
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),
     );
   }
 
-  Widget _step2Panel(BuildContext context, dynamic theme, bool isDesktop) {
-    final imageHeight = Responsive.isPhone(context) ? 140.0 : 180.0;
+  /// Form thêm một lá bài: ảnh chọn gọn (thumbnail 5:8 + nút chọn,
+  /// không còn hộp trống lớn), tên lá, giải nghĩa, nút thêm.
+  /// Trên màn rộng form này nằm cột trái, danh sách lá nháp nằm
+  /// cột phải để vừa nhập vừa thấy các lá đã thêm.
+  Widget _addCardPanel(BuildContext context, dynamic theme, bool isDesktop) {
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
       borderColor: theme.glassBorderColor,
@@ -185,42 +200,80 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
           _stepHeader(theme,
               icon: Icons.add_photo_alternate,
               iconColor: theme.accentColor,
-              title: '2. Thêm Lá Bài',
+              title: 'Thêm Lá Bài',
               isDesktop: isDesktop),
           const SizedBox(height: 12),
-          GestureDetector(
-            onTap: _pickCardImage,
-            child: Container(
-              height: imageHeight,
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: theme.primaryColor.withOpacity(0.5)),
-              ),
-              child: _selectedImagePath != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: kIsWeb
-                          ? Image.network(_selectedImagePath!,
-                              fit: BoxFit.contain, width: double.infinity)
-                          : Image.file(File(_selectedImagePath!),
-                              fit: BoxFit.contain, width: double.infinity),
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_a_photo,
-                            color: theme.primaryColor, size: 36),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Chọn ảnh',
-                          style: TextStyle(
-                              color: theme.secondaryTextColor, fontSize: 13),
+          // Hàng chọn ảnh gọn: thumbnail 5:8 bên trái, nút + gợi ý
+          // bên phải (thay hộp trống cao 140/180).
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: _pickCardImage,
+                child: Container(
+                  width: 84,
+                  height: 134,
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: theme.primaryColor.withOpacity(0.5)),
+                  ),
+                  child: _selectedImagePath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: kIsWeb
+                              ? Image.network(_selectedImagePath!,
+                                  fit: BoxFit.contain)
+                              : Image.file(File(_selectedImagePath!),
+                                  fit: BoxFit.contain),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo,
+                                color: theme.primaryColor, size: 28),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Chọn ảnh',
+                              style: TextStyle(
+                                  color: theme.secondaryTextColor,
+                                  fontSize: 11),
+                            ),
+                          ],
                         ),
-                      ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: isDesktop ? 36 : 44,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.photo_library, size: 18),
+                        label: Text(
+                          _selectedImagePath != null
+                              ? 'Đổi ảnh khác'
+                              : 'Chọn ảnh từ thư viện',
+                          style: TextStyle(fontSize: isDesktop ? 12 : 13),
+                        ),
+                        onPressed: _pickCardImage,
+                      ),
                     ),
-            ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ảnh lá bài (tỉ lệ 5:8). Chưa chọn ảnh thì lá dùng ảnh mặc định.',
+                      style: TextStyle(
+                          color: theme.secondaryTextColor,
+                          fontSize: 11,
+                          height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           TextField(
@@ -231,7 +284,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: _cardMeaningController,
-            maxLines: 5,
+            maxLines: 3,
             style: TextStyle(color: theme.textColor),
             decoration: _fieldDecoration(theme, 'Nội dung giải nghĩa'),
           ),
@@ -252,6 +305,74 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
               onPressed: _addCardToDraft,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// Danh sách lá bài nháp đã nhập: tiêu đề + số lượng + nút xóa
+  /// tất cả, rồi lưới thẻ 5:8. Panel riêng để đặt cạnh form thêm
+  /// lá trên màn rộng (vừa nhập vừa thấy).
+  Widget _draftListPanel(dynamic theme, bool isDesktop) {
+    return GlassPanel(
+      backgroundColor: theme.cardBackgroundColor,
+      borderColor: theme.glassBorderColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  'Danh sách lá bài đã nhập (${_draftCards.length}):',
+                  style: TextStyle(
+                    color: theme.textColor,
+                    fontSize: isDesktop ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (_draftCards.isNotEmpty)
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _draftCards.clear();
+                    });
+                  },
+                  child: const Text('Xóa Tất Cả',
+                      style: TextStyle(color: Colors.redAccent)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_draftCards.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  'Chưa có lá bài nào được thêm.',
+                  style: TextStyle(
+                      color: theme.secondaryTextColor, fontSize: 13),
+                ),
+              ),
+            )
+          else
+            // Danh sách lá nháp là lưới thẻ 5:8 như lá bài
+            // trên bàn trải: 2 cột điện thoại, 3 iPad, 4 PC.
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: Responsive.gridColumns(context),
+                crossAxisSpacing: isDesktop ? 10 : 12,
+                mainAxisSpacing: isDesktop ? 10 : 12,
+                childAspectRatio: 5 / 8,
+              ),
+              itemCount: _draftCards.length,
+              itemBuilder: (context, index) =>
+                  _draftCardItem(theme, _draftCards[index], index),
+            ),
         ],
       ),
     );
@@ -389,81 +510,29 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Tên bộ bài: một hàng full-width ở trên cùng.
+                      _deckNamePanel(theme, isDesktop),
+                      const SizedBox(height: 16),
+                      // Màn rộng: form thêm lá (trái) + danh sách
+                      // lá nháp (phải) cạnh nhau — vừa nhập vừa
+                      // thấy các lá đã thêm. Điện thoại: xếp dọc.
                       if (isWide)
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: _step1Panel(theme, isDesktop)),
-                            const SizedBox(width: 16),
                             Expanded(
                                 child:
-                                    _step2Panel(context, theme, isDesktop)),
+                                    _addCardPanel(context, theme, isDesktop)),
+                            const SizedBox(width: 16),
+                            Expanded(
+                                child: _draftListPanel(theme, isDesktop)),
                           ],
                         )
                       else ...[
-                        _step1Panel(theme, isDesktop),
-                        const SizedBox(height: 20),
-                        _step2Panel(context, theme, isDesktop),
+                        _addCardPanel(context, theme, isDesktop),
+                        const SizedBox(height: 16),
+                        _draftListPanel(theme, isDesktop),
                       ],
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              'Danh sách lá bài đã nhập (${_draftCards.length}):',
-                              style: TextStyle(
-                                color: theme.textColor,
-                                fontSize: isDesktop ? 14 : 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          if (_draftCards.isNotEmpty)
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _draftCards.clear();
-                                });
-                              },
-                              child: const Text('Xóa Tất Cả',
-                                  style:
-                                      TextStyle(color: Colors.redAccent)),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      if (_draftCards.isEmpty)
-                        GlassPanel(
-                          backgroundColor: theme.cardBackgroundColor,
-                          borderColor: theme.glassBorderColor,
-                          padding: const EdgeInsets.all(20),
-                          child: Center(
-                            child: Text(
-                              'Chưa có lá bài nào được thêm.',
-                              style: TextStyle(
-                                  color: theme.secondaryTextColor,
-                                  fontSize: 13),
-                            ),
-                          ),
-                        )
-                      else
-                        // Danh sách lá nháp là lưới thẻ 5:8 như lá bài
-                        // trên bàn trải: 2 cột điện thoại, 3 iPad, 4 PC.
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: Responsive.gridColumns(context),
-                            crossAxisSpacing: isDesktop ? 10 : 12,
-                            mainAxisSpacing: isDesktop ? 10 : 12,
-                            childAspectRatio: 5 / 8,
-                          ),
-                          itemCount: _draftCards.length,
-                          itemBuilder: (context, index) => _draftCardItem(
-                              theme, _draftCards[index], index),
-                        ),
                     ],
                   ),
                 ),

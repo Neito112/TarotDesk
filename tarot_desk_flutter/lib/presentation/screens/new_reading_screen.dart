@@ -69,14 +69,16 @@ class NewReadingScreen extends StatefulWidget {
 /// - Hoạt ảnh (HyperFrames + nghiên cứu hoạt ảnh mượt 2026-11-20):
 ///   rút bài = MỘT tween duy nhất (dịch + scale, easeOutCubic
 ///   500ms — power3.out, bắt đầu nhanh đuôi dài đáp mềm, không
-///   nảy); đổi lá: lá mới LÊN sân từ dưới, lá cũ XUỐNG khay
-///   (trượt xuống + mờ, 250ms vào / 150ms ra, switchInCurve
-///   easeOut / switchOutCurve easeIn — mặc định linear nhìn máy
-///   móc); khay cao CỐ ĐỊNH (không co giãn làm bàn nhảy khung
-///   hình); không đo layout khi bay, không hai hoạt ảnh cùng lúc
-///   trên cùng một thuộc tính; tranh bàn lớn nạp trước
-///   (precacheImage) + lá bay bọc RepaintBoundary để không vẽ
-///   lại cả bàn theo từng khung hình.
+///   nảy); đổi lá: lá mới LÊN sân từ dưới, lá cũ BAY VỀ KHAY
+///   (về đúng vị trí của nó trong khay, một tween dịch + scale,
+///   easeOutCubic 500ms, liền mạch, tuyệt đối không ngắt cảnh —
+///   lá trong khay ẩn đi trong lúc bay, hiện lại đúng lúc đáp;
+///   nếu đo rect không được thì giữ trượt xuống + mờ dần);
+///   khay cao CỐ ĐỊNH (không co giãn làm bàn nhảy khung hình);
+///   không đo layout khi bay, không hai hoạt ảnh cùng lúc trên
+///   cùng một thuộc tính; tranh bàn lớn nạp trước (precacheImage)
+///   + lá bay bọc RepaintBoundary để không vẽ lại cả bàn theo
+///   từng khung hình.
 class _NewReadingScreenState extends State<NewReadingScreen> {
   // Lá đang được đọc (panel giải nghĩa bên phải hiện nội dung của
   // lá này). -1 = chưa chọn lá nào, chỉ nhìn bàn.
@@ -87,6 +89,59 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   bool _tableArtPrecached = false; // Tranh bàn (gỗ/khăn/decor) đã nạp trước chưa.
   // Thanh cuộn của panel giải nghĩa (luôn hiện để thấy còn nội dung).
   final ScrollController _meaningScrollController = ScrollController();
+
+  // Bay về khay: lá rời sân khấu bay LIỀN MẠCH về đúng vị trí của
+  // nó trong khay (không ngắt cảnh, không mờ dần rồi hiện). Một
+  // flight tại một thời điểm. Lá trong khay ẩn đi trong lúc bay rồi
+  // hiện lại đúng lúc đáp xuống (cùng rect nên không thấy nhảy).
+  // Chỉ chạy trên desktop (sân khấu + khay cùng trong body PC);
+  // phone giữ trượt xuống + mờ dần như cũ.
+  final GlobalKey _flightLayerKey = GlobalKey();
+  // Key sân khấu theo id lá (không dùng một GlobalKey chung: trong
+  // lúc AnimatedSwitcher chuyển lá, lá cũ + lá mới cùng nằm trong
+  // cây — một key chung là trùng key, Flutter báo lỗi).
+  final Map<int, GlobalKey> _stageCardKeys = {};
+  final Map<int, GlobalKey> _trayItemKeys = {};
+  _TrayFlight? _trayFlight;
+
+  /// Lá đang hiển thị trên sân khấu (null = chưa rút lá nào).
+  TarotCardModel? _currentStageCard() {
+    final drawnCards = context.read<ReadingProvider>().drawnCards;
+    if (drawnCards.isEmpty ||
+        _selectedCardIndex < 0 ||
+        _selectedCardIndex >= drawnCards.length) {
+      return null;
+    }
+    return drawnCards[_selectedCardIndex];
+  }
+
+  /// Rect của một widget (theo key) đổi sang tọa độ của lớp bay
+  /// (Stack bọc body desktop). Null = widget chưa build / không
+  /// đo được (lá trong khay bị cuộn ra ngoài) → bỏ flight.
+  Rect? _rectInFlightLayer(GlobalKey key) {
+    final ctx = key.currentContext;
+    final layerCtx = _flightLayerKey.currentContext;
+    if (ctx == null || layerCtx == null) return null;
+    final box = ctx.findRenderObject() as RenderBox?;
+    final layerBox = layerCtx.findRenderObject() as RenderBox?;
+    if (box == null || layerBox == null || !box.hasSize) return null;
+    final topLeft =
+        layerBox.globalToLocal(box.localToGlobal(Offset.zero));
+    return topLeft & box.size;
+  }
+
+  /// Chuẩn bị flight cho lá `outgoing` (đang trên sân khấu): đo
+  /// rect sân khấu (điểm đi) và rect ô của nó trong khay (điểm
+  /// đến). Trả về flight, hoặc null nếu đo không được → bên gọi
+  /// giữ hiệu ứng cũ (trượt xuống + mờ dần).
+  _TrayFlight? _prepareTrayFlight(TarotCardModel outgoing) {
+    final stageKey = _stageCardKeys[outgoing.id];
+    final from = stageKey == null ? null : _rectInFlightLayer(stageKey);
+    final trayKey = _trayItemKeys[outgoing.id];
+    final to = trayKey == null ? null : _rectInFlightLayer(trayKey);
+    if (from == null || to == null) return null;
+    return _TrayFlight(card: outgoing, from: from, to: to);
+  }
 
   @override
   void dispose() {
@@ -135,11 +190,18 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   /// Chọn một lá để đọc: lá hiện trên màn hình (lá lớn + panel
   /// giải nghĩa ngay bên cạnh). Dùng chung cho chạm vào lá trong
-  /// khay và (phone) chạm vào lá đang xem.
+  /// khay và (phone) chạm vào lá đang xem. Lá đang trên sân khấu
+  /// BAY về đúng vị trí của nó trong khay (liền mạch, không ngắt
+  /// cảnh) rồi lá được chọn mới lên sân.
   void _selectCard(int index) {
     final drawnCards = context.read<ReadingProvider>().drawnCards;
     if (index < 0 || index >= drawnCards.length) return;
+    if (index == _selectedCardIndex) return; // Đang đọc lá này rồi.
+    final outgoing = _currentStageCard();
+    final flight =
+        outgoing == null ? null : _prepareTrayFlight(outgoing);
     setState(() {
+      _trayFlight = flight;
       _selectedCardIndex = index;
       _showSelectionPanel = false;
       _lastDrawnId = null; // Hết trạng thái "vừa rút".
@@ -148,14 +210,20 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   /// Rút một lá từ bộ bài: lá hiện lên màn hình (lá đang đọc)
   /// và đồng thời hiện trong khay (khay chứa toàn bộ các lá đã
-  /// rút). Trả về false nếu lá đã rút rồi.
+  /// rút). Lá đang trên sân khấu (nếu có) BAY về đúng vị trí của
+  /// nó trong khay rồi lá mới bay từ xấp bài vào sân. Trả về
+  /// false nếu lá đã rút rồi.
   bool _drawCardModel(TarotCardModel card) {
     final readingProvider = context.read<ReadingProvider>();
     if (readingProvider.drawnCards.any((dc) => dc.id == card.id)) {
       return false;
     }
+    final outgoing = _currentStageCard();
+    final flight =
+        outgoing == null ? null : _prepareTrayFlight(outgoing);
     readingProvider.addCardToReading(card);
     setState(() {
+      _trayFlight = flight;
       _lastDrawnId = card.id;
       _selectedCardIndex = readingProvider.drawnCards.length - 1;
     });
@@ -299,42 +367,99 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   /// Thân màn hình riêng cho PC: bàn trải bài chiếm toàn bộ chiều
   /// rộng, khay ở dưới cùng. Không ResponsiveCenter.
+  /// Bọc trong Stack (lớp bay) để lá rời sân khấu bay về khay ngay
+  /// trên lớp này — Positioned theo tọa độ của Stack.
   Widget _buildDesktopBody(List<TarotCardModel> deckCards,
       ReadingProvider readingProvider, dynamic theme) {
     final drawnCards = readingProvider.drawnCards;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
+        child: Stack(
+          key: _flightLayerKey,
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      drawnCardsCountText(),
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: theme.secondaryTextColor, fontSize: 12),
-                    ),
+            Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          drawnCardsCountText(),
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: theme.secondaryTextColor, fontSize: 12),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _showSelectionPanel
+                        ? _buildSelectionPanel(deckCards, readingProvider, theme)
+                        : _buildDesktopTable(drawnCards, readingProvider, theme),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildBottomTray(drawnCards, readingProvider, theme),
+              ],
             ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: _showSelectionPanel
-                    ? _buildSelectionPanel(deckCards, readingProvider, theme)
-                    : _buildDesktopTable(drawnCards, readingProvider, theme),
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildBottomTray(drawnCards, readingProvider, theme),
+            // Lá bay về khay: phủ lên trên, không chặn chạm.
+            if (_trayFlight != null) _buildTrayFlightOverlay(theme),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Lớp bay về khay: lá rời sân khấu bay từ rect sân khấu về
+  /// đúng rect ô của nó trong khay, MỘT tween duy nhất, chỉ
+  /// transform (dịch + scale, easeOutCubic 500ms — cùng nhịp với
+  /// flight rút bài), đáp xuống là đứng yên. Không đo layout khi
+  /// bay, không hai hoạt ảnh cùng lúc trên cùng một thuộc tính.
+  /// Lá trong khay ẩn đi trong lúc bay, hiện lại đúng lúc đáp
+  /// (cùng rect) nên không thấy ngắt cảnh.
+  Widget _buildTrayFlightOverlay(dynamic theme) {
+    final flight = _trayFlight!;
+    final toScale = flight.to.width / flight.from.width;
+    final dx = flight.to.left - flight.from.left;
+    final dy = flight.to.top - flight.from.top;
+    return Positioned(
+      left: flight.from.left,
+      top: flight.from.top,
+      width: flight.from.width,
+      height: flight.from.height,
+      child: IgnorePointer(
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOutCubic,
+          onEnd: () {
+            if (mounted && _trayFlight == flight) {
+              setState(() => _trayFlight = null);
+            }
+          },
+          builder: (context, v, child) {
+            return Transform(
+              alignment: Alignment.topLeft,
+              transform: Matrix4.identity()
+                ..translate(dx * v, dy * v)
+                ..scale(1 + (toScale - 1) * v),
+              child: child,
+            );
+          },
+          child: RepaintBoundary(
+            child: SizedBox(
+              width: flight.from.width,
+              height: flight.from.height,
+              child: _cardFrame(flight.card, theme, flight.from.width),
+            ),
+          ),
         ),
       ),
     );
@@ -414,13 +539,18 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             theme: theme,
           ),
         ),
-        // Lá đang đọc HIỆN TRÊN MÀN HÌNH: lá lớn 150 rộng ở
+        // Lá đang đọc HIỆN TRÊN MÀN HÌNH: lá lớn 170 rộng ở
         // giữa-phía trước, panel giải nghĩa ngay BÊN CẠNH nó.
-        // Đổi lá: lá MỚI lên sân từ dưới, lá CŨ xuống khay
-        // (trượt xuống + mờ dần) — sân chỉ giữ một lá tại một
+        // Đổi lá: lá MỚI lên sân từ dưới, lá CŨ BAY VỀ KHAY (về
+        // đúng vị trí của nó trong khay, liền mạch, không ngắt
+        // cảnh — xem _trayFlight; switcher không vẽ lá cũ nữa
+        // để không hiện hai bản). Sân chỉ giữ một lá tại một
         // thời điểm. Lá vừa rút thì bay từ xấp bài (tween riêng),
         // không trượt thêm (hai chuyển động cùng lúc trên cùng
         // một lá = giật). Vào 250ms / ra 150ms (ra ngắn hơn ~40%).
+        // Nếu đo rect để bay về khay không được (lá trong khay bị
+        // cuộn ra ngoài) thì giữ hiệu ứng cũ: lá cũ trượt xuống +
+        // mờ dần.
         if (activeCard != null)
           Positioned.fill(
             child: LayoutBuilder(
@@ -443,14 +573,24 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                       switchInCurve: Curves.easeOut,
                       switchOutCurve: Curves.easeIn,
                       transitionBuilder: (child, animation) {
+                        // Lá ra mà đang bay về khay: switcher
+                        // KHÔNG vẽ nó nữa (lớp bay vẽ nó rồi) —
+                        // không hiện hai bản của cùng một lá.
+                        final isIncoming = child.key ==
+                            ValueKey('stage-${activeCard.id}');
+                        if (!isIncoming &&
+                            _trayFlight != null &&
+                            child.key ==
+                                ValueKey(
+                                    'stage-${_trayFlight!.card.id}')) {
+                          return const SizedBox.shrink();
+                        }
                         // Lá vào (animation 0→1): trượt LÊN từ
                         // dưới (offset 0.25 → 0). Lá ra (animation
                         // 1→0): CÙNG tween đó chạy ngược nên trượt
                         // XUỐNG (0 → 0.25) + mờ dần. Lá vừa rút
                         // (bay từ xấp bài bằng tween riêng) thì
                         // không trượt thêm, chỉ mờ.
-                        final isIncoming = child.key ==
-                            ValueKey('stage-${activeCard.id}');
                         final isJustDrawn = isIncoming &&
                             activeCard.id == _lastDrawnId;
                         final slide = isJustDrawn
@@ -478,13 +618,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Lá đang đọc HIỆN TRÊN MÀN HÌNH (PC): lá lớn 150 rộng + panel
-  /// giải nghĩa ngay bên cạnh, căn giữa phía trước bàn. Đây là lá
-  /// HIỂN THỊ để đọc (phần tử màn hình), KHÔNG phải vật nằm trên
-  /// mặt bàn — nên lá đứng thẳng facing màn hình, không nghiêng
-  /// theo điểm tụ của bàn. Trên bàn không còn lá nào.
+  /// Lá đang đọc HIỆN TRÊN MÀN HÌNH (PC): lá lớn 170 rộng + panel
+  /// giải nghĩa ngay bên cạnh (380 rộng — khung văn bản lớn để đọc
+  /// thoải mái), căn giữa phía trước bàn. Đây là lá HIỂN THỊ để
+  /// đọc (phần tử màn hình), KHÔNG phải vật nằm trên mặt bàn — nên
+  /// lá đứng thẳng facing màn hình, không nghiêng theo điểm tụ của
+  /// bàn. Trên bàn không còn lá nào.
   Widget _buildDesktopStage(TarotCardModel activeCard, dynamic theme) {
-    const stageCardWidth = 150.0;
+    const stageCardWidth = 170.0;
     final stageCardHeight = stageCardWidth * 8 / 5;
     return Center(
       key: ValueKey('stage-${activeCard.id}'),
@@ -496,7 +637,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           const SizedBox(width: 16),
           // Panel giải nghĩa ngay bên cạnh lá lớn, cao bằng lá + 24.
           SizedBox(
-            width: 320,
+            width: 380,
             height: stageCardHeight + 24,
             child: _buildDesktopMeaningPanel(activeCard, theme),
           ),
@@ -520,6 +661,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     final isNew = activeCard.id == _lastDrawnId;
     final tile = RepaintBoundary(
       child: SizedBox(
+        // Key riêng theo id lá để đo rect lá trên sân khấu (điểm
+        // đi của flight về khay). Dùng key theo id (không dùng
+        // một key chung) vì lá cũ + lá mới cùng nằm trong cây
+        // trong lúc AnimatedSwitcher chuyển lá.
+        key: _stageCardKeys.putIfAbsent(activeCard.id, () => GlobalKey()),
         width: width,
         height: width * 8 / 5,
         child: _cardFrame(activeCard, theme, width),
@@ -904,9 +1050,173 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Dialog đổi bàn / khăn / decor ngay trong lúc trải bài (PC + phone).
+  /// Dialog đổi bàn / khăn / decor ngay trong lúc trải bài (PC + phone).
+  /// Bố cục lại: hai cột trên desktop (trái: bàn + khăn, phải:
+  /// decor + lớp hiển thị), một cột trên phone; chọn bằng chip
+  /// nhìn (không còn dropdown) cho nhanh; danh sách dùng chung
+  /// hằng số trong UserPreferencesModel (không hard-code riêng
+  /// nữa) để không lệch với màn Cài đặt.
   void _showTableSettingsDialog(
       BuildContext context, SettingsProvider settings, dynamic theme) {
     final prefs = settings.userPrefs;
+    final isDesktop = Responsive.isDesktop(context);
+
+    Widget sectionTitle(String title) => Text(title,
+        style: TextStyle(
+            color: theme.primaryColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 13));
+
+    Widget optionChips({
+      required List<String> options,
+      required String selected,
+      required ValueChanged<String> onSelected,
+    }) {
+      return Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: options.map((opt) {
+          final isSelected = opt == selected;
+          return ChoiceChip(
+            label: Text(opt,
+                style: TextStyle(
+                    color:
+                        isSelected ? Colors.black : theme.textColor,
+                    fontSize: 12,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal)),
+            selected: isSelected,
+            selectedColor: theme.primaryColor,
+            backgroundColor: Colors.white10,
+            side: BorderSide(
+                color: isSelected
+                    ? theme.primaryColor
+                    : theme.glassBorderColor),
+            visualDensity: VisualDensity.compact,
+            onSelected: (_) => onSelected(opt),
+          );
+        }).toList(),
+      );
+    }
+
+    Widget decorChips() {
+      return Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: UserPreferencesModel.decorOptions.map((item) {
+          final selected = prefs.decorItems.contains(item);
+          return FilterChip(
+            selectedColor: theme.primaryColor.withOpacity(0.3),
+            checkmarkColor: theme.primaryColor,
+            label: Text(item,
+                style: TextStyle(
+                    color: selected ? theme.primaryColor : theme.textColor,
+                    fontSize: 12)),
+            selected: selected,
+            visualDensity: VisualDensity.compact,
+            onSelected: (v) {
+              final current = List<String>.from(prefs.decorItems);
+              if (v) {
+                if (current.length <
+                    UserPreferencesModel.maxDecorItems) {
+                  current.add(item);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content:
+                            Text('Chỉ được chọn tối đa 3 món trang trí!'),
+                        duration: Duration(seconds: 1)),
+                  );
+                }
+              } else {
+                current.remove(item);
+              }
+              settings.setDecorItems(current);
+            },
+          );
+        }).toList(),
+      );
+    }
+
+    Widget layerSwitch({
+      required String title,
+      required bool value,
+      required ValueChanged<bool> onChanged,
+    }) {
+      return SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+        visualDensity: VisualDensity.compact,
+        title: Text(title,
+            style: TextStyle(color: theme.textColor, fontSize: 13)),
+        value: value,
+        activeColor: theme.primaryColor,
+        onChanged: onChanged,
+      );
+    }
+
+    final tableAndCloth = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        sectionTitle('Mặt bàn'),
+        const SizedBox(height: 6),
+        optionChips(
+          options: UserPreferencesModel.tableStyles,
+          selected: prefs.tableStyle,
+          onSelected: (v) => settings.setTableStyle(v),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Áp dụng trên điện thoại / máy tính bảng. Bản PC dùng tranh bàn gỗ trống.',
+          style: TextStyle(
+              color: theme.secondaryTextColor, fontSize: 11, height: 1.4),
+        ),
+        const SizedBox(height: 14),
+        sectionTitle('Khăn trải bàn'),
+        const SizedBox(height: 6),
+        optionChips(
+          options: UserPreferencesModel.clothStyles,
+          selected: prefs.clothStyle,
+          onSelected: (v) => settings.setClothStyle(v),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Đổi ngay trên bàn: khăn là lớp riêng to và phẳng trên mặt gỗ.',
+          style: TextStyle(
+              color: theme.secondaryTextColor, fontSize: 11, height: 1.4),
+        ),
+      ],
+    );
+
+    final decorAndLayers = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        sectionTitle(
+            'Đồ trang trí (tối đa ${UserPreferencesModel.maxDecorItems} món)'),
+        const SizedBox(height: 6),
+        decorChips(),
+        const SizedBox(height: 14),
+        sectionTitle('Hiển thị các lớp trên bàn'),
+        layerSwitch(
+          title: 'Hiện mặt bàn',
+          value: prefs.showTable,
+          onChanged: (v) => settings.toggleTable(v),
+        ),
+        layerSwitch(
+          title: 'Hiện khăn trải bàn',
+          value: prefs.showCloth,
+          onChanged: (v) => settings.toggleCloth(v),
+        ),
+        layerSwitch(
+          title: 'Hiện đồ decor',
+          value: prefs.showDecor,
+          onChanged: (v) => settings.toggleDecor(v),
+        ),
+      ],
+    );
+
     showDialog(
       context: context,
       builder: (ctx) {
@@ -915,7 +1225,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           title: Text('Đổi bàn trải bài',
               style: TextStyle(color: theme.textColor, fontSize: 16)),
           content: SizedBox(
-            width: 340,
+            width: isDesktop ? 560 : 340,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -926,7 +1236,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   // bàn gỗ rồi tách nền, khớp điểm tụ với bàn), phụ
                   // kiện là ảnh cắt trong suốt đặt theo tọa độ cố
                   // định. Đổi ở đây sẽ đổi ngay trên bàn (cross-fade).
-                  if (Responsive.isDesktop(context))
+                  if (isDesktop)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 12),
                       child: Text(
@@ -935,87 +1245,20 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                             color: Colors.white70, fontSize: 12, height: 1.5),
                       ),
                     ),
-                  Text('Mặt bàn', style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 4),
-                  DropdownButtonFormField<String>(
-                    dropdownColor: theme.cardBackgroundColor,
-                    isExpanded: true,
-                    value: prefs.tableStyle,
-                    items: ['Gỗ Sồi', 'Đá Cổ', 'Vũ Trụ'].map((s) {
-                      return DropdownMenuItem<String>(
-                          value: s,
-                          child: Text(s, style: TextStyle(color: theme.textColor)));
-                    }).toList(),
-                    onChanged: (v) {
-                      if (v != null) settings.setTableStyle(v);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Khăn trải bàn', style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 4),
-                  DropdownButtonFormField<String>(
-                    dropdownColor: theme.cardBackgroundColor,
-                    isExpanded: true,
-                    value: prefs.clothStyle,
-                    items: ['Nhung Tím', 'Lụa Vàng', 'Thảm Đen'].map((s) {
-                      return DropdownMenuItem<String>(
-                          value: s,
-                          child: Text(s, style: TextStyle(color: theme.textColor)));
-                    }).toList(),
-                    onChanged: (v) {
-                      if (v != null) settings.setClothStyle(v);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Đồ trang trí (tối đa 3 món)', style: TextStyle(color: theme.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: ['Đá Thạch Anh', 'Quả Cầu', 'Hương Trầm', 'Nến Đen', 'Lá Khô'].map((item) {
-                      final selected = prefs.decorItems.contains(item);
-                      return FilterChip(
-                        selectedColor: theme.primaryColor.withOpacity(0.3),
-                        checkmarkColor: theme.primaryColor,
-                        label: Text(item,
-                            style: TextStyle(
-                                color: selected ? theme.primaryColor : theme.textColor,
-                                fontSize: 12)),
-                        selected: selected,
-                        onSelected: (v) {
-                          final current = List<String>.from(prefs.decorItems);
-                          if (v) {
-                            if (current.length < 3) current.add(item);
-                          } else {
-                            current.remove(item);
-                          }
-                          settings.setDecorItems(current);
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 8),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Hiện mặt bàn', style: TextStyle(color: theme.textColor, fontSize: 13)),
-                    value: prefs.showTable,
-                    activeColor: theme.primaryColor,
-                    onChanged: (v) => settings.toggleTable(v),
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Hiện khăn trải bàn', style: TextStyle(color: theme.textColor, fontSize: 13)),
-                    value: prefs.showCloth,
-                    activeColor: theme.primaryColor,
-                    onChanged: (v) => settings.toggleCloth(v),
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Hiện đồ decor', style: TextStyle(color: theme.textColor, fontSize: 13)),
-                    value: prefs.showDecor,
-                    activeColor: theme.primaryColor,
-                    onChanged: (v) => settings.toggleDecor(v),
-                  ),
+                  if (isDesktop)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: tableAndCloth),
+                        const SizedBox(width: 20),
+                        Expanded(child: decorAndLayers),
+                      ],
+                    )
+                  else ...[
+                    tableAndCloth,
+                    const SizedBox(height: 16),
+                    decorAndLayers,
+                  ],
                 ],
               ),
             ),
@@ -1579,12 +1822,19 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// Thumbnail lá bài trong khay: PC 100 rộng (gần bằng lá trên
   /// bàn), phone/tablet 64 rộng, tỉ lệ 5:8. Ảnh lá hiện TRỌN
   /// (contain, nền đen) — ảnh gốc 7:12, cover cắt mất tên lá.
+  /// Mỗi ô có key riêng (theo id lá) để đo rect làm điểm đến của
+  /// flight về khay; ô đang bay về thì ẩn đi, hiện lại đúng lúc
+  /// lá đáp xuống (cùng rect nên không thấy ngắt cảnh).
   Widget _buildBottomTrayItem(
       TarotCardModel card, bool isSelected, dynamic theme, double width) {
     // Mỗi lá trong khay có display list riêng: đổi lá chọn /
     // cuộn khay không vẽ lại các lá còn lại.
+    final isFlyingToTray = _trayFlight?.card.id == card.id;
     return RepaintBoundary(
-      child: AnimatedContainer(
+      key: _trayItemKeys.putIfAbsent(card.id, () => GlobalKey()),
+      child: Opacity(
+        opacity: isFlyingToTray ? 0.0 : 1.0,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: width,
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -1606,6 +1856,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             aspectRatio: 5 / 8,
             child: TarotCardImage(card: card, fit: BoxFit.contain),
           ),
+        ),
         ),
       ),
     );
@@ -1876,6 +2127,16 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 }
 
 /// Widget mô phỏng Xấp bài Tarot úp rực rỡ (tỉ lệ 5:8, theo breakpoint).
+/// Một chuyến bay về khay: lá nào, bay từ rect nào (sân khấu) về
+/// rect nào (ô của nó trong khay). Rect tính theo tọa độ của lớp
+/// bay (Stack bọc body desktop).
+class _TrayFlight {
+  final TarotCardModel card;
+  final Rect from;
+  final Rect to;
+  const _TrayFlight({required this.card, required this.from, required this.to});
+}
+
 class CardStackWidget extends StatelessWidget {
   final VoidCallback onTap;
   final dynamic theme;
@@ -1884,11 +2145,13 @@ class CardStackWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Xấp bài ở góc bàn — to và rõ để thấy và chạm: PC 84 rộng
+    // (trước 60), tablet 100, phone 84.
     final stackWidth = Responsive.isDesktop(context)
-        ? 60.0
+        ? 84.0
         : Responsive.isTablet(context)
-            ? 88.0
-            : 72.0;
+            ? 100.0
+            : 84.0;
     final backWidth = stackWidth * 0.86;
     return GestureDetector(
       onTap: onTap,
@@ -1941,7 +2204,7 @@ class CardStackWidget extends StatelessWidget {
             'XẤP BÀI',
             style: TextStyle(
               color: theme.primaryColor,
-              fontSize: Responsive.isDesktop(context) ? 10 : 12,
+              fontSize: Responsive.isDesktop(context) ? 11 : 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.8,
             ),
