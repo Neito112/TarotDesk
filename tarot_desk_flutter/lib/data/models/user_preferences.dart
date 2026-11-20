@@ -13,6 +13,7 @@ class UserPreferencesModel {
   String tableStyle; // e.g. 'Gỗ Sồi', 'Đá Cổ', 'Vũ Trụ'
   String clothStyle; // e.g. 'Nhung Tím', 'Lụa Vàng', 'Thảm Đen'
   List<String> decorItems; // Danh sách tối đa 3 món: 'Đá Thạch Anh', 'Quả Cầu', 'Hương Trầm', 'Lá Khô'
+  String spreadMode; // Kiểu trải bài trên bàn: 'single' (1 hàng) hoặc 'multi' (nhiều hàng)
 
   UserPreferencesModel({
     this.themeId = 'default_dark',
@@ -26,6 +27,7 @@ class UserPreferencesModel {
     this.tableStyle = 'Gỗ Sồi',
     this.clothStyle = 'Nhung Tím',
     this.decorItems = const ['Đá Thạch Anh', 'Quả Cầu', 'Hương Trầm'],
+    this.spreadMode = 'multi',
   });
 
   Map<String, dynamic> toMap() {
@@ -41,6 +43,7 @@ class UserPreferencesModel {
       'table_style': tableStyle,
       'cloth_style': clothStyle,
       'decor_items': decorItems.join(','),
+      'spread_mode': spreadMode,
     };
   }
 
@@ -59,6 +62,10 @@ class UserPreferencesModel {
       tableStyle: map['table_style'] as String? ?? 'Gỗ Sồi',
       clothStyle: map['cloth_style'] as String? ?? 'Nhung Tím',
       decorItems: items.take(3).toList(), // Tối đa 3 món
+      // Dữ liệu cũ chưa có key này -> mặc định 'multi' (nhiều hàng).
+      spreadMode: (map['spread_mode'] as String? ?? 'multi') == 'single'
+          ? 'single'
+          : 'multi',
     );
   }
 }

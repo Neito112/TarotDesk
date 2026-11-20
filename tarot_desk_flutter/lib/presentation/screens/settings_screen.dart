@@ -227,8 +227,42 @@ class SettingsScreen extends StatelessWidget {
               );
             }).toList(),
           ),
+          const SizedBox(height: 16),
+          _fieldLabel(theme, 'Kiểu trải bài trên bàn:'),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              _spreadChip(settings, theme, 'single', '1 hàng'),
+              _spreadChip(settings, theme, 'multi', 'Nhiều hàng'),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Áp dụng ngay trong màn Trải bài (PC: các lá nằm trên bàn).',
+            style: TextStyle(color: theme.secondaryTextColor, fontSize: 12),
+          ),
         ],
       ),
+    );
+  }
+
+  /// Chip chọn kiểu trải bài: 'single' (1 hàng) / 'multi' (nhiều hàng).
+  Widget _spreadChip(SettingsProvider settings, AppThemeData theme,
+      String value, String label) {
+    final isSelected = settings.userPrefs.spreadMode == value;
+    return ChoiceChip(
+      selectedColor: theme.primaryColor.withOpacity(0.3),
+      checkmarkColor: theme.primaryColor,
+      label: Text(label,
+          style: TextStyle(
+              color: isSelected ? theme.primaryColor : theme.textColor,
+              fontSize: 12)),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) settings.setSpreadMode(value);
+      },
     );
   }
 
