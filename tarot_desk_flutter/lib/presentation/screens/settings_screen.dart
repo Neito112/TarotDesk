@@ -190,7 +190,7 @@ class SettingsScreen extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 4,
-            children: ['Đá Thạch Anh', 'Quả Cầu', 'Hương Trầm', 'Lá Khô']
+            children: ['Đá Thạch Anh', 'Quả Cầu', 'Hương Trầm', 'Nến Đen', 'Lá Khô']
                 .map((item) {
               final isSelected =
                   settings.userPrefs.decorItems.contains(item);
