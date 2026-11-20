@@ -412,26 +412,41 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             // Đổi lá chọn thì cả cụm mờ/trượt đổi mượt (AnimatedSwitcher
             // theo id lá). Chạm vào lá lớn để thu xuống khay.
             if (activeCard != null)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 4,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0.0, 0.08),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(
-                            parent: animation, curve: Curves.easeInOut)),
-                        child: child,
+              Positioned.fill(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Nâng đáy sân khấu lên 17% chiều cao bàn: khi đã
+                    // rút bài, khay dưới cao 176 (thay vì 36 khi chưa
+                    // rút) nên bàn ngắn lại và mép dưới khăn cao hơn
+                    // đáy bàn ~15% — đặt sân khấu sát đáy bàn sẽ làm
+                    // lá lớn vắt qua mép dưới khăn. Nâng lên để lá +
+                    // panel giải nghĩa nằm hẳn trên khăn.
+                    return Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                            bottom: constraints.maxHeight * 0.17),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.0, 0.08),
+                                  end: Offset.zero,
+                                ).animate(CurvedAnimation(
+                                    parent: animation,
+                                    curve: Curves.easeInOut)),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: _buildDesktopStage(activeCard, theme),
+                        ),
                       ),
                     );
                   },
-                  child: _buildDesktopStage(activeCard, theme),
                 ),
               ),
           ],
