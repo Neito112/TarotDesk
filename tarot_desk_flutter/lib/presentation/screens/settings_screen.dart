@@ -12,7 +12,7 @@ import '../widgets/glass_panel.dart';
 ///
 /// Mọi trường trong [UserPreferencesModel] đều có control ở đây và
 /// đều được ít nhất một màn hình đọc — không còn toggle "mồ côi".
-/// Tất cả cấu hình bàn (chất liệu, khăn, decor, kiểu trải, bật/tắt
+/// Tất cả cấu hình bàn (chất liệu, khăn, decor, bật/tắt
 /// các lớp) nằm trong MỘT mục "Cấu Hình Bàn Trải Bài Tarot".
 /// Các danh sách lựa chọn dùng chung hằng số trong
 /// [UserPreferencesModel] (tableStyles / clothStyles / decorOptions)
@@ -153,7 +153,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   /// MỘT mục duy nhất cho toàn bộ bàn trải bài: chất liệu mặt bàn,
-  /// khăn trải bàn, đồ trang trí, kiểu trải bài, và bật/tắt 3 lớp
+  /// khăn trải bàn, đồ trang trí, và bật/tắt 3 lớp
   /// (mặt bàn / khăn / decor). Mọi control ở đây đều gọi setter
   /// của SettingsProvider nên màn Trải bài cập nhật ngay khi đổi.
   Widget _tableSection(
@@ -253,20 +253,6 @@ class SettingsScreen extends StatelessWidget {
             }).toList(),
           ),
           const SizedBox(height: 16),
-          _fieldLabel(theme, 'Kiểu trải bài trên bàn:'),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              _spreadChip(settings, theme, 'single', '1 hàng'),
-              _spreadChip(settings, theme, 'multi', 'Nhiều hàng'),
-            ],
-          ),
-          const SizedBox(height: 4),
-          _hintText(theme,
-              'Áp dụng ngay trong màn Trải bài (PC: các lá nằm trên bàn).'),
-          const SizedBox(height: 16),
           const Divider(color: Colors.white12),
           _fieldLabel(theme, 'Hiển thị các lớp trên bàn:'),
           const SizedBox(height: 4),
@@ -296,24 +282,6 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  /// Chip chọn kiểu trải bài: 'single' (1 hàng) / 'multi' (nhiều hàng).
-  Widget _spreadChip(SettingsProvider settings, AppThemeData theme,
-      String value, String label) {
-    final isSelected = settings.userPrefs.spreadMode == value;
-    return ChoiceChip(
-      selectedColor: theme.primaryColor.withOpacity(0.3),
-      checkmarkColor: theme.primaryColor,
-      label: Text(label,
-          style: TextStyle(
-              color: isSelected ? theme.primaryColor : theme.textColor,
-              fontSize: 12)),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) settings.setSpreadMode(value);
-      },
     );
   }
 
