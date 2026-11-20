@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/responsive.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/models/tarot_card.dart';
 import '../../data/models/tarot_deck.dart';
@@ -8,12 +9,24 @@ import '../../logic/deck_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/tarot_card_image.dart';
+import 'edit_card_screen.dart';
 
-/// Màn hình Chi tiết Bộ Bài (Hiển thị lưới lá bài xem bộ bài, Tìm kiếm bài, Học bài Ngẫu nhiên 1 lá)
+/// Màn hình Chi tiết Bộ Bài (Hiển thị lưới lá bài xem bộ bài, Tìm kiếm bài, Học bài Ngẫu nhiên 1 lá).
+///
+/// Hai chế độ mở:
+/// - Xem (readOnly: true) — từ "Bộ bài hiện tại" ở Trang chủ: chỉ
+///   xem bộ bài, KHÔNG sửa được gì (không đổi tên, không thêm/sửa lá).
+/// - Quản lý (mặc định) — từ "Kho bộ bài": đổi tên bộ, thêm lá mới
+///   (nút +), sửa nội dung từng lá (nút Sửa trong hộp chi tiết lá).
+/// PC gọn: lưới 5 cột, nội dung căn giữa tối đa 1080, chữ và nút nhỏ.
 class DeckDetailScreen extends StatefulWidget {
   final TarotDeckModel deck;
 
-  const DeckDetailScreen({Key? key, required this.deck}) : super(key: key);
+  /// true = chỉ xem (bộ bài hiện tại); false = quản lý (kho bộ bài).
+  final bool readOnly;
+
+  const DeckDetailScreen({Key? key, required this.deck, this.readOnly = false})
+      : super(key: key);
 
   @override
   State<DeckDetailScreen> createState() => _DeckDetailScreenState();
@@ -41,6 +54,18 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  /// Thêm lá bài MỚI vào bộ này (chỉ ở chế độ quản lý — kho bộ
+  /// bài). Mở màn sửa lá ở chế độ tạo, lưu xong tải lại lưới.
+  Future<void> _addCard() async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditCardScreen.create(deckId: widget.deck.id!),
+      ),
+    );
+    if (changed == true) _loadCards();
   }
 
   void _showRandomCardDialog(dynamic theme) {
@@ -120,15 +145,20 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
     );
   }
 
-  /// Mở hộp xem chi tiết lá bài (Chế độ xem - Read-only) để không bị nhầm lẫn với sửa nội dung bộ bài
+  /// Mở hộp xem chi tiết lá bài (Chế độ xem - Read-only) để không bị nhầm lẫn với sửa nội dung bộ bài.
+  /// Ở chế độ quản lý (kho bộ bài) có thêm nút Sửa để sửa nội dung
+  /// lá; ở chế độ xem (bộ bài hiện tại) chỉ có nút Đóng.
   void _showCardDetailDialog(BuildContext context, TarotCardModel card, dynamic theme) {
+    final isDesktop = Responsive.isDesktop(context);
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: GlassPanel(
+          insetPadding: EdgeInsets.symmetric(horizontal: isDesktop ? 24 : 16, vertical: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: isDesktop ? 420 : 560),
+            child: GlassPanel(
             backgroundColor: theme.backgroundColor, // Nền đục vững chãi tránh trộn text dưới nền
             borderColor: theme.primaryColor,
             borderRadius: BorderRadius.circular(20),
@@ -152,7 +182,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.white70),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ],
                   ),
@@ -160,9 +190,11 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
 
                   // Hình ảnh lá bài lớn
                   Container(
-                    width: 110,
-                    height: 180,
+                    width: isDesktop ? 96 : 110,
+                    height: isDesktop ? 160 : 180,
                     decoration: BoxDecoration(
+                      // Nền đen: ảnh lá hiện trọn (contain), không cắt.
+                      color: Colors.black,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: theme.primaryColor, width: 1.5),
                       boxShadow: [
@@ -171,7 +203,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: TarotCardImage(card: card, fit: BoxFit.cover),
+                      child: TarotCardImage(card: card, fit: BoxFit.contain),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -185,7 +217,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
 
                   // Luận giải chi tiết (Read-only)
                   ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                    constraints: BoxConstraints(maxHeight: MediaQuery.of(dialogContext).size.height * 0.4),
                     child: SingleChildScrollView(
                       child: SelectionArea(
                         child: Text(
@@ -197,20 +229,48 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  Row(
+                    children: [
+                      if (!widget.readOnly)
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () async {
+                              Navigator.pop(dialogContext);
+                              final changed = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EditCardScreen(card: card),
+                                ),
+                              );
+                              if (changed == true) _loadCards();
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: theme.primaryColor,
+                              side: BorderSide(color: theme.primaryColor),
+                              padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: const Text('Sửa', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      if (!widget.readOnly) const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Đóng', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                        ),
                       ),
-                      child: const Text('Đóng', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-                    ),
+                    ],
                   ),
                 ],
               ),
             ),
+          ),
           ),
         );
       },
@@ -221,6 +281,8 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final theme = settings.currentThemeData;
+    final isDesktop = Responsive.isDesktop(context);
+    final isTablet = Responsive.isTablet(context);
 
     final filteredCards = _cards.where((card) {
       return card.name.toLowerCase().contains(_searchQuery.toLowerCase());
@@ -229,7 +291,16 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: GestureDetector(
+        toolbarHeight: isDesktop ? 48 : null,
+        // Chế độ xem (bộ bài hiện tại): tên chỉ để xem, không bấm
+        // đổi được. Chế độ quản lý (kho bộ bài): bấm tên để đổi tên.
+        title: widget.readOnly
+            ? Text(
+                _currentDeckName,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: isDesktop ? 16 : 20),
+              )
+            : GestureDetector(
           onTap: () => _showEditDeckNameDialog(context),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -238,6 +309,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                 child: Text(
                   _currentDeckName,
                   overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: isDesktop ? 16 : 20),
                 ),
               ),
               const SizedBox(width: 6),
@@ -250,31 +322,43 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
         elevation: 0,
         actions: [
           TextButton.icon(
-            icon: const Icon(Icons.school, size: 18),
-            label: const Text('Ngẫu nhiên 1 lá'),
+            icon: Icon(Icons.school, size: isDesktop ? 16 : 18),
+            label: Text(
+              'Ngẫu nhiên 1 lá',
+              style: TextStyle(fontSize: isDesktop ? 12 : 14),
+            ),
             style: TextButton.styleFrom(
               foregroundColor: theme.primaryColor,
+              padding: EdgeInsets.symmetric(horizontal: isDesktop ? 8 : 12),
               textStyle: const TextStyle(fontWeight: FontWeight.bold),
             ),
             onPressed: () => _showRandomCardDialog(theme),
           ),
+          // Thêm lá mới: chỉ ở chế độ quản lý (kho bộ bài).
+          if (!widget.readOnly)
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'Thêm lá bài mới',
+              onPressed: _addCard,
+            ),
         ],
       ),
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            : ResponsiveCenter(
+                padding: EdgeInsets.symmetric(horizontal: isDesktop ? 12 : 16),
                 child: Column(
                   children: [
                     // Thanh Tìm kiếm lá bài trong bộ
                     TextField(
                       onChanged: (val) => setState(() => _searchQuery = val),
-                      style: TextStyle(color: theme.textColor),
+                      style: TextStyle(color: theme.textColor, fontSize: isDesktop ? 13 : 15),
                       decoration: InputDecoration(
                         hintText: 'Tìm kiếm lá bài...',
                         hintStyle: TextStyle(color: theme.secondaryTextColor),
-                        prefixIcon: Icon(Icons.search, color: theme.primaryColor),
+                        prefixIcon: Icon(Icons.search, color: theme.primaryColor, size: isDesktop ? 20 : 24),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: isDesktop ? 10 : 14),
                         filled: true,
                         fillColor: theme.cardBackgroundColor.withOpacity(0.4),
                         border: OutlineInputBorder(
@@ -287,9 +371,9 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: isDesktop ? 12 : 16),
 
-                    // Lưới hiển thị 78 lá bài
+                    // Lưới hiển thị 78 lá bài — PC 5 cột cho gọn.
                     Expanded(
                       child: filteredCards.isEmpty
                           ? Center(
@@ -300,11 +384,11 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                             )
                           : GridView.builder(
                               physics: const BouncingScrollPhysics(),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: isDesktop ? 5 : (isTablet ? 4 : 3),
                                 childAspectRatio: 0.62,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
+                                crossAxisSpacing: isDesktop ? 10 : 12,
+                                mainAxisSpacing: isDesktop ? 10 : 12,
                               ),
                               itemCount: filteredCards.length,
                               itemBuilder: (context, index) {
@@ -324,7 +408,8 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.stretch,
                                         children: [
                                           Expanded(
-                                            child: TarotCardImage(card: card, fit: BoxFit.cover),
+                                            // Ảnh lá hiện trọn (contain) — ảnh gốc 7:12, cover cắt mất tên lá.
+                                            child: TarotCardImage(card: card, fit: BoxFit.contain),
                                           ),
                                           Container(
                                             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
@@ -366,14 +451,17 @@ class _RandomCardStudyDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 1024;
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: GlassPanel(
-        backgroundColor: theme.backgroundColor, // Dùng màu nền vững chãi hoàn toàn đục để không bị trùng text dưới
-        borderColor: theme.primaryColor,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
+      insetPadding: EdgeInsets.symmetric(horizontal: isDesktop ? 24 : 16, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: isDesktop ? 420 : 560),
+        child: GlassPanel(
+          backgroundColor: theme.backgroundColor, // Dùng màu nền vững chãi hoàn toàn đục để không bị trùng text dưới
+          borderColor: theme.primaryColor,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -402,9 +490,11 @@ class _RandomCardStudyDialog extends StatelessWidget {
 
               // Thẻ bài
               Container(
-                width: 110,
-                height: 180,
+                width: isDesktop ? 96 : 110,
+                height: isDesktop ? 160 : 180,
                 decoration: BoxDecoration(
+                  // Nền đen: ảnh lá hiện trọn (contain), không cắt.
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: theme.primaryColor, width: 1.5),
                   boxShadow: [
@@ -413,7 +503,7 @@ class _RandomCardStudyDialog extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: TarotCardImage(card: card, fit: BoxFit.cover),
+                  child: TarotCardImage(card: card, fit: BoxFit.contain),
                 ),
               ),
               const SizedBox(height: 16),
@@ -438,13 +528,14 @@ class _RandomCardStudyDialog extends StatelessWidget {
               ),
 
               const SizedBox(height: 16),
-              // Nút đóng ở dưới cùng
+              // Nút đóng ở dưới cùng (PC gọn: cao ~40).
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
+                    padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   child: const Text('Hoàn Thành Học', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
@@ -452,6 +543,7 @@ class _RandomCardStudyDialog extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

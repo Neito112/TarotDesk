@@ -11,12 +11,15 @@ import '../widgets/tarot_card_image.dart';
 import 'add_deck_screen.dart';
 import 'deck_detail_screen.dart';
 
-/// Màn hình chọn & quản lý danh sách bộ bài Tarot.
+/// Màn hình chọn & quản lý danh sách bộ bài Tarot (KHO BỘ BÀI).
 /// Điện thoại (Android, chính): lưới 2 cột, thumbnail lá bài 5:8.
 /// iPad: 3 cột. PC: 4 cột, mật độ gọn (PC 4K), nội dung căn giữa theo
 /// Responsive.maxContentWidth. Thumbnail luôn 5:8 như lá bài trên bàn
 /// trải (bàn gỗ + khăn lớn + decor ảnh), trạng thái đã chọn rõ ràng:
 /// viền vàng + nền vàng nhạt + huy hiệu check + chữ "Đang chọn".
+/// Bấm vào một bộ bài → mở chi tiết bộ ở CHẾ ĐỘ QUẢN LÝ (đổi tên,
+/// thêm/sửa lá) — khác với "Bộ bài hiện tại" ở Trang chủ (chỉ xem).
+/// Nút PC gọn: hàng thao tác cao 32, nút xóa cao 36.
 class SelectDeckScreen extends StatelessWidget {
   const SelectDeckScreen({Key? key}) : super(key: key);
 
@@ -107,8 +110,13 @@ class SelectDeckScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: theme.primaryColor,
         foregroundColor: Colors.black,
-        icon: const Icon(Icons.add),
-        label: const Text('Thêm Bộ Bài Mới'),
+        extendedPadding:
+            EdgeInsets.symmetric(horizontal: isDesktop ? 12 : 16),
+        icon: Icon(Icons.add, size: isDesktop ? 20 : 24),
+        label: Text(
+          'Thêm Bộ Bài Mới',
+          style: TextStyle(fontSize: isDesktop ? 13 : 14),
+        ),
         onPressed: () {
           Navigator.push(
             context,
@@ -126,6 +134,9 @@ class SelectDeckScreen extends StatelessWidget {
     String deckName,
   ) async {
     final theme = context.read<SettingsProvider>().currentThemeData;
+    final isDesktop = Responsive.isDesktop(context);
+    // Nút PC gọn: cao 36 thay vì 48.
+    final buttonHeight = isDesktop ? 36.0 : 48.0;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -134,14 +145,14 @@ class SelectDeckScreen extends StatelessWidget {
         content: Text('Bạn có chắc muốn xóa bộ bài "$deckName"?\nHành động này không thể hoàn tác.'),
         actions: [
           TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(88, 48)),
+            style: TextButton.styleFrom(minimumSize: Size(88, buttonHeight)),
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Hủy'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.redAccent,
-              minimumSize: const Size(88, 48),
+              minimumSize: Size(88, buttonHeight),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Xóa', style: TextStyle(color: Colors.white)),
@@ -176,8 +187,8 @@ class _DeckCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Chiều cao vùng thao tác: 48dp trên điện thoại, gọn 40dp trên PC 4K.
-    final actionHeight = isDesktop ? 40.0 : 48.0;
+    // Chiều cao vùng thao tác: 48dp trên điện thoại, gọn 32dp trên PC 4K.
+    final actionHeight = isDesktop ? 32.0 : 48.0;
     return GlassPanel(
       backgroundColor: isSelected
           ? theme.primaryColor.withOpacity(0.2)
@@ -346,12 +357,14 @@ class _DeckThumbnailState extends State<_DeckThumbnail> {
   @override
   Widget build(BuildContext context) {
     // Thumbnail lá bài luôn tỉ lệ 5:8 như lá bài trên bàn trải.
+    // Ảnh lá hiện trọn (contain, nền đen) — ảnh gốc 7:12, cover
+    // cắt mất đầu/cuối tranh.
     return AspectRatio(
       aspectRatio: 5 / 8,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          color: Colors.black26,
+          color: Colors.black,
           child: !_loaded
               ? const Center(
                   child: SizedBox(
@@ -362,7 +375,7 @@ class _DeckThumbnailState extends State<_DeckThumbnail> {
                 )
               : _firstCard != null
                   ? SizedBox.expand(
-                      child: TarotCardImage(card: _firstCard!, fit: BoxFit.cover),
+                      child: TarotCardImage(card: _firstCard!, fit: BoxFit.contain),
                     )
                   : Icon(Icons.auto_stories, color: widget.theme.primaryColor, size: 28),
         ),
