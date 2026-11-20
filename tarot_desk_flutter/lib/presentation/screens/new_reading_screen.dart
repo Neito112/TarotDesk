@@ -24,15 +24,19 @@ import '../widgets/tarot_card_image.dart';
 ///
 /// PC (desktop): bàn là một BỨC TRANH VẼ 3D (HyperFrames-style —
 /// tranh vẽ phối cảnh góc nhìn thứ nhất, KHÔNG phải engine 3D thời
-/// gian thực, KHÔNG dùng Matrix4 nghiêng mặt phẳng). Ảnh vẽ
-/// `assets/images/table_3d_flat.png` chiếm toàn bộ viewport
-/// (BoxFit.cover): bàn gỗ chạm khắc + khăn nhung tím TRẢI PHẲNG,
-/// mịn, không nhăn, ở giữa — trong tranh KHÔNG có phụ kiện nào.
+/// gian thực, KHÔNG dùng Matrix4 nghiêng mặt phẳng). Nền là bàn gỗ
+/// trống `assets/images/table_wood_only.png` (BoxFit.cover, toàn bộ
+/// viewport); KHĂN là một LỚP RIÊNG trên mặt gỗ — tấm nhung phẳng
+/// TO (85% chiều rộng, 70% chiều cao bàn), màu theo Khăn trải bàn
+/// đã chọn (Nhung Tím / Lụa Vàng / Thảm Đen), đổi trong lúc trải
+/// bài hoặc trong Cài đặt là đổi ngay (cross-fade, không nhảy).
 /// Phụ kiện là các sprite ảnh thật RIÊNG BIỆT, đặt trên mép xa
-/// của bàn (lư trầm, thạch anh, quả cầu, nến), đổi được trực tiếp
-/// trong lúc trải bài hoặc trong Cài đặt và cập nhật ngay trên bàn.
-/// Các lá bài trải nằm TRÊN vùng khăn phẳng trong tranh. Phone/
-/// tablet giữ nền bàn + khăn + decor như cũ.
+/// của bàn, đổi được và cập nhật ngay. Các lá bài trải nằm TRÊN
+/// lớp khăn to đó. Lá đang đọc hiện TO ở giữa-phía trước của khăn,
+/// panel giải nghĩa ngay BÊN CẠNH nó; chạm vào lá đang hiện để
+/// thu xuống khay (có hoạt ảnh bay xuống khay). Mọi thao tác đều
+/// có hoạt ảnh di chuyển mượt (rút / chọn / thu / đổi khăn /
+/// đổi decor / đổi kiểu trải). Phone/tablet giữ bản đơn giản đã có.
 class NewReadingScreen extends StatefulWidget {
   const NewReadingScreen({Key? key}) : super(key: key);
 
@@ -45,6 +49,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   bool _showSelectionPanel = false; // Trạng thái mở khay chọn bài từ xấp bài
   TarotSuit _selectedSuit = TarotSuit.major; // Nhóm bài được chọn mặc định ban đầu là Ẩn Chính
   int? _lastDrawnId; // Lá vừa rút: bay từ xấp bài ra bàn (desktop) / bay lên (phone)
+  bool _isCollecting = false; // Đang chạy hoạt ảnh thu lá lớn xuống khay (desktop)
 
   // Mật độ gọn cho PC 4K: mọi thứ nhỏ lại, bàn chiếm toàn bộ khung hình.
   bool get _isDesktop => Responsive.isDesktop(context);
@@ -58,13 +63,35 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     return 180;
   }
 
+  // Lá đang đọc trên bàn PC hiện TO ở phía trước khăn: 175 rộng.
+  double get _desktopStageCardWidth => 175.0;
+
   double _meaningFontSize() => _isDesktop ? 14.0 : 15.0;
   double _cardNameFontSize() => _isDesktop ? 17.0 : (_isPhone ? 20.0 : 19.0);
 
   /// Thu lá đang đọc xuống khay: lá vẫn nằm trong drawnCards (khay),
   /// chỉ bỏ chọn để nó hiện lại trong khay dưới cùng.
   void _collectCard() {
-    setState(() => _selectedCardIndex = -1);
+    setState(() {
+      _selectedCardIndex = -1;
+      _lastDrawnId = null; // Không chạy lại hoạt ảnh rút khi lá hiện lại trong vùng trải.
+    });
+  }
+
+  /// Thu lá đang đọc xuống khay KÈM hoạt ảnh mượt (chỉ dùng trên
+  /// bàn PC): lá bay nhỏ dần xuống khay dưới trong 450ms rồi mới
+  /// bỏ chọn — giống hệt nút "Thu xuống khay" về kết quả.
+  void _collectCardAnimated() {
+    if (_isCollecting || _selectedCardIndex < 0) return;
+    setState(() => _isCollecting = true);
+    Future.delayed(const Duration(milliseconds: 450), () {
+      if (!mounted) return;
+      setState(() {
+        _isCollecting = false;
+        _selectedCardIndex = -1;
+        _lastDrawnId = null; // Không chạy lại hoạt ảnh rút khi lá hiện lại trong vùng trải.
+      });
+    });
   }
 
   @override
@@ -282,11 +309,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Bàn trải bài góc nhìn thứ nhất trên PC: xấp bài ở góc trên-trái,
-  /// phụ kiện (ảnh thật, đổi được) xếp đều trên mép xa của bàn,
-  /// các lá đã rút nằm TRÊN khăn nhung tím TRẢI PHẲNG của bức tranh
-  /// vẽ, panel giải nghĩa gọn ở bên phải (đứng thẳng, không nghiêng).
-  /// Khăn phẳng trong tranh nằm ở giữa, nên vùng trải được đẩy xuống
-  /// ~12% chiều cao bàn để lá bài nằm đúng trên khăn.
+  /// phụ kiện (ảnh thật, đổi được) xếp đều trên mép xa của bàn, các
+  /// lá đã rút KHÁC nằm thành hàng gọn TRÊN lớp khăn to, còn lá đang
+  /// đọc hiện TO ở giữa-phía trước của khăn (175 rộng) với panel
+  /// giải nghĩa ngay BÊN CẠNH nó. Chạm vào lá lớn để thu xuống khay.
   Widget _buildDesktopTable(List<TarotCardModel> drawnCards,
       ReadingProvider readingProvider, dynamic theme) {
     final activeCard = drawnCards.isNotEmpty &&
@@ -309,9 +335,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       builder: (context, candidateData, rejectedData) {
         return Stack(
           children: [
-            // Các lá đã rút nằm trên khăn phẳng của bức tranh vẽ (hoặc
-            // bàn trống). Đẩy vùng trải xuống ~12% chiều cao bàn để lá
-            // bài nằm đúng trên khăn nhung tím, thay vì ở chính giữa màn.
+            // Các lá đã rút KHÁC nằm trên lớp khăn to (lá đang đọc
+            // không nằm ở đây nữa — nó ở sân khấu phía trước).
+            // Đẩy vùng trải xuống ~12% chiều cao bàn để lá bài nằm
+            // đúng trên khăn, thay vì ở chính giữa màn.
             Positioned.fill(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -326,18 +353,33 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               ),
             ),
             // Phụ kiện: ảnh thật đặt riêng trên mép xa của bàn — một
-            // hàng xếp đều trên viền gỗ phía trên khăn, sau xấp bài,
-            // trước panel giải nghĩa. IgnorePointer nên không bao giờ
-            // chặn lá bài. Đổi trong dialog/Cài đặt cập nhật ngay
-            // (SettingsProvider notifyListeners -> build lại).
+            // hàng xếp đều trên viền gỗ phía trên khăn, sau xấp bài.
+            // IgnorePointer nên không bao giờ chặn lá bài. Đổi trong
+            // dialog/Cài đặt cập nhật ngay với hiệu ứng mờ dần
+            // (AnimatedSwitcher theo danh sách decor đã chọn).
             if (prefs.showDecor && prefs.decorItems.isNotEmpty)
               Positioned(
                 top: 2,
                 left: 96,
-                right: hasActive ? 336 : 12,
+                right: 12,
                 height: 64,
                 child: IgnorePointer(
-                  child: _buildDesktopDecorSprites(prefs.decorItems),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 0.96, end: 1.0)
+                              .animate(CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOut)),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _buildDesktopDecorSprites(prefs.decorItems),
+                  ),
                 ),
               ),
             // Xấp bài ở MỘT góc bàn: góc trên-trái, luôn hiện diện.
@@ -353,18 +395,128 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 theme: theme,
               ),
             ),
-            // Panel giải nghĩa gọn bên phải, chỉ khi đang đọc một lá.
+            // Sân khấu phía trước khăn: lá đang đọc TO (175 rộng) ở
+            // giữa-phía trước, panel giải nghĩa ngay BÊN CẠNH nó.
+            // Đổi lá chọn thì cả cụm mờ/trượt đổi mượt (AnimatedSwitcher
+            // theo id lá). Chạm vào lá lớn để thu xuống khay.
             if (activeCard != null)
               Positioned(
-                top: 4,
-                right: 4,
+                left: 0,
+                right: 0,
                 bottom: 4,
-                width: 320,
-                child: _buildDesktopMeaningPanel(activeCard, theme),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.0, 0.08),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                            parent: animation, curve: Curves.easeInOut)),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _buildDesktopStage(activeCard, theme),
+                ),
               ),
           ],
         );
       },
+    );
+  }
+
+  /// Sân khấu phía trước khăn (PC): lá đang đọc TO + gợi ý chạm để
+  /// thu + panel giải nghĩa ngay bên cạnh, tất cả căn giữa trên khăn.
+  Widget _buildDesktopStage(TarotCardModel activeCard, dynamic theme) {
+    final stageCardWidth = _desktopStageCardWidth;
+    final stageCardHeight = stageCardWidth * 8 / 5;
+    return Center(
+      key: ValueKey('stage-${activeCard.id}'),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Lá lớn + gợi ý chạm để thu xuống khay.
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDesktopStageCard(activeCard, theme, stageCardWidth),
+              const SizedBox(height: 6),
+              const Text(
+                'Chạm vào lá bài để thu xuống khay',
+                style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          // Panel giải nghĩa ngay bên cạnh lá lớn, cao bằng lá + gợi ý.
+          SizedBox(
+            width: 320,
+            height: stageCardHeight + 24,
+            child: _buildDesktopMeaningPanel(activeCard, theme),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Lá lớn trên sân khấu PC: 175 rộng, viền vàng + glow. Lá vừa rút
+  /// bay từ xấp bài (góc trên-trái) ra vị trí này trong 450ms
+  /// (easeOutBack, giống trước). Đang thu thì bay nhỏ dần xuống khay
+  /// dưới trong 450ms (easeInOut). Chạm vào lá để thu xuống khay.
+  Widget _buildDesktopStageCard(
+      TarotCardModel activeCard, dynamic theme, double width) {
+    final isNew = activeCard.id == _lastDrawnId;
+    final tile = GestureDetector(
+      onTap: _collectCardAnimated,
+      child: SizedBox(
+        width: width,
+        height: width * 8 / 5,
+        child: _cardFrame(activeCard, theme, width),
+      ),
+    );
+    if (_isCollecting) {
+      // Thu xuống khay: bay xuống + nhỏ dần + mờ dần về phía khay.
+      return TweenAnimationBuilder<double>(
+        key: ValueKey('collect-${activeCard.id}'),
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+        builder: (context, v, child) {
+          return Opacity(
+            opacity: 1.0 - v,
+            child: Transform.translate(
+              offset: Offset(0, 280 * v),
+              child: Transform.scale(
+                scale: 1.0 - 0.65 * v,
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: tile,
+      );
+    }
+    if (!isNew) return tile;
+    // Hoạt ảnh rút bài: bay từ xấp bài ra sân khấu, scale từ 0.6 lên 1.
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('draw-${activeCard.id}'),
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutBack,
+      builder: (context, v, child) {
+        return Transform.translate(
+          offset: Offset(-160 * (1 - v), -120 * (1 - v)),
+          child: Transform.scale(scale: 0.6 + 0.4 * v, child: child),
+        );
+      },
+      child: tile,
     );
   }
 
@@ -373,7 +525,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// nền đen của ảnh hòa vào gỗ tối của bàn. Xếp đều nhau, không
   /// chồng lên lá bài hay xấp bài.
   Widget _buildDesktopDecorSprites(List<String> items) {
+    // Key theo danh sách món đã chọn để AnimatedSwitcher ở trên
+    // nhận ra khi decor đổi và chạy hiệu ứng mờ/scale.
     return Row(
+      key: ValueKey(items.join(',')),
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -487,31 +642,38 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Các lá đã rút nằm trên khăn phẳng. 1 hàng: một hàng ngang duy
-  /// nhất, căn giữa trên khăn, các lá cùng một cỡ, cùng một đường
-  /// chân (căn đáy), khoảng cách đều, chồng nhẹ lên nhau 8px như
-  /// xòe bài thật; nhiều lá thì cuộn ngang. Nhiều hàng: lưới căn
-  /// giữa, tối đa 5 lá mỗi hàng, khoảng cách đều 12px, các hàng căn
-  /// giữa, cuộn dọc. Lá đang chọn (active) lên phía trước, to hơn
-  /// (150 rộng, cao 240) với viền vàng phát sáng, các lá còn lại
-  /// 104 rộng, tất cả cùng đường chân. Lá vừa rút bay từ xấp bài
-  /// (góc trên-trái) ra vị trí của nó trên bàn.
+  /// Các lá đã rút KHÁC (không tính lá đang đọc — lá đó ở sân khấu
+  /// phía trước) nằm trên lớp khăn to. 1 hàng: một hàng ngang duy
+  /// nhất, căn giữa trên khăn, các lá cùng một cỡ (104 rộng), cùng
+  /// một đường chân (căn đáy), khoảng cách đều, chồng nhẹ lên nhau
+  /// 8px như xòe bài thật; nhiều lá thì cuộn ngang. Nhiều hàng: lưới
+  /// căn giữa, tối đa 5 lá mỗi hàng, khoảng cách đều 12px, các hàng
+  /// căn giữa, cuộn dọc. Đổi kiểu trải thì cả vùng trải mờ đổi mượt
+  /// (AnimatedSwitcher theo kiểu trải). Chừa khoảng trống phía dưới
+  /// cho sân khấu lá lớn + panel khi đang đọc một lá. Lá vừa rút bay
+  /// từ xấp bài (góc trên-trái) ra vị trí của nó trên bàn.
   Widget _buildSpread(List<TarotCardModel> drawnCards, dynamic theme) {
     final settings = context.read<SettingsProvider>();
     final isSingle = settings.userPrefs.spreadMode == 'single';
-    // Chừa chỗ cho panel giải nghĩa bên phải khi đang đọc một lá.
+    // Lá đang đọc ở sân khấu phía trước, không nằm trong vùng trải này.
+    final others = [
+      for (var i = 0; i < drawnCards.length; i++)
+        if (i != _selectedCardIndex) i,
+    ];
+    if (others.isEmpty) return const SizedBox.shrink();
+    // Chừa chỗ phía dưới cho sân khấu (lá lớn 175 + gợi ý + panel)
+    // khi đang đọc một lá, để vùng trải không bị sân khấu che.
     final hasActive = _selectedCardIndex >= 0 &&
         _selectedCardIndex < drawnCards.length;
-    final rightReserve = hasActive ? 336.0 : 16.0;
+    final bottomReserve = hasActive ? 320.0 : 8.0;
 
     Widget item(int index) {
       final card = drawnCards[index];
-      final isSelected = index == _selectedCardIndex;
       final isNew = card.id == _lastDrawnId;
-      // Lá đang chọn to hơn, lên phía trước; lá thường 104 rộng.
-      final width = isSelected ? 150.0 : 104.0;
-      Widget tile =
-          _buildSpreadCard(card, index, isSelected, theme, width);
+      // Các lá trong vùng trải đều 104 rộng (lá đang đọc to 175 ở
+      // sân khấu phía trước, không ở đây).
+      const width = 104.0;
+      Widget tile = _buildSpreadCard(card, index, false, theme, width);
       if (!isNew) return tile;
       // Hoạt ảnh rút bài: bay từ xấp bài ra bàn, scale từ 0.6 lên 1.
       return TweenAnimationBuilder<double>(
@@ -529,49 +691,66 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       );
     }
 
-    if (isSingle) {
-      // Một hàng ngang duy nhất, căn giữa trên khăn: nội dung hẹp
-      // hơn vùng trải thì Row căn giữa; rộng hơn thì cuộn ngang.
-      // Các lá cùng đường chân (căn đáy), chồng nhẹ 8px.
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final availWidth =
-              constraints.maxWidth - 16 - rightReserve;
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(top: 8, bottom: 8),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: availWidth),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  for (var i = 0; i < drawnCards.length; i++)
-                    // Chồng nhẹ 8px lên lá trước (padding âm), như xòe bài thật.
-                    Padding(
-                      padding: EdgeInsets.only(left: i == 0 ? 0 : -8),
-                      child: item(i),
-                    ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    }
+    // Đổi kiểu trải: mờ đổi mượt giữa 1 hàng và nhiều hàng.
+    final spread = isSingle ? _buildSpreadSingleRow(others, item) : _buildSpreadMultiRow(others, item, bottomReserve);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (child, animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      child: KeyedSubtree(
+        key: ValueKey('spread-$isSingle-$hasActive'),
+        child: spread,
+      ),
+    );
+  }
 
-    // Nhiều hàng: chia thành từng hàng tối đa 5 lá, mỗi hàng là một
-    // Row căn giữa, các lá cùng đường chân; các hàng cách đều 12px.
+  /// Vùng trải 1 hàng: một hàng ngang duy nhất, căn giữa trên khăn,
+  /// các lá cùng đường chân (căn đáy), chồng nhẹ 8px; rộng hơn vùng
+  /// trải thì cuộn ngang.
+  Widget _buildSpreadSingleRow(List<int> others, Widget Function(int) item) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availWidth = constraints.maxWidth - 16 - 16;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.only(top: 8, bottom: 8),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: availWidth),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (var j = 0; j < others.length; j++)
+                  // Chồng nhẹ 8px lên lá trước (padding âm), như xòe bài thật.
+                  Padding(
+                    padding: EdgeInsets.only(left: j == 0 ? 0 : -8),
+                    child: item(others[j]),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Vùng trải nhiều hàng: chia thành từng hàng tối đa 5 lá, mỗi hàng
+  /// là một Row căn giữa, các lá cùng đường chân; các hàng cách đều
+  /// 12px; chừa khoảng trống phía dưới cho sân khấu lá lớn.
+  Widget _buildSpreadMultiRow(
+      List<int> others, Widget Function(int) item, double bottomReserve) {
     const maxPerRow = 5;
     final rows = <List<int>>[];
-    for (var start = 0; start < drawnCards.length; start += maxPerRow) {
-      final end = (start + maxPerRow).clamp(0, drawnCards.length);
+    for (var start = 0; start < others.length; start += maxPerRow) {
+      final end = (start + maxPerRow).clamp(0, others.length);
       rows.add([
-        for (var i = start; i < end; i++) i,
+        for (var i = start; i < end; i++) others[i],
       ]);
     }
     return SingleChildScrollView(
-      padding: EdgeInsets.only(left: 16, right: rightReserve, top: 8, bottom: 8),
+      padding:
+          EdgeInsets.only(left: 16, right: 16, top: 8, bottom: bottomReserve),
       child: Column(
         children: [
           for (var r = 0; r < rows.length; r++)
@@ -583,8 +762,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 children: [
                   for (var j = 0; j < rows[r].length; j++)
                     Padding(
-                      padding: EdgeInsets.only(
-                          left: j == 0 ? 0 : 12),
+                      padding: EdgeInsets.only(left: j == 0 ? 0 : 12),
                       child: item(rows[r][j]),
                     ),
                 ],
@@ -678,7 +856,9 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             SizedBox(
               height: 36,
               child: OutlinedButton.icon(
-                onPressed: _collectCard,
+                // Thu kèm hoạt ảnh bay xuống khay (xem _collectCardAnimated);
+                // chạm trực tiếp vào lá lớn cũng thu giống hệt.
+                onPressed: _collectCardAnimated,
                 icon: const Icon(Icons.archive, size: 16),
                 label: const Text('Thu xuống khay',
                     style: TextStyle(fontSize: 13)),
@@ -724,15 +904,16 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // PC: khăn trong tranh đã trải phẳng, phụ kiện là
-                  // các sprite ảnh thật đặt riêng trên mép xa của bàn
-                  // (xem _buildDesktopDecorSprites) — đổi món decor ở
-                  // đây cập nhật ngay trên bàn PC, không cần vẽ lại tranh.
+                  // PC: nền là bàn gỗ trống, khăn là một lớp riêng
+                  // TO và phẳng trên mặt gỗ — đổi màu khăn ở đây sẽ
+                  // đổi ngay trên bàn (cross-fade); phụ kiện là các
+                  // sprite ảnh thật đặt riêng trên mép xa của bàn,
+                  // đổi ở đây cũng hiện ngay trên bàn.
                   if (Responsive.isDesktop(context))
                     const Padding(
                       padding: EdgeInsets.only(bottom: 12),
                       child: Text(
-                        'Bản PC dùng tranh bàn khăn phẳng: phụ kiện là ảnh thật đặt riêng trên mép bàn, đổi ở đây sẽ hiện ngay trên bàn.',
+                        'Bản PC dùng bàn gỗ trống: khăn là lớp riêng to và phẳng trên mặt gỗ — đổi màu khăn ở đây sẽ đổi ngay trên bàn. Phụ kiện là ảnh thật đặt riêng trên mép bàn, đổi ở đây sẽ hiện ngay.',
                         style: TextStyle(
                             color: Colors.white70, fontSize: 12, height: 1.5),
                       ),
@@ -1389,6 +1570,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           else if (data is int) {
             setState(() {
               _selectedCardIndex = -1;
+              _lastDrawnId = null;
             });
           }
         },
@@ -1484,24 +1666,27 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Nền bàn — PC: bức tranh vẽ 3D góc nhìn thứ nhất
-  /// (`table_3d_flat.png`, BoxFit.cover, chiếm toàn bộ viewport):
-  /// bàn gỗ chạm khắc + khăn nhung tím TRẢI PHẲNG, mịn, không nhăn,
-  /// ở giữa — trong tranh KHÔNG có phụ kiện nào. Phụ kiện là các
-  /// sprite ảnh thật riêng biệt trên mép xa của bàn (xem
-  /// _buildDesktopDecorSprites trong _buildDesktopTable), đổi được
-  /// và cập nhật ngay. KHÔNG còn lớp khăn màu phẳng, KHÔNG còn lớp
-  /// phủ tối toàn màn — chỉ một vệt tối nhẹ sát mép dưới (sau khay
-  /// bài). Tắt "Hiện mặt bàn" thì tranh tắt, nền đen. Phone/tablet
-  /// giữ như cũ: ảnh bàn -> khăn màu phẳng -> scrim tối -> nội dung
-  /// -> hàng icon decor trên cùng.
+  /// (`table_wood_only.png`, BoxFit.cover, chiếm toàn bộ viewport):
+  /// bàn gỗ chạm khắc TRỐNG, không khăn, không phụ kiện trong tranh.
+  /// KHĂN là một LỚP RIÊNG trên mặt gỗ: tấm nhung phẳng TO (85%
+  /// chiều rộng, 70% chiều cao bàn), màu theo Khăn trải bàn đã chọn
+  /// (Nhung Tím / Lụa Vàng / Thảm Đen), đổi trong dialog hoặc Cài
+  /// đặt thì cross-fade ngay (AnimatedSwitcher, không nhảy). Các lá
+  /// bài trải nằm TRÊN lớp khăn to này. Phụ kiện là các sprite ảnh
+  /// thật riêng biệt trên mép xa của bàn (xem _buildDesktopDecorSprites
+  /// trong _buildDesktopTable), đổi được và cập nhật ngay. KHÔNG còn
+  /// lớp khăn màu phẳng cũ, KHÔNG còn lớp phủ tối toàn màn — chỉ một
+  /// vệt tối nhẹ sát mép dưới (sau khay bài). Tắt "Hiện mặt bàn" thì
+  /// tranh tắt, nền đen. Tắt "Hiện khăn" thì lớp khăn ẩn, chỉ còn
+  /// gỗ trống. Phone/tablet giữ như cũ: ảnh bàn -> khăn màu phẳng
+  /// -> scrim tối -> nội dung -> hàng icon decor trên cùng.
   Widget _buildTableBackground(UserPreferencesModel prefs, Widget child) {
-    // PC: bức tranh vẽ 3D khăn phẳng là toàn bộ mặt bàn — khăn
-    // nhung tím trải phẳng đã vẽ sẵn trong tranh, phụ kiện là
-    // sprite riêng, các kiểu bàn/khăn cũ chỉ áp dụng cho phone/tablet.
+    // PC: nền là bàn gỗ trống — khăn là lớp riêng phía trên, màu
+    // theo clothStyle; các kiểu bàn/khăn cũ chỉ áp dụng phone/tablet.
     final isDesktop = Responsive.isDesktop(context);
     String tableImage;
     if (isDesktop) {
-      tableImage = 'assets/images/table_3d_flat.png';
+      tableImage = 'assets/images/table_wood_only.png';
     } else if (prefs.tableStyle == 'Đá Cổ') {
       tableImage = 'assets/images/table_stone_texture.jpg';
     } else if (prefs.tableStyle == 'Vũ Trụ') {
@@ -1573,6 +1758,37 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               ),
             ),
 
+          // LỚP KHĂN RIÊNG (chỉ PC): tấm nhung phẳng TO nằm trên mặt
+          // gỗ trống — 85% chiều rộng, 70% chiều cao bàn, căn giữa,
+          // gradient dọc nhẹ + viền vàng + bóng đổ mềm để đọc là
+          // nhung phẳng đặt trên gỗ. Màu theo clothStyle đã chọn;
+          // đổi khăn thì cross-fade + scale nhẹ (AnimatedSwitcher),
+          // không nhảy. Tắt "Hiện khăn" thì lớp này ẩn.
+          if (prefs.showCloth && isDesktop)
+            Align(
+              alignment: Alignment.center,
+              child: FractionallySizedBox(
+                widthFactor: 0.85,
+                heightFactor: 0.70,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(
+                        scale: Tween<double>(begin: 0.985, end: 1.0)
+                            .animate(CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOut)),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _buildDesktopCloth(prefs.clothStyle),
+                ),
+              ),
+            ),
+
           // Lớp phủ tối: chữ trắng đọc được trên mọi ảnh nền.
           // PC: KHÔNG làm tối cả bức tranh — chỉ một vệt tối nhẹ ở
           // sát mép dưới (phía sau khay bài). Tranh giữ nguyên độ
@@ -1623,6 +1839,61 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         ],
       ),
     );
+  }
+
+  /// Tấm khăn riêng trên bàn PC: nhung phẳng, gradient dọc nhẹ,
+  /// viền mỏng + bóng đổ mềm. Key theo kiểu khăn để AnimatedSwitcher
+  /// ở trên nhận ra khi đổi khăn và chạy cross-fade.
+  Widget _buildDesktopCloth(String clothStyle) {
+    final palette = _clothPalette(clothStyle);
+    return Container(
+      key: ValueKey('cloth-$clothStyle'),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [palette.top, palette.bottom],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.border, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.7),
+            blurRadius: 24,
+            spreadRadius: 2,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Bảng màu khăn theo kiểu đã chọn (màu đầu / màu cuối gradient /
+  /// màu viền). Nhung Tím = tím đậm, Lụa Vàng = vàng gold,
+  /// Thảm Đen = gần đen.
+  ({Color top, Color bottom, Color border}) _clothPalette(
+      String clothStyle) {
+    switch (clothStyle) {
+      case 'Lụa Vàng':
+        return (
+          top: const Color(0xFF8A6D1F),
+          bottom: const Color(0xFF5C4710),
+          border: const Color(0xFFD4AF37),
+        );
+      case 'Thảm Đen':
+        return (
+          top: const Color(0xFF262626),
+          bottom: const Color(0xFF0E0E0E),
+          border: const Color(0xFF5A5A5A),
+        );
+      case 'Nhung Tím':
+      default:
+        return (
+          top: const Color(0xFF4A1E63),
+          bottom: const Color(0xFF2E173C),
+          border: const Color(0xFF9D4EDD),
+        );
+    }
   }
 
   /// Các biểu tượng trang trí: chỉ trả về widget, vị trí do hàng
