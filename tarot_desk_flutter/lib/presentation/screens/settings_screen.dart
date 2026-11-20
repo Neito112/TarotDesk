@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/models/user_preferences.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 
-/// Màn hình Cài đặt giao diện, Theme, Bàn bói bài & Đồ trang trí (Cập nhật bật/tắt 3 lớp)
+/// Màn hình Cài đặt giao diện, Theme, Bàn bói bài & Đồ trang trí.
 /// Bố cục: mobile-first Android (1 cột), iPad (2 cột cho Theme + Hiệu ứng),
-/// PC (nội dung căn giữa, rộng tối đa 1080). Mọi toggle trong SettingsProvider
-/// đều có mặt trên màn hình, không còn toggle "mồ côi".
+/// PC (nội dung căn giữa, rộng tối đa 1080).
+///
+/// Mọi trường trong [UserPreferencesModel] đều có control ở đây và
+/// đều được ít nhất một màn hình đọc — không còn toggle "mồ côi".
+/// Tất cả cấu hình bàn (chất liệu, khăn, decor, kiểu trải, bật/tắt
+/// các lớp) nằm trong MỘT mục "Cấu Hình Bàn Trải Bài Tarot".
+/// Các danh sách lựa chọn dùng chung hằng số trong
+/// [UserPreferencesModel] (tableStyles / clothStyles / decorOptions)
+/// để không lệch với dialog đổi bàn trong màn Trải bài.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
@@ -44,6 +52,13 @@ class SettingsScreen extends StatelessWidget {
             fontSize: 13));
   }
 
+  Widget _hintText(AppThemeData theme, String text) {
+    return Text(
+      text,
+      style: TextStyle(color: theme.secondaryTextColor, fontSize: 12),
+    );
+  }
+
   Widget _toggleTile({
     required AppThemeData theme,
     required String title,
@@ -70,7 +85,7 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(theme, '🎨 Chọn Chủ Đề Giao Diện (Theme)'),
+          _sectionTitle(theme, 'Chọn Chủ Đề Giao Diện (Theme)'),
           const SizedBox(height: 12),
           ...AppThemeData.availableThemes.values.map((t) {
             final isSelected = settings.userPrefs.themeId == t.id;
@@ -107,7 +122,7 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(theme, '✨ Hiệu Ứng Giao Diện'),
+          _sectionTitle(theme, 'Hiệu Ứng Giao Diện'),
           const SizedBox(height: 8),
           _toggleTile(
             theme: theme,
@@ -137,6 +152,10 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  /// MỘT mục duy nhất cho toàn bộ bàn trải bài: chất liệu mặt bàn,
+  /// khăn trải bàn, đồ trang trí, kiểu trải bài, và bật/tắt 3 lớp
+  /// (mặt bàn / khăn / decor). Mọi control ở đây đều gọi setter
+  /// của SettingsProvider nên màn Trải bài cập nhật ngay khi đổi.
   Widget _tableSection(
       BuildContext context, SettingsProvider settings, AppThemeData theme) {
     return GlassPanel(
@@ -145,7 +164,7 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(theme, '🔮 Cấu Hình Bàn Trải Bài Tarot'),
+          _sectionTitle(theme, 'Cấu Hình Bàn Trải Bài Tarot'),
           const SizedBox(height: 12),
           _fieldLabel(theme, 'Chất liệu mặt bàn:'),
           const SizedBox(height: 6),
@@ -153,7 +172,7 @@ class SettingsScreen extends StatelessWidget {
             dropdownColor: theme.cardBackgroundColor,
             isExpanded: true,
             value: settings.userPrefs.tableStyle,
-            items: ['Gỗ Sồi', 'Đá Cổ', 'Vũ Trụ'].map((style) {
+            items: UserPreferencesModel.tableStyles.map((style) {
               return DropdownMenuItem<String>(
                 value: style,
                 child: Text(style,
@@ -165,6 +184,9 @@ class SettingsScreen extends StatelessWidget {
             },
             decoration: _fieldDecoration(theme),
           ),
+          const SizedBox(height: 4),
+          _hintText(theme,
+              'Áp dụng trên điện thoại / máy tính bảng. Bản PC dùng tranh bàn gỗ trống, chất liệu không đổi nền PC.'),
           const SizedBox(height: 16),
           _fieldLabel(theme, 'Khăn trải bàn:'),
           const SizedBox(height: 6),
@@ -172,7 +194,7 @@ class SettingsScreen extends StatelessWidget {
             dropdownColor: theme.cardBackgroundColor,
             isExpanded: true,
             value: settings.userPrefs.clothStyle,
-            items: ['Nhung Tím', 'Lụa Vàng', 'Thảm Đen'].map((style) {
+            items: UserPreferencesModel.clothStyles.map((style) {
               return DropdownMenuItem<String>(
                 value: style,
                 child: Text(style,
@@ -184,14 +206,16 @@ class SettingsScreen extends StatelessWidget {
             },
             decoration: _fieldDecoration(theme),
           ),
+          const SizedBox(height: 4),
+          _hintText(theme,
+              'Đổi ngay trên bàn: khăn là lớp riêng to và phẳng trên mặt gỗ, chuyển màu mượt.'),
           const SizedBox(height: 16),
           _fieldLabel(theme, 'Đồ trang trí (Chọn tối đa 3 món):'),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
             runSpacing: 4,
-            children: ['Đá Thạch Anh', 'Quả Cầu', 'Hương Trầm', 'Nến Đen', 'Lá Khô']
-                .map((item) {
+            children: UserPreferencesModel.decorOptions.map((item) {
               final isSelected =
                   settings.userPrefs.decorItems.contains(item);
               return FilterChip(
@@ -208,7 +232,8 @@ class SettingsScreen extends StatelessWidget {
                   final current =
                       List<String>.from(settings.userPrefs.decorItems);
                   if (selected) {
-                    if (current.length < 3) {
+                    if (current.length <
+                        UserPreferencesModel.maxDecorItems) {
                       current.add(item);
                       settings.setDecorItems(current);
                     } else {
@@ -239,9 +264,35 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            'Áp dụng ngay trong màn Trải bài (PC: các lá nằm trên bàn).',
-            style: TextStyle(color: theme.secondaryTextColor, fontSize: 12),
+          _hintText(theme,
+              'Áp dụng ngay trong màn Trải bài (PC: các lá nằm trên bàn).'),
+          const SizedBox(height: 16),
+          const Divider(color: Colors.white12),
+          _fieldLabel(theme, 'Hiển thị các lớp trên bàn:'),
+          const SizedBox(height: 4),
+          _toggleTile(
+            theme: theme,
+            title: 'Hiển thị lớp Mặt Bàn',
+            subtitle: 'Bật/Tắt lớp nền chất liệu bàn bên dưới',
+            value: settings.userPrefs.showTable,
+            onChanged: (val) => settings.toggleTable(val),
+          ),
+          const Divider(color: Colors.white12),
+          _toggleTile(
+            theme: theme,
+            title: 'Hiển thị lớp Khăn Trải Bàn',
+            subtitle: 'Bật/Tắt tấm khăn phẳng đặt trên bàn bói',
+            value: settings.userPrefs.showCloth,
+            onChanged: (val) => settings.toggleCloth(val),
+          ),
+          const Divider(color: Colors.white12),
+          _toggleTile(
+            theme: theme,
+            title: 'Hiển thị lớp Đồ Decor',
+            subtitle:
+                'Bật/Tắt các vật phẩm thạch anh, quả cầu, trầm hương',
+            value: settings.userPrefs.showDecor,
+            onChanged: (val) => settings.toggleDecor(val),
           ),
         ],
       ),
@@ -263,44 +314,6 @@ class SettingsScreen extends StatelessWidget {
       onSelected: (selected) {
         if (selected) settings.setSpreadMode(value);
       },
-    );
-  }
-
-  Widget _layersSection(SettingsProvider settings, AppThemeData theme) {
-    return GlassPanel(
-      backgroundColor: theme.cardBackgroundColor,
-      borderColor: theme.glassBorderColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionTitle(theme, '🌟 Bật/Tắt Các Lớp Nền Bàn Bói'),
-          const SizedBox(height: 8),
-          _toggleTile(
-            theme: theme,
-            title: 'Hiển thị lớp Mặt Bàn',
-            subtitle: 'Bật/Tắt lớp nền chất liệu bàn bên dưới',
-            value: settings.userPrefs.showTable,
-            onChanged: (val) => settings.toggleTable(val),
-          ),
-          const Divider(color: Colors.white12),
-          _toggleTile(
-            theme: theme,
-            title: 'Hiển thị lớp Khăn Trải Bàn',
-            subtitle: 'Bật/Tắt tấm khăn thảm đặt trên bàn bói',
-            value: settings.userPrefs.showCloth,
-            onChanged: (val) => settings.toggleCloth(val),
-          ),
-          const Divider(color: Colors.white12),
-          _toggleTile(
-            theme: theme,
-            title: 'Hiển thị lớp Đồ Decor',
-            subtitle:
-                'Bật/Tắt các vật phẩm thạch anh, quả cầu, trầm hương',
-            value: settings.userPrefs.showDecor,
-            onChanged: (val) => settings.toggleDecor(val),
-          ),
-        ],
-      ),
     );
   }
 
@@ -343,8 +356,6 @@ class SettingsScreen extends StatelessWidget {
                 ],
                 const SizedBox(height: _sectionGap),
                 _tableSection(context, settings, theme),
-                const SizedBox(height: _sectionGap),
-                _layersSection(settings, theme),
               ],
             ),
           ),
