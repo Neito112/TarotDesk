@@ -9,10 +9,13 @@ import '../widgets/glass_panel.dart';
 import '../widgets/tarot_card_image.dart';
 
 /// Màn hình xem chi tiết lịch sử bốc bài cũ.
-/// Điện thoại (Android, chính): lá bài lớn 5:8 ở trên, panel ý nghĩa ở dưới,
-/// khay lịch sử ở dưới cùng.
-/// iPad / PC: lá bài + ý nghĩa đặt cạnh nhau, nội dung căn giữa theo
-/// Responsive.maxContentWidth.
+/// Cùng ngôn ngữ bố cục với sân khấu trong NewReading: lá bài lớn 5:8
+/// với panel giải nghĩa ngay bên cạnh trên tablet/PC, khay lịch sử ở
+/// dưới cùng dùng cùng cỡ lá khay (~96 rộng) để lá bài nhìn giống nhau
+/// ở mọi nơi.
+/// Điện thoại (Android, chính): lá bài lớn 5:8 ở trên, panel ý nghĩa
+/// ở dưới, khay lịch sử ở dưới cùng.
+/// PC 4K gọn: lá bài ~190 rộng, chữ giải nghĩa 14, tên lá 18.
 class ReadingDetailScreen extends StatefulWidget {
   final TarotReadingModel reading;
 
@@ -45,22 +48,32 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
     }
   }
 
+  // Cùng cỡ sân khấu trong NewReading (lá lớn 175) nhưng gọn cho PC 4K:
+  // desktop 190, tablet 200, phone 180 — đều 5:8.
   double _cardWidth(BuildContext context) {
-    if (Responsive.isDesktop(context)) return 260;
-    if (Responsive.isTablet(context)) return 240;
-    return 200;
+    if (Responsive.isDesktop(context)) return 190;
+    if (Responsive.isTablet(context)) return 200;
+    return 180;
   }
+
+  // Lá khay dùng cùng cỡ với khay trong NewReading: ~96 rộng ở mọi nơi.
+  static const double _trayCardWidth = 96.0;
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final theme = settings.currentThemeData;
     final isWide = !Responsive.isPhone(context);
+    final isDesktop = Responsive.isDesktop(context);
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: Text(widget.reading.name),
+        toolbarHeight: isDesktop ? 44 : null,
+        title: Text(
+          widget.reading.name,
+          style: TextStyle(fontSize: isDesktop ? 15 : 18),
+        ),
         backgroundColor: Colors.transparent,
         foregroundColor: theme.primaryColor,
         elevation: 0,
@@ -107,11 +120,18 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
 
   Widget _buildActiveCardDetail(TarotCardModel card, dynamic theme) {
     final isWide = !Responsive.isPhone(context);
-    final meaningFontSize = isWide ? 16.0 : 15.0;
-    final nameFontSize = isWide ? 22.0 : 20.0;
+    final isDesktop = Responsive.isDesktop(context);
+    // PC 4K gọn: giải nghĩa 14, tên lá 18; tablet 15/17; phone 15/16.
+    final meaningFontSize = isDesktop ? 14.0 : 15.0;
+    final nameFontSize = isDesktop ? 18.0 : (isWide ? 17.0 : 16.0);
+    final cardWidth = _cardWidth(context);
+    final cardHeight = cardWidth * 8 / 5;
 
-    final cardWidget = _buildCard(card, theme);
-    final meaningWidget = Expanded(
+    final cardWidget = _buildCard(card, theme, cardWidth);
+    // Panel giải nghĩa ngay bên cạnh lá lớn, cao bằng lá — cùng ngôn ngữ
+    // với panel bên cạnh sân khấu trong NewReading.
+    final meaningWidget = SizedBox(
+      height: cardHeight,
       child: GlassPanel(
         backgroundColor: theme.cardBackgroundColor,
         borderColor: theme.glassBorderColor,
@@ -131,73 +151,94 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
       ),
     );
 
-    if (!isWide) {
-      return Column(
-        children: [
-          cardWidget,
-          const SizedBox(height: 12),
-          Text(
-            card.name,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: theme.textColor,
-              fontSize: nameFontSize,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          meaningWidget,
-        ],
-      );
-    }
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            cardWidget,
-            const SizedBox(height: 12),
-            SizedBox(
-              width: _cardWidth(context),
-              child: Text(
-                card.name,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: theme.textColor,
-                  fontSize: nameFontSize,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
+    // Đổi lá: sân khấu + panel chuyển cảnh mượt (fade + trượt nhẹ),
+    // cùng kiểu AnimatedSwitcher với sân khấu trong NewReading.
+    final stage = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.04, 0),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
         ),
-        const SizedBox(width: 24),
-        meaningWidget,
-      ],
+      ),
+      child: KeyedSubtree(
+        key: ValueKey('detail-${card.id}'),
+        child: isWide
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      cardWidget,
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: cardWidth,
+                        child: Text(
+                          card.name,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: theme.textColor,
+                            fontSize: nameFontSize,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(child: meaningWidget),
+                ],
+              )
+            : Column(
+                children: [
+                  cardWidget,
+                  const SizedBox(height: 12),
+                  Text(
+                    card.name,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: theme.textColor,
+                      fontSize: nameFontSize,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(child: meaningWidget),
+                ],
+              ),
+      ),
     );
+
+    return stage;
   }
 
-  Widget _buildCard(TarotCardModel card, dynamic theme) {
+  /// Khung lá bài: viền vàng + glow — cùng ngôn ngữ với _cardFrame
+  /// trong NewReading.
+  Widget _buildCard(TarotCardModel card, dynamic theme, double width) {
     return Center(
       child: SizedBox(
-        width: _cardWidth(context),
+        width: width,
         child: AspectRatio(
           aspectRatio: 5 / 8,
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: theme.primaryColor, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: theme.primaryColor.withOpacity(0.5),
+                  color: theme.primaryColor.withOpacity(0.6),
                   blurRadius: 16,
                   spreadRadius: 2,
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
               child: TarotCardImage(card: card, fit: BoxFit.cover),
             ),
           ),
@@ -206,10 +247,12 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
     );
   }
 
+  /// Khay lịch sử ở dưới cùng: cùng cỡ lá khay với NewReading
+  /// (~96 rộng, 5:8), chạm vào lá trong khay để xem lá đó.
   Widget _buildHistoryTray(List<TarotCardModel> cards, dynamic theme) {
-    final isWide = !Responsive.isPhone(context);
-    final itemWidth = isWide ? 84.0 : 76.0;
-    final trayHeight = isWide ? 128.0 : 116.0;
+    final itemWidth = _trayCardWidth;
+    // 96 rộng -> cao 153.6, cộng tên lá ~26 và padding -> khay ~186.
+    final trayHeight = itemWidth * 8 / 5 + 32;
 
     return Container(
       height: trayHeight,
