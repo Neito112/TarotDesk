@@ -21,9 +21,12 @@ import 'settings_screen.dart';
 /// - Điện thoại (<600dp): 1 cột, lá bài hero lớn ở trên, 1 CTA chính,
 ///   2 action phụ, thẻ bộ bài, footer lịch sử gọn.
 /// - iPad / tablet (600–1024dp): 2 cột — hero bên trái, bộ bài + CTA +
-///   action phụ bên phải.
-/// - PC / desktop (>1024dp): như tablet nhưng căn giữa, rộng tối đa 1080dp,
-///   hero lớn hơn.
+///   action phụ bên phải, căn giữa tối đa 720dp.
+/// - PC / desktop (>1024dp): KHÔNG còn cột 1080 căn giữa. Dùng trọn chiều
+///   rộng màn hình: hero gọn bên trái, bộ bài + CTA + action phụ bên phải,
+///   nền bàn gỗ (cùng thế giới bàn trải bài góc nhìn thứ nhất), chữ và lá
+///   bài thu nhỏ cho gọn ở 4K. Hero desktop 160 rộng (bằng cỡ lá bài trên
+///   bàn), tiêu đề 24, CTA cao 48.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -74,56 +77,148 @@ class _HomeScreenState extends State<HomeScreen> {
     final deckProvider = context.watch<DeckProvider>();
     final readingProvider = context.watch<ReadingProvider>();
     final dailyCard = _dailyCard(deckProvider.currentDeckCards);
+    final isDesktop = Responsive.isDesktop(context);
 
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/tarot_main_background.jpg'),
+            // Desktop: nền bàn gỗ trơn — cùng thế giới bàn trải bài góc
+            // nhìn thứ nhất với màn Trải bài mới. Điện thoại/tablet giữ
+            // nền sao như cũ.
+            image: AssetImage(isDesktop
+                ? 'assets/images/table_wood_only.png'
+                : 'assets/images/tarot_main_background.jpg'),
             fit: BoxFit.cover,
           ),
         ),
-        child: SmokeParticleEffect(
-          enableSmoke: settings.userPrefs.enableSmokeParticles,
-          child: SafeArea(
-            child: ResponsiveCenter(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 12.0,
-              ),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeader(context, theme, settings),
-                    const SizedBox(height: 20),
-                    if (Responsive.isPhone(context))
-                      _buildPhoneLayout(
-                        context,
-                        theme,
-                        settings,
-                        deckProvider,
-                        dailyCard,
-                      )
-                    else
-                      _buildWideLayout(
-                        context,
-                        theme,
-                        settings,
-                        deckProvider,
-                        dailyCard,
-                      ),
-                    const SizedBox(height: 16),
-                    _buildHistoryFooter(context, theme, readingProvider),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
+        child: Container(
+          // Lớp tối để chữ đọc được trên nền gỗ; đậm hơn ở trên cùng.
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                theme.backgroundColor.withOpacity(isDesktop ? 0.82 : 0.55),
+                theme.backgroundColor.withOpacity(isDesktop ? 0.72 : 0.45),
+              ],
             ),
           ),
+          child: SmokeParticleEffect(
+            enableSmoke: settings.userPrefs.enableSmokeParticles,
+            child: SafeArea(
+              child: isDesktop
+                  ? _buildDesktopBody(
+                      context,
+                      theme,
+                      settings,
+                      deckProvider,
+                      readingProvider,
+                      dailyCard,
+                    )
+                  : ResponsiveCenter(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 12.0,
+                      ),
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildHeader(context, theme, settings),
+                            const SizedBox(height: 20),
+                            if (Responsive.isPhone(context))
+                              _buildPhoneLayout(
+                                context,
+                                theme,
+                                settings,
+                                deckProvider,
+                                dailyCard,
+                              )
+                            else
+                              _buildWideLayout(
+                                context,
+                                theme,
+                                settings,
+                                deckProvider,
+                                dailyCard,
+                              ),
+                            const SizedBox(height: 16),
+                            _buildHistoryFooter(
+                                context, theme, readingProvider),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Thân trang desktop: dùng trọn chiều rộng, không bọc ResponsiveCenter.
+  Widget _buildDesktopBody(
+    BuildContext context,
+    dynamic theme,
+    SettingsProvider settings,
+    DeckProvider deckProvider,
+    ReadingProvider readingProvider,
+    TarotCardModel? dailyCard,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 56.0, vertical: 20.0),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(context, theme, settings, compact: true),
+            const SizedBox(height: 28),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Hero gọn bên trái, cố định chiều rộng.
+                SizedBox(
+                  width: 300,
+                  child: _buildHeroCard(
+                    context,
+                    theme,
+                    dailyCard,
+                    heroWidth: 160,
+                    nameFontSize: 16,
+                  ),
+                ),
+                const SizedBox(width: 48),
+                // Bộ bài + CTA + action phụ bên phải, dùng hết chiều rộng.
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildDeckCard(context, theme, settings, deckProvider),
+                      const SizedBox(height: 14),
+                      _buildPrimaryCta(context, theme, compact: true),
+                      const SizedBox(height: 12),
+                      _buildSecondaryActions(context, theme, horizontal: true),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // Vạch vàng mảnh ngăn với footer lịch sử.
+            Container(
+              height: 1,
+              color: theme.primaryColor.withOpacity(0.25),
+            ),
+            const SizedBox(height: 12),
+            _buildHistoryFooter(context, theme, readingProvider),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
@@ -132,8 +227,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeader(
     BuildContext context,
     dynamic theme,
-    SettingsProvider settings,
-  ) {
+    SettingsProvider settings, {
+    bool compact = false,
+  }) {
+    final titleSize = compact ? 24.0 : 32.0;
+    final symbolSize = compact ? 24.0 : 30.0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -141,19 +239,19 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               TarotSymbols.pentacles,
-              style: const TextStyle(fontSize: 30),
+              style: TextStyle(fontSize: symbolSize),
             ),
             const SizedBox(width: 8),
             settings.userPrefs.enableTwinklingText
                 ? TwinklingTitle(
                     text: 'TarotDesk',
-                    fontSize: 32,
+                    fontSize: titleSize,
                     primaryColor: theme.primaryColor,
                   )
                 : Text(
                     'TarotDesk',
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: titleSize,
                       fontWeight: FontWeight.bold,
                       color: theme.primaryColor,
                     ),
@@ -230,10 +328,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeroCard(
     BuildContext context,
     dynamic theme,
-    TarotCardModel? dailyCard,
-  ) {
-    final heroWidth = Responsive.cardWidth(context);
-    final heroHeight = heroWidth * 8 / 5;
+    TarotCardModel? dailyCard, {
+    double? heroWidth,
+    double nameFontSize = 18,
+  }) {
+    final width = heroWidth ?? Responsive.cardWidth(context);
+    final height = width * 8 / 5;
 
     return Column(
       children: [
@@ -250,8 +350,8 @@ class _HomeScreenState extends State<HomeScreen> {
         GestureDetector(
           onTap: () => _startNewReading(context),
           child: Container(
-            width: heroWidth,
-            height: heroHeight,
+            width: width,
+            height: height,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: theme.primaryColor, width: 2),
@@ -268,18 +368,18 @@ class _HomeScreenState extends State<HomeScreen> {
               child: dailyCard == null
                   ? Container(
                       color: theme.cardBackgroundColor,
-                      child: const Center(
+                      child: Center(
                         child: Icon(
                           Icons.auto_stories,
-                          color: Colors.amberAccent,
+                          color: theme.primaryColor,
                           size: 40,
                         ),
                       ),
                     )
                   : TarotCardImage(
                       card: dailyCard,
-                      width: heroWidth,
-                      height: heroHeight,
+                      width: width,
+                      height: height,
                       fit: BoxFit.cover,
                     ),
             ),
@@ -291,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen> {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: theme.textColor,
-            fontSize: 18,
+            fontSize: nameFontSize,
             fontWeight: FontWeight.bold,
           ),
           maxLines: 1,
@@ -314,19 +414,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPrimaryCta(BuildContext context, dynamic theme) {
+  Widget _buildPrimaryCta(
+    BuildContext context,
+    dynamic theme, {
+    bool compact = false,
+  }) {
     return SizedBox(
-      height: 56,
+      height: compact ? 48 : 56,
       child: ElevatedButton.icon(
         onPressed: () => _startNewReading(context),
         icon: const Icon(Icons.auto_awesome, size: 22),
-        label: const Text(
+        label: Text(
           'Trải bài mới',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: compact ? 15 : 17,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: theme.primaryColor,
-          foregroundColor: Colors.black,
+          // Chữ tối trên nền vàng: dùng màu nền của theme đang chọn.
+          foregroundColor: theme.backgroundColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -335,34 +443,49 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSecondaryActions(BuildContext context, dynamic theme) {
+  Widget _buildSecondaryActions(
+    BuildContext context,
+    dynamic theme, {
+    bool horizontal = false,
+  }) {
+    final khoBoBai = _buildMenuCard(
+      context,
+      title: 'Kho bộ bài',
+      icon: Icons.auto_stories,
+      color: theme.accentColor,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SelectDeckScreen()),
+        );
+      },
+    );
+    final traiBaiCu = _buildMenuCard(
+      context,
+      title: 'Trải bài cũ',
+      icon: Icons.history_edu,
+      color: theme.primaryColor,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const HistoryScreen()),
+        );
+      },
+    );
+    if (horizontal) {
+      return Row(
+        children: [
+          Expanded(child: khoBoBai),
+          const SizedBox(width: 12),
+          Expanded(child: traiBaiCu),
+        ],
+      );
+    }
     return Column(
       children: [
-        _buildMenuCard(
-          context,
-          title: 'Kho bộ bài',
-          icon: Icons.auto_stories,
-          color: theme.accentColor,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SelectDeckScreen()),
-            );
-          },
-        ),
+        khoBoBai,
         const SizedBox(height: 12),
-        _buildMenuCard(
-          context,
-          title: 'Trải bài cũ',
-          icon: Icons.history_edu,
-          color: Colors.amberAccent,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HistoryScreen()),
-            );
-          },
-        ),
+        traiBaiCu,
       ],
     );
   }
@@ -373,6 +496,7 @@ class _HomeScreenState extends State<HomeScreen> {
     SettingsProvider settings,
     DeckProvider deckProvider,
   ) {
+    final cardCount = deckProvider.currentDeckCards.length;
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -411,6 +535,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (cardCount > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '$cardCount lá bài',
+                      style: TextStyle(
+                        color: theme.secondaryTextColor,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -433,42 +567,51 @@ class _HomeScreenState extends State<HomeScreen> {
     if (readingProvider.readingsHistory.isEmpty) {
       return const SizedBox.shrink();
     }
-    return GlassPanel(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      backgroundColor: theme.cardBackgroundColor,
-      borderColor: theme.glassBorderColor,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.bookmark_added,
-                  color: Colors.greenAccent,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Lần bói bài gần nhất: ${readingProvider.readingsHistory.first.name}',
-                    style: TextStyle(
-                      color: theme.secondaryTextColor,
-                      fontSize: 12,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+    final count = readingProvider.readingsHistory.length;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const HistoryScreen()),
+        );
+      },
+      child: GlassPanel(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        backgroundColor: theme.cardBackgroundColor,
+        borderColor: theme.glassBorderColor,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.bookmark_added,
+                    color: theme.accentColor,
+                    size: 18,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Đã lưu $count lượt trải bài · Gần nhất: ${readingProvider.readingsHistory.first.name}',
+                      style: TextStyle(
+                        color: theme.secondaryTextColor,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Icon(
-            Icons.chevron_right,
-            color: theme.secondaryTextColor,
-            size: 18,
-          ),
-        ],
+            Icon(
+              Icons.chevron_right,
+              color: theme.secondaryTextColor,
+              size: 18,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -13,7 +13,10 @@ import 'deck_detail_screen.dart';
 
 /// Màn hình chọn & quản lý danh sách bộ bài Tarot.
 /// Điện thoại (Android, chính): lưới 2 cột, thumbnail lá bài 5:8.
-/// iPad: 3 cột. PC: 4 cột, nội dung căn giữa theo Responsive.maxContentWidth.
+/// iPad: 3 cột. PC: 4 cột, mật độ gọn (PC 4K), nội dung căn giữa theo
+/// Responsive.maxContentWidth. Thumbnail luôn 5:8 như lá bài trên bàn
+/// trải (bàn gỗ + khăn lớn + decor ảnh), trạng thái đã chọn rõ ràng:
+/// viền vàng + nền vàng nhạt + huy hiệu check + chữ "Đang chọn".
 class SelectDeckScreen extends StatelessWidget {
   const SelectDeckScreen({Key? key}) : super(key: key);
 
@@ -22,11 +25,16 @@ class SelectDeckScreen extends StatelessWidget {
     final settings = context.watch<SettingsProvider>();
     final theme = settings.currentThemeData;
     final deckProvider = context.watch<DeckProvider>();
+    final isDesktop = Responsive.isDesktop(context);
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Danh Sách Bộ Bài Tarot'),
+        toolbarHeight: isDesktop ? 48 : null,
+        title: Text(
+          'Danh Sách Bộ Bài Tarot',
+          style: TextStyle(fontSize: isDesktop ? 16 : 20),
+        ),
         backgroundColor: Colors.transparent,
         foregroundColor: theme.primaryColor,
         elevation: 0,
@@ -35,18 +43,25 @@ class SelectDeckScreen extends StatelessWidget {
         enableSmoke: settings.userPrefs.enableSmokeParticles,
         child: SafeArea(
           child: ResponsiveCenter(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isDesktop ? 12 : 16),
             child: deckProvider.decks.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.auto_stories, color: theme.secondaryTextColor, size: 56),
+                        Icon(
+                          Icons.auto_stories,
+                          color: theme.secondaryTextColor,
+                          size: isDesktop ? 44 : 56,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'Chưa có bộ bài nào.\nHãy bấm "Thêm Bộ Bài Mới" bên dưới để tạo!',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: theme.secondaryTextColor, fontSize: 15),
+                          style: TextStyle(
+                            color: theme.secondaryTextColor,
+                            fontSize: isDesktop ? 14 : 15,
+                          ),
                         ),
                       ],
                     ),
@@ -55,17 +70,19 @@ class SelectDeckScreen extends StatelessWidget {
                     itemCount: deckProvider.decks.length,
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: Responsive.gridColumns(context),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 0.44,
+                      crossAxisSpacing: isDesktop ? 10 : 12,
+                      mainAxisSpacing: isDesktop ? 10 : 12,
+                      childAspectRatio: isDesktop ? 0.47 : 0.44,
                     ),
                     itemBuilder: (context, index) {
                       final deck = deckProvider.decks[index];
-                      final isSelected = deckProvider.selectedDeck?.id == deck.id;
+                      final isSelected =
+                          deckProvider.selectedDeck?.id == deck.id;
                       return _DeckCard(
                         deck: deck,
                         isSelected: isSelected,
                         theme: theme,
+                        isDesktop: isDesktop,
                         onSelect: () => deckProvider.selectDeck(deck),
                         onDelete: () => _confirmDelete(
                           context,
@@ -142,6 +159,7 @@ class _DeckCard extends StatelessWidget {
   final dynamic deck;
   final bool isSelected;
   final dynamic theme;
+  final bool isDesktop;
   final VoidCallback onSelect;
   final VoidCallback onDelete;
   final VoidCallback onOpen;
@@ -150,6 +168,7 @@ class _DeckCard extends StatelessWidget {
     required this.deck,
     required this.isSelected,
     required this.theme,
+    required this.isDesktop,
     required this.onSelect,
     required this.onDelete,
     required this.onOpen,
@@ -157,18 +176,49 @@ class _DeckCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Chiều cao vùng thao tác: 48dp trên điện thoại, gọn 40dp trên PC 4K.
+    final actionHeight = isDesktop ? 40.0 : 48.0;
     return GlassPanel(
       backgroundColor: isSelected
           ? theme.primaryColor.withOpacity(0.2)
           : theme.cardBackgroundColor,
       borderColor: isSelected ? theme.primaryColor : theme.glassBorderColor,
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isDesktop ? 10 : 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           GestureDetector(
             onTap: onOpen,
-            child: _DeckThumbnail(deckId: deck.id!, theme: theme),
+            child: Stack(
+              children: [
+                _DeckThumbnail(deckId: deck.id!, theme: theme),
+                if (isSelected)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.45),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.check,
+                        color: Colors.black,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           GestureDetector(
@@ -182,7 +232,7 @@ class _DeckCard extends StatelessWidget {
                   style: TextStyle(
                     color: theme.textColor,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                    fontSize: 15,
+                    fontSize: isDesktop ? 13 : 15,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -190,25 +240,32 @@ class _DeckCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Ngày tạo: ${deck.createdDate.day}/${deck.createdDate.month}/${deck.createdDate.year}',
-                  style: TextStyle(color: theme.secondaryTextColor, fontSize: 12),
+                  style: TextStyle(
+                    color: theme.secondaryTextColor,
+                    fontSize: isDesktop ? 11 : 12,
+                  ),
                 ),
               ],
             ),
           ),
           const Spacer(),
           SizedBox(
-            height: 48,
+            height: actionHeight,
             child: isSelected
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check_circle, color: theme.primaryColor, size: 24),
+                      Icon(
+                        Icons.check_circle,
+                        color: theme.primaryColor,
+                        size: isDesktop ? 20 : 24,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Đang chọn',
                         style: TextStyle(
                           color: theme.primaryColor,
-                          fontSize: 14,
+                          fontSize: isDesktop ? 13 : 14,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -221,9 +278,11 @@ class _DeckCard extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: theme.primaryColor,
                             foregroundColor: Colors.black,
-                            minimumSize: const Size.fromHeight(48),
+                            minimumSize: Size.fromHeight(actionHeight),
                             padding: const EdgeInsets.symmetric(horizontal: 8),
-                            textStyle: const TextStyle(fontSize: 14),
+                            textStyle: TextStyle(
+                              fontSize: isDesktop ? 13 : 14,
+                            ),
                           ),
                           onPressed: onSelect,
                           child: const Text('Chọn'),
@@ -232,12 +291,14 @@ class _DeckCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       SizedBox(
                         width: 56,
-                        height: 48,
+                        height: actionHeight,
                         child: TextButton(
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.redAccent,
                             padding: EdgeInsets.zero,
-                            textStyle: const TextStyle(fontSize: 13),
+                            textStyle: TextStyle(
+                              fontSize: isDesktop ? 12 : 13,
+                            ),
                           ),
                           onPressed: onDelete,
                           child: const Text('Xóa'),
@@ -284,6 +345,7 @@ class _DeckThumbnailState extends State<_DeckThumbnail> {
 
   @override
   Widget build(BuildContext context) {
+    // Thumbnail lá bài luôn tỉ lệ 5:8 như lá bài trên bàn trải.
     return AspectRatio(
       aspectRatio: 5 / 8,
       child: ClipRRect(

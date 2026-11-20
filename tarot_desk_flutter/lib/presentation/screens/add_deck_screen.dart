@@ -131,7 +131,8 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
   Widget _stepHeader(dynamic theme,
       {required IconData icon,
       required Color iconColor,
-      required String title}) {
+      required String title,
+      required bool isDesktop}) {
     return Row(
       children: [
         Icon(icon, color: iconColor),
@@ -141,7 +142,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
             title,
             style: TextStyle(
               color: theme.primaryColor,
-              fontSize: 18,
+              fontSize: isDesktop ? 16 : 18,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -150,7 +151,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
     );
   }
 
-  Widget _step1Panel(dynamic theme) {
+  Widget _step1Panel(dynamic theme, bool isDesktop) {
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
       borderColor: theme.glassBorderColor,
@@ -160,7 +161,8 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
           _stepHeader(theme,
               icon: Icons.collections,
               iconColor: theme.primaryColor,
-              title: '1. Đặt Tên Bộ Bài'),
+              title: '1. Đặt Tên Bộ Bài',
+              isDesktop: isDesktop),
           const SizedBox(height: 12),
           TextField(
             controller: _deckNameController,
@@ -172,7 +174,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
     );
   }
 
-  Widget _step2Panel(BuildContext context, dynamic theme) {
+  Widget _step2Panel(BuildContext context, dynamic theme, bool isDesktop) {
     final imageHeight = Responsive.isPhone(context) ? 140.0 : 180.0;
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
@@ -183,7 +185,8 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
           _stepHeader(theme,
               icon: Icons.add_photo_alternate,
               iconColor: theme.accentColor,
-              title: '2. Thêm Lá Bài'),
+              title: '2. Thêm Lá Bài',
+              isDesktop: isDesktop),
           const SizedBox(height: 12),
           GestureDetector(
             onTap: _pickCardImage,
@@ -235,7 +238,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: isDesktop ? 44 : 48,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.accentColor,
@@ -251,44 +254,100 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
     );
   }
 
+  /// Một lá bài nháp hiển thị như một lá bài Tarot thật: tỉ lệ 5:8,
+  /// ảnh phủ kín, tên + giải nghĩa trên lớp phủ tối ở chân lá,
+  /// nút xóa 48dp ở góc trên-phải. Cùng ngôn ngữ 5:8 với lá bài
+  /// trên bàn trải (bàn gỗ + khăn lớn + decor ảnh).
   Widget _draftCardItem(dynamic theme, TarotCardModel card, int index) {
-    return GlassPanel(
-      backgroundColor: theme.cardBackgroundColor,
-      borderColor: theme.glassBorderColor,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Container(
-          width: 40,
-          height: 50,
-          decoration: BoxDecoration(
-            color: theme.primaryColor.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: card.imagePath.startsWith('assets')
-              ? Icon(Icons.auto_stories, color: theme.primaryColor)
-              : ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: kIsWeb
+    return AspectRatio(
+      aspectRatio: 5 / 8,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          color: theme.cardBackgroundColor,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              card.imagePath.startsWith('assets')
+                  ? Container(
+                      color: theme.primaryColor.withOpacity(0.2),
+                      child: Icon(
+                        Icons.auto_stories,
+                        color: theme.primaryColor,
+                        size: 32,
+                      ),
+                    )
+                  : kIsWeb
                       ? Image.network(card.imagePath, fit: BoxFit.cover)
-                      : Image.file(File(card.imagePath),
-                          fit: BoxFit.cover),
+                      : Image.file(File(card.imagePath), fit: BoxFit.cover),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(10, 18, 10, 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0),
+                        Colors.black.withOpacity(0.85),
+                      ],
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${index + 1}. ${card.name}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        card.meaning,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.75),
+                          fontSize: 11,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-        ),
-        title: Text(
-          '${index + 1}. ${card.name}',
-          style: TextStyle(
-              color: theme.textColor, fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          card.meaning,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: theme.secondaryTextColor, fontSize: 12),
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
-          onPressed: () => _removeCardFromDraft(index),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  alignment: Alignment.center,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.delete,
+                      color: Colors.redAccent,
+                      size: 20,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    onPressed: () => _removeCardFromDraft(index),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -300,11 +359,16 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
     final theme = settings.currentThemeData;
     final isWide = Responsive.isTablet(context) ||
         Responsive.isDesktop(context);
+    final isDesktop = Responsive.isDesktop(context);
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Tạo Bộ Bài Tarot Mới'),
+        toolbarHeight: isDesktop ? 48 : null,
+        title: Text(
+          'Tạo Bộ Bài Tarot Mới',
+          style: TextStyle(fontSize: isDesktop ? 16 : 20),
+        ),
         backgroundColor: Colors.transparent,
         foregroundColor: theme.primaryColor,
         elevation: 0,
@@ -323,15 +387,17 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: _step1Panel(theme)),
+                            Expanded(child: _step1Panel(theme, isDesktop)),
                             const SizedBox(width: 16),
-                            Expanded(child: _step2Panel(context, theme)),
+                            Expanded(
+                                child:
+                                    _step2Panel(context, theme, isDesktop)),
                           ],
                         )
                       else ...[
-                        _step1Panel(theme),
+                        _step1Panel(theme, isDesktop),
                         const SizedBox(height: 20),
-                        _step2Panel(context, theme),
+                        _step2Panel(context, theme, isDesktop),
                       ],
                       const SizedBox(height: 20),
                       Row(
@@ -342,7 +408,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                               'Danh sách lá bài đã nhập (${_draftCards.length}):',
                               style: TextStyle(
                                 color: theme.textColor,
-                                fontSize: 16,
+                                fontSize: isDesktop ? 14 : 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -375,31 +441,22 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                             ),
                           ),
                         )
-                      else if (isWide)
+                      else
+                        // Danh sách lá nháp là lưới thẻ 5:8 như lá bài
+                        // trên bàn trải: 2 cột điện thoại, 3 iPad, 4 PC.
                         GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 8,
-                            childAspectRatio: 2.8,
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: Responsive.gridColumns(context),
+                            crossAxisSpacing: isDesktop ? 10 : 12,
+                            mainAxisSpacing: isDesktop ? 10 : 12,
+                            childAspectRatio: 5 / 8,
                           ),
                           itemCount: _draftCards.length,
                           itemBuilder: (context, index) => _draftCardItem(
                               theme, _draftCards[index], index),
-                        )
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _draftCards.length,
-                          itemBuilder: (context, index) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: _draftCardItem(
-                                theme, _draftCards[index], index),
-                          ),
                         ),
                     ],
                   ),
@@ -415,7 +472,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                   ),
                   child: SizedBox(
                     width: double.infinity,
-                    height: 54,
+                    height: isDesktop ? 48 : 54,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.primaryColor,
@@ -427,8 +484,9 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                       icon: const Icon(Icons.save, size: 24),
                       label: Text(
                         'LƯU TOÀN BỘ BỘ BÀI (${_draftCards.length} LÁ)',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: isDesktop ? 14 : 16,
+                            fontWeight: FontWeight.bold),
                       ),
                       onPressed: _saveEntireDeck,
                     ),
