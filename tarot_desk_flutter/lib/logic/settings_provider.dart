@@ -80,6 +80,14 @@ class SettingsProvider extends ChangeNotifier {
     _save();
   }
 
+  /// Kiểu trải bài trên bàn: 'single' (1 hàng) hoặc 'multi' (nhiều hàng).
+  void setSpreadMode(String mode) {
+    if (mode == 'single' || mode == 'multi') {
+      _userPrefs.spreadMode = mode;
+      _save();
+    }
+  }
+
   void _save() {
     _prefsService.savePreferences(_userPrefs);
     notifyListeners();
