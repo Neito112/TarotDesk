@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui'; // Cần thiết cho PointerDeviceKind và kéo thả bằng chuột
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/responsive.dart';
 import '../../data/models/tarot_card.dart';
 import '../../data/models/user_preferences.dart';
 import '../../logic/deck_provider.dart';
@@ -11,7 +12,15 @@ import '../widgets/glass_panel.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
 
-/// Màn hình Nhật ký trải bài Tarot (Tách 3 lớp nền: Bàn - Khăn - Decor, Tương tác kéo thả nhạy, Bài bay động, Giải nghĩa đầy đủ)
+/// Màn hình Trải bài Tarot — bố cục mobile-first (Android là chính),
+/// thích ứng cho iPad (tablet) và PC (desktop).
+///
+/// Luồng bố cục (không còn Stack/Positioned chắp vá):
+///   nền bàn + lớp phủ tối (scrim) -> lá bài lớn ở giữa (tỉ lệ 5:8)
+///   -> panel giải nghĩa ở dưới (phone) hoặc bên cạnh (tablet/desktop),
+///   không chồng lên nhau -> khay bài đã rút ở dưới cùng (section riêng).
+/// Panel chọn bài là một section riêng (dạng bottom-sheet) thay thế
+/// vùng chính, không đè lên khay bài.
 class NewReadingScreen extends StatefulWidget {
   const NewReadingScreen({Key? key}) : super(key: key);
 
@@ -23,6 +32,13 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   int _selectedCardIndex = -1; // Mặc định là -1 (Không hiển thị khung giải nghĩa khi bắt đầu để nhìn rõ bàn bói)
   bool _showSelectionPanel = false; // Trạng thái mở khay chọn bài từ xấp bài
   TarotSuit _selectedSuit = TarotSuit.major; // Nhóm bài được chọn mặc định ban đầu là Ẩn Chính
+
+  // Chiều rộng lá bài đang chọn theo từng loại thiết bị (tỉ lệ 5:8).
+  double _activeCardWidth(BuildContext context) {
+    if (Responsive.isDesktop(context)) return 240;
+    if (Responsive.isTablet(context)) return 220;
+    return 180;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,41 +52,30 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     final prefs = settings.userPrefs;
 
     return Scaffold(
-      extendBodyBehindAppBar: true, // Cho phép hình nền trải rộng lên hết toàn màn hình
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.45), // Nền trong suốt hiệu ứng glass
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: theme.glassBorderColor, width: 0.5),
-          ),
-          child: GestureDetector(
-            onTap: () => _showEditTitleDialog(context, readingProvider),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    readingProvider.currentReadingTitle,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: theme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      shadows: const [
-                        Shadow(color: Colors.black, blurRadius: 4, offset: Offset(1, 1))
-                      ],
-                    ),
+        title: GestureDetector(
+          onTap: () => _showEditTitleDialog(context, readingProvider),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  readingProvider.currentReadingTitle,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: theme.primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
-                const SizedBox(width: 6),
-                Icon(Icons.edit, size: 14, color: theme.primaryColor),
-              ],
-            ),
+              ),
+              const SizedBox(width: 6),
+              Icon(Icons.edit, size: 18, color: theme.primaryColor),
+            ],
           ),
         ),
-        backgroundColor: Colors.transparent, // Trong suốt để lộ thảm trải bàn
+        backgroundColor: theme.backgroundColor,
         foregroundColor: theme.primaryColor,
         elevation: 0,
         actions: [
@@ -112,11 +117,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         child: _buildTableBackground(
           prefs,
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12.0, 56.0, 12.0, 12.0), // Chừa không gian cho AppBar trong suốt
+            child: ResponsiveCenter(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 children: [
-                  // Vùng chính ở trên (Sử dụng AnimatedSwitcher để chuyển màn chọn bài cực kỳ mượt mà)
+                  // Vùng chính: chọn bài hoặc xem lá bài + giải nghĩa.
                   Expanded(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
@@ -138,9 +143,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
 
-                  // Khay lịch sử bài đã rút ở dưới cùng (Hỗ trợ kéo thả nhận từ khay chọn)
+                  // Khay bài đã rút ở dưới cùng — section riêng, không
+                  // bị panel giải nghĩa hay lá bài che khuất.
                   _buildBottomTray(drawnCards, readingProvider, theme),
                 ],
               ),
@@ -151,7 +157,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Giao diện chính chứa khung giải nghĩa chèn dưới xấp bài & lá bài đang chọn
+  /// Vùng chính: lá bài lớn ở giữa + panel giải nghĩa bên dưới (phone)
+  /// hoặc bên cạnh (tablet/desktop). Kéo một lá từ khay lên đây để xem.
   Widget _buildMainInteractiveLayout(
     List<TarotCardModel> drawnCards,
     ReadingProvider readingProvider,
@@ -173,228 +180,242 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         }
       },
       builder: (context, candidateData, rejectedData) {
-        return Stack(
-          children: [
-            // Khung nội dung giải nghĩa kéo sát lên trên cùng (Hiển thị khi chọn bài)
-            if (activeCard != null)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 30,
-                child: GlassPanel(
-                  backgroundColor: Colors.black.withOpacity(0.65), // Đậm màu hơn để tạo tương phản tốt với text
-                  borderColor: theme.primaryColor.withOpacity(0.5),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Tên lá bài có màu nổi bật vàng hoàng kim thắp sáng
-                        Text(
-                          activeCard.name,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: theme.primaryColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(color: theme.primaryColor.withOpacity(0.6), blurRadius: 12)
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Cuộn văn bản giải nghĩa (được đệm khoảng trống ở dưới để không bị các lá bài che khuất)
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.only(bottom: 140.0),
-                            child: SelectionArea(
-                              child: Text(
-                                activeCard.meaning,
-                                style: const TextStyle(
-                                  color: Colors.white, // Text trắng sáng tương phản cực cao trên nền tối
-                                  fontSize: 13,
-                                  height: 1.5,
-                                  shadows: [
-                                    Shadow(color: Colors.black, blurRadius: 4, offset: Offset(1, 1))
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              )
-            else
-              // Khi chưa chọn lá bài nào, hiện lời khuyên nhỏ hướng dẫn trong khung kính tối tương phản cao
-              Align(
-                alignment: Alignment.center,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                  child: GlassPanel(
-                    backgroundColor: Colors.black.withOpacity(0.55),
-                    borderColor: theme.primaryColor.withOpacity(0.3),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.auto_awesome, color: theme.primaryColor, size: 28),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Chạm vào xấp bài bên trái để bắt đầu chọn.\n\nKéo các lá bài từ khay lịch sử lên đây hoặc chạm để xem giải nghĩa.\n\nKéo lá bài đang chọn xuống hoặc vuốt xuống để thu hồi.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white, // Tương phản tốt
-                              fontSize: 13,
-                              height: 1.6,
-                              fontWeight: FontWeight.w500,
-                              shadows: [Shadow(color: Colors.black, blurRadius: 4, offset: Offset(1, 1))],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-            // Xấp bài cố định bên trên khay lịch sử, sát bên trái. Nhận kéo thả để loại bỏ bài
-            Positioned(
-              bottom: 0,
-              left: 10,
-              child: DragTarget<int>(
-                onAccept: (cardIndex) {
-                  readingProvider.removeCardFromReading(cardIndex);
-                  setState(() {
-                    _selectedCardIndex = -1;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Đã gỡ lá bài khỏi trải bài.'), duration: Duration(milliseconds: 600)),
-                  );
-                },
-                builder: (context, candidateData, rejectedData) {
-                  final isHovered = candidateData.isNotEmpty;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isHovered ? Colors.redAccent : Colors.transparent,
-                        width: 2,
-                      ),
-                      color: isHovered ? Colors.red.withOpacity(0.25) : Colors.transparent,
-                    ),
-                    child: CardStackWidget(
-                      onTap: () {
-                        setState(() {
-                          _showSelectionPanel = true;
-                        });
-                      },
-                      theme: theme,
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Lá bài đang được chọn ở mé bên phải (bay động bay lên, và có thể vuốt/kéo xuống dưới để tắt)
-            if (activeCard != null)
-              Positioned(
-                bottom: 0,
-                right: 15,
-                child: TweenAnimationBuilder<double>(
-                  key: ValueKey(activeCard.id),
-                  tween: Tween<double>(begin: 0.0, end: 1.0),
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeOutBack,
-                  builder: (context, animValue, child) {
-                    return Transform.translate(
-                      offset: Offset(0, 120 * (1.0 - animValue)),
-                      child: Transform.scale(
-                        scale: 0.6 + (0.4 * animValue),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: GestureDetector(
-                    onVerticalDragUpdate: (details) {
-                      // Vuốt xuống dưới (delta y dương) để thu hồi lá bài về khay lịch sử
-                      if (details.delta.dy > 8) {
-                        setState(() {
-                          _selectedCardIndex = -1;
-                        });
-                      }
-                    },
-                    onTap: () {
-                      // Chạm vào để tắt/thu hồi lá bài về khay lịch sử
-                      setState(() {
-                        _selectedCardIndex = -1;
-                      });
-                    },
-                    child: Draggable<int>(
-                      data: _selectedCardIndex,
-                      feedback: Material(
-                        color: Colors.transparent,
-                        child: Container(
-                          width: 70,
-                          height: 110,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: theme.primaryColor, width: 2),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: TarotCardImage(card: activeCard, fit: BoxFit.cover),
-                          ),
-                        ),
-                      ),
-                      childWhenDragging: Opacity(
-                        opacity: 0.1,
-                        child: Container(
-                          width: 70,
-                          height: 110,
-                          decoration: BoxDecoration(
-                            color: Colors.black38,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      child: Container(
-                        width: 70,
-                        height: 110,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: theme.primaryColor, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.primaryColor.withOpacity(0.6),
-                              blurRadius: 16,
-                              spreadRadius: 2,
-                            )
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: TarotCardImage(card: activeCard, fit: BoxFit.cover),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
+        if (activeCard == null) return _buildEmptyTable(theme);
+        return _buildActiveCardLayout(activeCard, theme);
       },
     );
   }
 
-  /// Khay chọn lá bài: Thiết kế dạng nhóm bài, hỗ trợ đổi nhóm bài bằng selector
+  /// Khi chưa chọn lá bài nào: xấp bài ở giữa, nút chọn rõ ràng,
+  /// hướng dẫn ngắn gọn — không còn lá bài bay đè lên khung chữ.
+  Widget _buildEmptyTable(dynamic theme) {
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CardStackWidget(
+              onTap: () {
+                setState(() {
+                  _showSelectionPanel = true;
+                });
+              },
+              theme: theme,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _showSelectionPanel = true;
+                  });
+                },
+                icon: const Icon(Icons.style, size: 20),
+                label: const Text(
+                  'Chọn lá bài',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  foregroundColor: Colors.black87,
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            GlassPanel(
+              backgroundColor: Colors.black.withOpacity(0.55),
+              borderColor: theme.primaryColor.withOpacity(0.3),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 28),
+                    SizedBox(height: 12),
+                    Text(
+                      'Chạm vào xấp bài bên trái để bắt đầu chọn.\n\nKéo các lá bài từ khay lịch sử lên đây hoặc chạm để xem giải nghĩa.\n\nKéo lá bài đang chọn xuống hoặc vuốt xuống để thu hồi.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        height: 1.6,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Lá bài lớn + panel giải nghĩa. Phone: xếp dọc. Tablet/desktop:
+  /// lá bài bên trái, giải nghĩa bên phải, cùng một chiều cao.
+  Widget _buildActiveCardLayout(TarotCardModel activeCard, dynamic theme) {
+    final cardWidth = _activeCardWidth(context);
+    final cardHeight = cardWidth * 8 / 5; // Tỉ lệ lá Tarot 5:8.
+    final cardWidget = _buildActiveCard(activeCard, theme, cardWidth);
+    final meaningPanel = _buildMeaningPanel(activeCard, theme);
+
+    if (Responsive.isPhone(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(child: cardWidget),
+          const SizedBox(height: 16),
+          Expanded(child: meaningPanel),
+        ],
+      );
+    }
+
+    return SizedBox(
+      height: cardHeight,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          cardWidget,
+          const SizedBox(width: 24),
+          Expanded(child: meaningPanel),
+        ],
+      ),
+    );
+  }
+
+  /// Lá bài đang chọn: vào bằng animation bay lên, chạm hoặc vuốt
+  /// xuống để thu hồi, kéo thả được về khay.
+  Widget _buildActiveCard(TarotCardModel activeCard, dynamic theme, double cardWidth) {
+    final cardHeight = cardWidth * 8 / 5;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(activeCard.id),
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutBack,
+      builder: (context, animValue, child) {
+        return Transform.translate(
+          offset: Offset(0, 120 * (1.0 - animValue)),
+          child: Transform.scale(
+            scale: 0.6 + (0.4 * animValue),
+            child: child,
+          ),
+        );
+      },
+      child: GestureDetector(
+        onVerticalDragUpdate: (details) {
+          // Vuốt xuống dưới (delta y dương) để thu hồi lá bài về khay lịch sử
+          if (details.delta.dy > 8) {
+            setState(() {
+              _selectedCardIndex = -1;
+            });
+          }
+        },
+        onTap: () {
+          // Chạm vào để tắt/thu hồi lá bài về khay lịch sử
+          setState(() {
+            _selectedCardIndex = -1;
+          });
+        },
+        child: Draggable<int>(
+          data: _selectedCardIndex,
+          feedback: Material(
+            color: Colors.transparent,
+            child: SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: _cardFrame(activeCard, theme, cardWidth),
+            ),
+          ),
+          childWhenDragging: Opacity(
+            opacity: 0.1,
+            child: SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black38,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          child: SizedBox(
+            width: cardWidth,
+            height: cardHeight,
+            child: _cardFrame(activeCard, theme, cardWidth),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Khung lá bài: viền vàng + glow, tỉ lệ 5:8.
+  Widget _cardFrame(TarotCardModel card, dynamic theme, double cardWidth) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.primaryColor, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: theme.primaryColor.withOpacity(0.6),
+            blurRadius: 16,
+            spreadRadius: 2,
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: TarotCardImage(card: card, fit: BoxFit.cover),
+      ),
+    );
+  }
+
+  /// Panel giải nghĩa: tên lá bài + nội dung cuộn được, chữ 15pt.
+  Widget _buildMeaningPanel(TarotCardModel activeCard, dynamic theme) {
+    return GlassPanel(
+      backgroundColor: Colors.black.withOpacity(0.65),
+      borderColor: theme.primaryColor.withOpacity(0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              activeCard.name,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: theme.primaryColor,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: SingleChildScrollView(
+                child: SelectionArea(
+                  child: Text(
+                    activeCard.meaning,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Khay chọn lá bài: section riêng dạng bottom-sheet — có tay kéo,
+  /// tiêu đề + nút đóng 48dp, chip chọn nhóm bài, lưới bài.
   Widget _buildSelectionPanel(List<TarotCardModel> deckCards, ReadingProvider readingProvider, dynamic theme) {
     // Phân loại các lá bài theo Suit
     final List<TarotCardModel> activeCards;
@@ -423,19 +444,41 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     }
 
     return GlassPanel(
-      backgroundColor: Colors.black.withOpacity(0.7), // Tương phản rất cao
+      backgroundColor: Colors.black.withOpacity(0.7),
       borderColor: theme.primaryColor.withOpacity(0.3),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Tiêu đề bảng chọn bài
+            // Tay kéo của bottom-sheet
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white38,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Tiêu đề + nút đóng
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                const Expanded(
+                  child: Text(
+                    'Chọn lá bài',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                  icon: const Icon(Icons.close, color: Colors.white70, size: 24),
+                  tooltip: 'Đóng khay chọn bài',
                   onPressed: () {
                     setState(() {
                       _showSelectionPanel = false;
@@ -455,7 +498,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               padding: const EdgeInsets.symmetric(vertical: 4.0),
               child: Text(
                 suitLabel,
-                style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold, fontSize: 11),
+                style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
 
@@ -492,49 +535,59 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Chip riêng cho từng nhóm bài
+  /// Chip riêng cho từng nhóm bài (vùng chạm cao 48dp)
   Widget _buildSuitChip(TarotSuit suit, String label, dynamic theme) {
     final isSelected = _selectedSuit == suit;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (val) {
-          if (val) {
-            setState(() {
-              _selectedSuit = suit;
-            });
-          }
-        },
-        selectedColor: theme.primaryColor,
-        backgroundColor: Colors.black38,
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.black87 : Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 11,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: isSelected ? theme.primaryColor : theme.glassBorderColor,
-            width: 0.5,
+      child: SizedBox(
+        height: 48,
+        child: Center(
+          child: ChoiceChip(
+            label: Text(label),
+            selected: isSelected,
+            onSelected: (val) {
+              if (val) {
+                setState(() {
+                  _selectedSuit = suit;
+                });
+              }
+            },
+            selectedColor: theme.primaryColor,
+            backgroundColor: Colors.black38,
+            labelStyle: TextStyle(
+              color: isSelected ? Colors.black87 : Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: isSelected ? theme.primaryColor : theme.glassBorderColor,
+                width: 0.5,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// Lưới bài (Grid) 4 cột để nhìn bao quát toàn bộ bài của suit hiện hành.
+  /// Lưới bài: phone 4 cột, tablet 5 cột, desktop 6 cột, tỉ lệ 5:8.
   Widget _buildCardGrid(List<TarotCardModel> cards, ReadingProvider readingProvider, dynamic theme) {
+    final crossAxisCount = Responsive.isDesktop(context)
+        ? 6
+        : Responsive.isTablet(context)
+            ? 5
+            : 4;
     return ScrollConfiguration(
       behavior: MouseDragScrollBehavior(),
       child: GridView.builder(
         key: ValueKey(cards.hashCode),
         physics: const AlwaysScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          childAspectRatio: 0.62,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          childAspectRatio: 0.625, // 5:8
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
         ),
@@ -570,8 +623,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             feedback: Material(
               color: Colors.transparent,
               child: Container(
-                width: 55,
-                height: 85,
+                width: 64,
+                height: 102,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: theme.primaryColor, width: 2),
@@ -599,11 +652,26 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Khay bài lịch sử bên dưới. Hỗ trợ cuộn mượt mà bằng chuột, KÉO THẢ nhạy bén (delay 80ms)
+  /// Khay bài đã rút ở dưới cùng — section riêng, cao 124dp, hỗ trợ
+  /// kéo thả nhận từ khay chọn và thu hồi lá đang chọn về đây.
   Widget _buildBottomTray(List<TarotCardModel> drawnCards, ReadingProvider readingProvider, dynamic theme) {
+    if (drawnCards.isEmpty) {
+      return Container(
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: theme.glassBorderColor, width: 0.5)),
+        ),
+        child: Text(
+          'Chưa rút lá nào — chạm vào xấp bài để chọn.',
+          style: TextStyle(color: theme.secondaryTextColor, fontSize: 13),
+        ),
+      );
+    }
+
     return Container(
-      height: 95,
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      height: 124,
+      padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: theme.glassBorderColor, width: 0.5)),
       ),
@@ -654,8 +722,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                       child: Opacity(
                         opacity: 0.85,
                         child: Container(
-                          width: 55,
-                          height: 85,
+                          width: 64,
+                          height: 102,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: theme.primaryColor, width: 2),
@@ -690,11 +758,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Thumbnail lá bài lịch sử
+  /// Thumbnail lá bài trong khay: 64 rộng, tỉ lệ 5:8.
   Widget _buildBottomTrayItem(TarotCardModel card, bool isSelected, dynamic theme) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      width: 55,
+      width: 64,
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -708,12 +776,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
-        child: TarotCardImage(card: card, fit: BoxFit.cover),
+        child: AspectRatio(
+          aspectRatio: 5 / 8,
+          child: TarotCardImage(card: card, fit: BoxFit.cover),
+        ),
       ),
     );
   }
 
-  /// Dựng hình nền tách biệt: Mặt bàn thực tế -> Thảm trải bàn -> Đồ Decor động tùy biến
+  /// Nền bàn: ảnh bàn -> khăn -> lớp phủ tối (scrim) giúp chữ đọc được
+  /// -> nội dung. Decor chỉ là một hàng nhỏ ở trên cùng, không đè lên
+  /// nội dung và không chặn chạm (IgnorePointer).
   Widget _buildTableBackground(UserPreferencesModel prefs, Widget child) {
     String tableImage;
     if (prefs.tableStyle == 'Đá Cổ') {
@@ -777,22 +850,51 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               ),
             ),
 
-          // LỚP 3: Nội dung của ứng dụng (SafeArea, các lá bài, khay cuộn)
+          // Lớp phủ tối: chữ trắng đọc được trên mọi ảnh nền.
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0x8A000000),
+                  Color(0x40000000),
+                  Color(0xA6000000),
+                ],
+              ),
+            ),
+          ),
+
+          // LỚP 3: Nội dung của ứng dụng
           child,
 
-          // LỚP 4: Đồ Trang Trí phong thủy vẽ ĐÈ LÊN TRÊN, thay đổi động (Tùy chỉnh bật tắt)
+          // LỚP 4: Đồ trang trí — hàng nhỏ ở trên cùng, không đè nội dung,
+          // không chặn chạm.
           if (prefs.showDecor)
-            ..._buildDynamicDecorWidgets(prefs.decorItems),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: _buildDynamicDecorWidgets(prefs.decorItems),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  /// Sinh các biểu tượng trang trí tách lớp có khói sương bay lên
+  /// Các biểu tượng trang trí: chỉ trả về widget, vị trí do hàng
+  /// ở trên cùng của _buildTableBackground quyết định.
   List<Widget> _buildDynamicDecorWidgets(List<String> items) {
     final widgets = <Widget>[];
-    for (int i = 0; i < items.length; i++) {
-      final item = items[i];
+    for (final item in items) {
       Widget decorWidget;
 
       if (item == 'Đá Thạch Anh') {
@@ -860,37 +962,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         );
       }
 
-      // Đặt vị trí các món đồ thoáng đãng ngay dưới AppBar
-      double top = 75;
-      double? left;
-      double? right;
-
-      if (i == 0) {
-        left = 28;
-      } else if (i == 1) {
-        right = 28;
-      }
-
-      if (i == 2) {
-        widgets.add(
-          Align(
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 75.0),
-              child: decorWidget,
-            ),
-          ),
-        );
-      } else {
-        widgets.add(
-          Positioned(
-            top: top,
-            left: left,
-            right: right,
-            child: decorWidget,
-          ),
-        );
-      }
+      widgets.add(decorWidget);
     }
     return widgets;
   }
@@ -933,7 +1005,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 }
 
-/// Widget mô phỏng Xấp bài Tarot úp rực rỡ
+/// Widget mô phỏng Xấp bài Tarot úp rực rỡ (tỉ lệ 5:8, theo breakpoint).
 class CardStackWidget extends StatelessWidget {
   final VoidCallback onTap;
   final dynamic theme;
@@ -942,35 +1014,43 @@ class CardStackWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final stackWidth = Responsive.isDesktop(context)
+        ? 96.0
+        : Responsive.isTablet(context)
+            ? 88.0
+            : 72.0;
+    final backWidth = stackWidth * 0.86;
     return GestureDetector(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            width: 70,
-            height: 105,
-            child: Stack(
-              children: [
-                // Lá bài thứ 3 dưới cùng
-                Transform.translate(
-                  offset: const Offset(-5, 3),
-                  child: Transform.rotate(
-                    angle: -0.06,
-                    child: _buildCardBack(),
+            width: stackWidth,
+            child: AspectRatio(
+              aspectRatio: 5 / 8,
+              child: Stack(
+                children: [
+                  // Lá bài thứ 3 dưới cùng
+                  Transform.translate(
+                    offset: const Offset(-5, 3),
+                    child: Transform.rotate(
+                      angle: -0.06,
+                      child: _buildCardBack(backWidth),
+                    ),
                   ),
-                ),
-                // Lá bài thứ 2 ở giữa
-                Transform.translate(
-                  offset: const Offset(3, 1),
-                  child: Transform.rotate(
-                    angle: 0.05,
-                    child: _buildCardBack(),
+                  // Lá bài thứ 2 ở giữa
+                  Transform.translate(
+                    offset: const Offset(3, 1),
+                    child: Transform.rotate(
+                      angle: 0.05,
+                      child: _buildCardBack(backWidth),
+                    ),
                   ),
-                ),
-                // Lá bài trên cùng
-                _buildCardBack(),
-              ],
+                  // Lá bài trên cùng
+                  _buildCardBack(backWidth),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 6),
@@ -978,7 +1058,7 @@ class CardStackWidget extends StatelessWidget {
             'XẤP BÀI',
             style: TextStyle(
               color: theme.primaryColor,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.8,
             ),
@@ -988,10 +1068,10 @@ class CardStackWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCardBack() {
+  Widget _buildCardBack(double width) {
     return Container(
-      width: 60,
-      height: 95,
+      width: width,
+      height: width * 8 / 5,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: theme.primaryColor.withOpacity(0.4), width: 1),
