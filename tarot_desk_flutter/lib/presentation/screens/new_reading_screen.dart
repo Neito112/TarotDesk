@@ -83,7 +83,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   // Lá đang đọc trên bàn PC hiện TO ở phía trước khăn: 175 rộng.
-  double get _desktopStageCardWidth => 175.0;
+  double get _desktopStageCardWidth => 150.0;
 
   double _meaningFontSize() => _isDesktop ? 14.0 : 15.0;
   double _cardNameFontSize() => _isDesktop ? 17.0 : (_isPhone ? 20.0 : 19.0);
@@ -415,17 +415,20 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               Positioned.fill(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    // Nâng đáy sân khấu lên 17% chiều cao bàn: khi đã
+                    // Nâng đáy sân khấu lên 14% chiều cao bàn: khi đã
                     // rút bài, khay dưới cao 176 (thay vì 36 khi chưa
                     // rút) nên bàn ngắn lại và mép dưới khăn cao hơn
-                    // đáy bàn ~15% — đặt sân khấu sát đáy bàn sẽ làm
-                    // lá lớn vắt qua mép dưới khăn. Nâng lên để lá +
-                    // panel giải nghĩa nằm hẳn trên khăn.
+                    // đáy bàn ~13% — đặt sân khấu sát đáy bàn sẽ làm
+                    // lá lớn vắt qua mép dưới khăn. Chỉ nâng vừa đủ
+                    // để lá + panel nằm hẳn trên khăn mà KHÔNG chạm
+                    // tới hàng đồ trang trí ở mép xa (nâng 17% đã che
+                    // mất lư hương). Lá sân khấu thu nhỏ 175 -> 150
+                    // để đỉnh sân khấu cũng không chạm hàng decor.
                     return Align(
                       alignment: Alignment.bottomCenter,
                       child: Padding(
                         padding: EdgeInsets.only(
-                            bottom: constraints.maxHeight * 0.17),
+                            bottom: constraints.maxHeight * 0.14),
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 300),
                           transitionBuilder: (child, animation) {
@@ -493,7 +496,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Lá lớn trên sân khấu PC: 175 rộng, viền vàng + glow. Lá vừa rút
+  /// Lá lớn trên sân khấu PC: 150 rộng, viền vàng + glow. Lá vừa rút
   /// bay từ xấp bài (góc trên-trái) ra vị trí này trong 450ms
   /// (easeOutBack, giống trước). Đang thu thì bay nhỏ dần xuống khay
   /// dưới trong 450ms (easeInOut). Chạm vào lá để thu xuống khay.
@@ -618,6 +621,36 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
+          // Bóng ĐỔ: bóng hắt xuống-phải theo ánh sáng của bàn
+          // (sáng từ trên-trái), kéo dài trên mặt bàn và mờ dần
+          // — vật "đứng" trên bàn thay vì dán lên tranh. Vẽ bằng
+          // code (chữ nhật xiên + gradient) nên đổi màu khăn vẫn
+          // đúng. Cần Clip.none của Stack này để bóng tràn ra
+          // ngoài khung vật, xuống-phải mặt khăn.
+          Positioned(
+            left: boxWidth * 0.10,
+            top: boxHeight * 0.55,
+            width: boxWidth * 1.15,
+            height: boxHeight * 0.55,
+            child: Transform(
+              transform: Matrix4.skewX(0.45),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.black.withOpacity(0.45),
+                      Colors.black.withOpacity(0.0),
+                    ],
+                    stops: const [0.0, 0.85],
+                  ),
+                  borderRadius:
+                      BorderRadius.circular(boxHeight * 0.18),
+                ),
+              ),
+            ),
+          ),
           // Bóng tiếp xúc vẽ bằng code: ellipse đen mờ nằm NGAY
           // DƯỚI CHÂN vật, chạm vào đáy khung — vật "đứng trên"
           // mặt gỗ thay vì lơ lửng. (Ảnh cắt trong suốt nên bóng
@@ -694,13 +727,13 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   Rect? _decorCutoutRect(String item) {
     switch (item) {
       case 'Đá Thạch Anh':
-        return const Rect.fromLTWH(0.245, 0.12, 0.115, 0.16);
+        return const Rect.fromLTWH(0.245, 0.12, 0.10, 0.16);
       case 'Quả Cầu':
-        return const Rect.fromLTWH(0.368, 0.098, 0.107, 0.187);
+        return const Rect.fromLTWH(0.368, 0.098, 0.09, 0.187);
       case 'Hương Trầm':
-        return const Rect.fromLTWH(0.52, 0.0, 0.13, 0.27);
+        return const Rect.fromLTWH(0.52, 0.0, 0.11, 0.27);
       case 'Nến Đen':
-        return const Rect.fromLTWH(0.625, 0.03, 0.115, 0.24);
+        return const Rect.fromLTWH(0.625, 0.03, 0.10, 0.24);
       default:
         return null;
     }
@@ -1388,6 +1421,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: theme.primaryColor, width: 2),
         boxShadow: [
+          // Bóng đổ xuống-phải lên mặt khăn (ánh sáng từ trên-trái):
+          // lá bài "nằm" trên bàn thay vì lơ lửng phát sáng.
+          BoxShadow(
+            color: Colors.black.withOpacity(0.55),
+            blurRadius: 14,
+            spreadRadius: 1,
+            offset: const Offset(8, 14),
+          ),
           BoxShadow(
             color: theme.primaryColor.withOpacity(0.6),
             blurRadius: 16,
@@ -1686,7 +1727,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   /// Khay bài đã rút ở dưới cùng — section riêng, cao 124dp phone,
   /// 104dp tablet, 176dp PC 4K. Lá trong khay TO gần bằng lá trên
-  /// bàn: PC 100 rộng (lá sân khấu 175) thay vì 52 như trước, tỉ
+  /// bàn: PC 100 rộng (lá sân khấu 150) thay vì 52 như trước, tỉ
   /// lệ 5:8, xem rõ mặt lá. Hỗ trợ kéo thả nhận từ khay chọn và
   /// thu hồi lá đang chọn về đây. Lá ĐÃ THU chỉ còn ở khay này
   /// (không còn trên bàn); chạm vào một lá trong khay để đưa nó
@@ -2108,11 +2149,23 @@ class CardStackWidget extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: stackWidth,
-            child: AspectRatio(
-              aspectRatio: 5 / 8,
-              child: Stack(
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                  offset: const Offset(8, 12),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              width: stackWidth,
+              child: AspectRatio(
+                aspectRatio: 5 / 8,
+                child: Stack(
                 children: [
                   // Lá bài thứ 3 dưới cùng
                   Transform.translate(
@@ -2133,6 +2186,7 @@ class CardStackWidget extends StatelessWidget {
                   // Lá bài trên cùng
                   _buildCardBack(backWidth),
                 ],
+                ),
               ),
             ),
           ),
