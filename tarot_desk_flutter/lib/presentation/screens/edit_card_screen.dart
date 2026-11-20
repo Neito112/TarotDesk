@@ -18,7 +18,10 @@ class EditCardScreen extends StatefulWidget {
   final TarotCardModel? card;
   final int deckId;
 
-  const EditCardScreen({Key? key, required TarotCardModel card})
+  // KHÔNG const: `deckId = card.deckId` không phải biểu thức hằng
+  // (truy cập trường của tham số) nên constructor này không thể
+  // const — để const là build web gãy ("Not a constant expression").
+  EditCardScreen({Key? key, required TarotCardModel card})
       : card = card,
         deckId = card.deckId;
 
