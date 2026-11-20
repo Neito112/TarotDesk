@@ -1286,7 +1286,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       backgroundColor: Colors.black.withOpacity(0.7),
       borderColor: theme.primaryColor.withOpacity(0.3),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1315,8 +1315,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     ),
                   ),
                 ),
+                // Nút đóng gọn (IconButton mặc định 48×48 ăn mất
+                // chiều cao của lưới — thu về 32×32 để 2 hàng lá hiện trọn).
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white70, size: 24),
+                  icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints.tightFor(width: 32, height: 32),
                   tooltip: 'Đóng khay chọn bài',
                   onPressed: () {
                     setState(() {
@@ -1412,11 +1418,15 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Lưới bài: phone 4 cột, tablet 5 cột, desktop 8 cột (gọn ở 4K),
-  /// tỉ lệ 5:8.
+  /// Lưới bài: phone 4 cột, tablet 5 cột, desktop 12 cột (gọn ở 4K),
+  /// tỉ lệ 5:8. Desktop 12 cột để 2 hàng lá hiện trọn trong panel:
+  /// 10 cột thì lá cao ~200px, 2 hàng ~407px, vượt chiều cao lưới
+  /// (~400px) nên hàng 2 bị cắt ở đáy; 12 cột thì lá ~164px,
+  /// 2 hàng ~336px, vừa thoải mái (nhóm Ẩn Chính 22 lá cũng vừa
+  /// hết trong 2 hàng).
   Widget _buildCardGrid(List<TarotCardModel> cards, ReadingProvider readingProvider, dynamic theme) {
     final crossAxisCount = Responsive.isDesktop(context)
-        ? 10 // PC: 10 cột để 2 hàng lá hiện trọn (8 cột thì hàng 2 bị cắt).
+        ? 12 // PC: 12 cột để 2 hàng lá hiện trọn.
         : Responsive.isTablet(context)
             ? 5
             : 4;
