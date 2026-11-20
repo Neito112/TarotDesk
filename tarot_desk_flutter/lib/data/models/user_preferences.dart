@@ -12,7 +12,7 @@ class UserPreferencesModel {
   bool showDecor; // Bật/tắt lớp đồ decor trang trí
   String tableStyle; // e.g. 'Gỗ Sồi', 'Đá Cổ', 'Vũ Trụ'
   String clothStyle; // e.g. 'Nhung Tím', 'Lụa Vàng', 'Thảm Đen'
-  List<String> decorItems; // Danh sách tối đa 3 món: 'Đá Thạch Anh', 'Quả Cầu', 'Hương Trầm', 'Lá Khô'
+  List<String> decorItems; // Danh sách tối đa 3 món: 'Đá Thạch Anh', 'Quả Cầu', 'Hương Trầm', 'Nến Đen', 'Lá Khô'
   String spreadMode; // Kiểu trải bài trên bàn: 'single' (1 hàng) hoặc 'multi' (nhiều hàng)
 
   UserPreferencesModel({
