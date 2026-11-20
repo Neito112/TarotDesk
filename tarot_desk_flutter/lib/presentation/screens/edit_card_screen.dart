@@ -10,24 +10,20 @@ import '../widgets/glass_panel.dart';
 import '../widgets/tarot_card_image.dart';
 
 /// Màn hình Chỉnh sửa thông tin giải nghĩa và hình ảnh của một lá bài (Tối giản theo dạng Text thuần).
-/// Hai chế độ: sửa lá đã có (EditCardScreen(card: ...)) và tạo lá
-/// MỚI trong một bộ đã có (EditCardScreen.create(deckId: ...),
-/// dùng từ kho bộ bài → chi tiết bộ → nút +).
+/// Hai chế độ, MỘT constructor duy nhất:
+/// - Sửa lá đã có: EditCardScreen(card: lá, deckId: lá.deckId).
+/// - Tạo lá MỚI trong một bộ đã có: EditCardScreen(deckId: idBộ)
+///   (để `card` null), dùng từ kho bộ bài → chi tiết bộ → nút +.
+/// `deckId` luôn do bên gọi truyền thẳng — không suy ra từ `card`
+/// trong initializer (cách cũ dùng hai constructor + `deckId =
+/// card.deckId` trong const nên build web gãy), nên constructor
+/// này const được và không còn lỗi.
 class EditCardScreen extends StatefulWidget {
   /// Lá cần sửa; null = tạo lá mới trong bộ `deckId`.
   final TarotCardModel? card;
   final int deckId;
 
-  // KHÔNG const: `deckId = card.deckId` không phải biểu thức hằng
-  // (truy cập trường của tham số) nên constructor này không thể
-  // const — để const là build web gãy ("Not a constant expression").
-  EditCardScreen({Key? key, required TarotCardModel card})
-      : card = card,
-        deckId = card.deckId;
-
-  /// Tạo lá bài MỚI trong bộ bài `deckId` (từ kho bộ bài).
-  const EditCardScreen.create({Key? key, required this.deckId})
-      : card = null;
+  const EditCardScreen({Key? key, this.card, required this.deckId});
 
   @override
   State<EditCardScreen> createState() => _EditCardScreenState();
@@ -90,7 +86,7 @@ class _EditCardScreenState extends State<EditCardScreen> {
     } else {
       final updatedCard = TarotCardModel(
         id: widget.card!.id,
-        deckId: widget.card!.deckId,
+        deckId: widget.deckId,
         name: name,
         meaning: _meaningController.text.trim(),
         imagePath: _selectedImagePath ?? widget.card!.imagePath,

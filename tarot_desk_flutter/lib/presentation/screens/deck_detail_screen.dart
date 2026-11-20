@@ -57,12 +57,12 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
   }
 
   /// Thêm lá bài MỚI vào bộ này (chỉ ở chế độ quản lý — kho bộ
-  /// bài). Mở màn sửa lá ở chế độ tạo, lưu xong tải lại lưới.
+  /// bài). Mở màn sửa lá ở chế độ tạo (card null), lưu xong tải lại lưới.
   Future<void> _addCard() async {
     final changed = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => EditCardScreen.create(deckId: widget.deck.id!),
+        builder: (_) => EditCardScreen(deckId: widget.deck.id!),
       ),
     );
     if (changed == true) _loadCards();
@@ -239,7 +239,8 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                               final changed = await Navigator.push<bool>(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => EditCardScreen(card: card),
+                                  builder: (_) => EditCardScreen(
+                                      card: card, deckId: card.deckId),
                                 ),
                               );
                               if (changed == true) _loadCards();
