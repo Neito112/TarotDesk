@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui'; // Cần thiết cho PointerDeviceKind và kéo thả bằng chuột
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../../core/responsive.dart';
 import '../../data/models/tarot_card.dart';
 import '../../data/models/user_preferences.dart';
@@ -9,6 +10,7 @@ import '../../logic/deck_provider.dart';
 import '../../logic/reading_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
+import '../widgets/mystic_music_player.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
 
@@ -90,6 +92,27 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   // Thanh cuộn của panel giải nghĩa (luôn hiện để thấy còn nội dung).
   final ScrollController _meaningScrollController = ScrollController();
 
+  // Nhạc huyền bí (YouTube): controller + bài đang phát + ô nhập link.
+  // Player YoutubePlayer nằm trong Offstage (giữ trong cây để nhạc
+  // chạy nền khi đóng panel nhạc) — xem _buildMusicPlayer. Nhạc
+  // KHÔNG tự phát khi mở màn (autoPlay: false) — người dùng chạm
+  // một bài (hoặc nút phát) mới phát, đúng luật autoplay của trình
+  // duyệt (phát tiếng phải sau cử chỉ của người dùng).
+  late final YoutubePlayerController _musicController =
+      YoutubePlayerController.fromVideoId(
+    videoId: kMysticTracks[0].videoId,
+    autoPlay: false,
+    params: const YoutubePlayerParams(
+      showControls: false,
+      showFullscreenButton: false,
+      mute: false,
+    ),
+  );
+  int _musicTrackIndex = 0; // -1 = đang phát link YouTube tự nhập
+  String _musicTitle = kMysticTracks[0].title;
+  final TextEditingController _ytLinkController = TextEditingController();
+  double _musicVolume = 80; // 0..100
+
   // Bay về khay: lá rời sân khấu bay LIỀN MẠCH về đúng vị trí của
   // nó trong khay (không ngắt cảnh, không mờ dần rồi hiện). Một
   // flight tại một thời điểm. Lá trong khay ẩn đi trong lúc bay rồi
@@ -149,6 +172,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   @override
   void dispose() {
     _meaningScrollController.dispose();
+    _musicController.close();
+    _ytLinkController.dispose();
     super.dispose();
   }
 
@@ -281,6 +306,25 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         foregroundColor: theme.primaryColor,
         elevation: 0,
         actions: [
+          // Nhạc huyền bí: mở panel chọn bài / nhập link YouTube.
+          // Nốt nhạc vàng khi đang phát, vàng nhạt khi dừng.
+          YoutubeValueBuilder(
+            controller: _musicController,
+            builder: (context, value) {
+              final playing =
+                  value.playerState == PlayerState.playing;
+              return IconButton(
+                icon: Icon(
+                  Icons.music_note,
+                  color: playing ? Colors.amber : theme.primaryColor,
+                ),
+                tooltip: playing
+                    ? 'Nhạc huyền bí: đang phát — chạm để đổi bài'
+                    : 'Nhạc huyền bí',
+                onPressed: () => _openMusicSheet(context, theme),
+              );
+            },
+          ),
           // Đổi bàn / khăn / đồ decor ngay trong lúc trải bài.
           IconButton(
             icon: const Icon(Icons.tune),
@@ -321,7 +365,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           ),
         ],
       ),
-      body: SmokeParticleEffect(
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: SmokeParticleEffect(
         enableSmoke: settings.userPrefs.enableSmokeParticles,
         child: _buildTableBackground(
           prefs,
@@ -364,6 +411,18 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             ),
           ),
         ),
+      ),
+    ),
+    // Player nhạc YouTube: ẩn (Offstage) nhưng giữ trong cây để
+    // nhạc chạy nền khi đóng panel nhạc.
+    Offstage(
+      offstage: true,
+      child: YoutubePlayer(
+        controller: _musicController,
+        aspectRatio: 16 / 9,
+      ),
+    ),
+  ],
       ),
     );
   }
@@ -621,14 +680,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Lá đang đọc HIỆN TRÊN MÀN HÌNH (PC): lá lớn 170 rộng + panel
-  /// giải nghĩa ngay bên cạnh (380 rộng — khung văn bản lớn để đọc
-  /// thoải mái), căn giữa phía trước bàn. Đây là lá HIỂN THỊ để
+  /// Lá đang đọc HIỆN TRÊN MÀN HÌNH (PC): lá lớn 190 rộng + panel
+  /// giải nghĩa ngay bên cạnh (500 rộng — khung văn bản lớn để đọc
+  /// thoải mái, hiện nhiều chữ cùng lúc), căn giữa phía trước bàn. Đây là lá HIỂN THỊ để
   /// đọc (phần tử màn hình), KHÔNG phải vật nằm trên mặt bàn — nên
   /// lá đứng thẳng facing màn hình, không nghiêng theo điểm tụ của
   /// bàn. Trên bàn không còn lá nào.
   Widget _buildDesktopStage(TarotCardModel activeCard, dynamic theme) {
-    const stageCardWidth = 170.0;
+    const stageCardWidth = 190.0;
     final stageCardHeight = stageCardWidth * 8 / 5;
     return Center(
       key: ValueKey('stage-${activeCard.id}'),
@@ -640,7 +699,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           const SizedBox(width: 16),
           // Panel giải nghĩa ngay bên cạnh lá lớn, cao bằng lá + 24.
           SizedBox(
-            width: 380,
+            width: 500,
             height: stageCardHeight + 24,
             child: _buildDesktopMeaningPanel(activeCard, theme),
           ),
@@ -1049,6 +1108,48 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Mở panel nhạc huyền bí (bottom sheet): bài đang phát + phát/dừng,
+  /// âm lượng, danh sách 5 bài có sẵn, ô nhập link YouTube để phát nhạc.
+  /// Panel là một route riêng (bottom sheet) nên nó giữ state hiện
+  /// tại của riêng nó (bài đang chọn, âm lượng) và báo về màn hình
+  /// qua callback để đổi bài / đổi âm lượng thật trên controller.
+  void _openMusicSheet(BuildContext context, dynamic theme) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return MysticMusicSheet(
+          controller: _musicController,
+          tracks: kMysticTracks,
+          currentIndex: _musicTrackIndex,
+          currentTitle: _musicTitle,
+          volume: _musicVolume,
+          linkController: _ytLinkController,
+          onSelectTrack: (index) {
+            final track = kMysticTracks[index];
+            _musicController.loadVideoById(videoId: track.videoId);
+            setState(() {
+              _musicTrackIndex = index;
+              _musicTitle = track.title;
+            });
+          },
+          onPlayCustom: (videoId, title) {
+            _musicController.loadVideoById(videoId: videoId);
+            setState(() {
+              _musicTrackIndex = -1;
+              _musicTitle = title;
+            });
+          },
+          onVolumeChanged: (v) {
+            _musicController.setVolume(v.round());
+            setState(() => _musicVolume = v);
+          },
+        );
+      },
     );
   }
 
