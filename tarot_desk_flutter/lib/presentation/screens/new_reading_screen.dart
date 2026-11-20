@@ -95,7 +95,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     final drawnCards = context.read<ReadingProvider>().drawnCards;
     if (index < 0 || index >= drawnCards.length) return;
     setState(() {
-      _collectedIds.add(drawnCards[index].id);
+      final id = drawnCards[index].id;
+      if (id != null) _collectedIds.add(id);
       if (_selectedCardIndex == index) _selectedCardIndex = -1;
       _lastDrawnId = null; // Không chạy lại hoạt ảnh rút cho lá đã thu.
     });
@@ -132,7 +133,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             .read<ReadingProvider>()
             .drawnCards
             .any((c) => c.id == cardId)) {
-          _collectedIds.add(cardId);
+          if (cardId != null) _collectedIds.add(cardId);
         }
         if (_selectedCardIndex == index) _selectedCardIndex = -1;
         _lastDrawnId = null; // Không chạy lại hoạt ảnh rút cho lá đã thu.
