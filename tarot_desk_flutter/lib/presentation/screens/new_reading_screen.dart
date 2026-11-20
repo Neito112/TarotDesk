@@ -38,7 +38,7 @@ import '../widgets/tarot_card_image.dart';
 /// giữa-phía trước của khăn, panel giải nghĩa ngay BÊN CẠNH nó;
 /// chạm vào lá đang hiện để thu xuống khay (có hoạt ảnh bay xuống
 /// khay). Mọi thao tác đều có hoạt ảnh di chuyển mượt (rút / chọn /
-/// thu / đổi khăn / đổi decor / đổi kiểu trải). Phone/tablet giữ bản
+/// thu / đổi khăn / đổi decor). Phone/tablet giữ bản
 /// đơn giản đã có.
 ///
 /// Bám sát mặt bàn: khăn là hình thang phối cảnh với bóng tiếp xúc,
@@ -272,8 +272,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Thân màn hình riêng cho PC: thanh công cụ kiểu trải + bàn trải bài
-  /// chiếm toàn bộ chiều rộng, khay ở dưới cùng. Không ResponsiveCenter.
+  /// Thân màn hình riêng cho PC: bàn trải bài chiếm toàn bộ chiều
+  /// rộng, khay ở dưới cùng. Không ResponsiveCenter.
   Widget _buildDesktopBody(List<TarotCardModel> deckCards,
       ReadingProvider readingProvider, dynamic theme) {
     final drawnCards = readingProvider.drawnCards;
@@ -282,7 +282,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(
           children: [
-            _buildSpreadToolbar(theme),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                drawnCardsCountText(),
+                style: TextStyle(
+                    color: theme.secondaryTextColor, fontSize: 12),
+              ),
+            ),
             const SizedBox(height: 8),
             Expanded(
               child: AnimatedSwitcher(
@@ -296,61 +303,6 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             _buildBottomTray(drawnCards, readingProvider, theme),
           ],
         ),
-      ),
-    );
-  }
-
-  /// Thanh công cụ kiểu trải bài trên PC: "1 hàng" / "Nhiều hàng",
-  /// đổi trực tiếp ngay trong lúc trải (lưu vào SettingsProvider).
-  Widget _buildSpreadToolbar(dynamic theme) {
-    final settings = context.read<SettingsProvider>();
-    final mode = settings.userPrefs.spreadMode;
-    Widget chip(String value, String label) {
-      final selected = mode == value;
-      return ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (v) {
-          if (v) settings.setSpreadMode(value);
-        },
-        selectedColor: theme.primaryColor,
-        backgroundColor: Colors.black45,
-        labelStyle: TextStyle(
-          color: selected ? Colors.black87 : Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-        visualDensity: VisualDensity.compact,
-      );
-    }
-
-    // Thanh công cụ nổi trên bức tranh vẽ: nền tối mờ nhẹ để chữ
-    // đọc được, không làm tối cả bức tranh.
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.45),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      child: Row(
-      children: [
-        Text(
-          'Kiểu trải:',
-          style: TextStyle(
-              color: theme.secondaryTextColor,
-              fontSize: 12,
-              fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(width: 8),
-        chip('single', '1 hàng'),
-        const SizedBox(width: 6),
-        chip('multi', 'Nhiều hàng'),
-        const Spacer(),
-        Text(
-          '${drawnCardsCountText()}',
-          style: TextStyle(color: theme.secondaryTextColor, fontSize: 12),
-        ),
-      ],
       ),
     );
   }
