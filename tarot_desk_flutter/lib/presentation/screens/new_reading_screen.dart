@@ -100,8 +100,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   // Key sân khấu theo id lá (không dùng một GlobalKey chung: trong
   // lúc AnimatedSwitcher chuyển lá, lá cũ + lá mới cùng nằm trong
   // cây — một key chung là trùng key, Flutter báo lỗi).
-  final Map<int, GlobalKey> _stageCardKeys = {};
-  final Map<int, GlobalKey> _trayItemKeys = {};
+  // Khóa là int? (không phải int) vì TarotCardModel.id là int?
+  // (null với lá chưa vào DB) — map khóa int là sai kiểu, build
+  // web gãy ("int? can't be assigned to int").
+  final Map<int?, GlobalKey> _stageCardKeys = {};
+  final Map<int?, GlobalKey> _trayItemKeys = {};
   _TrayFlight? _trayFlight;
 
   /// Lá đang hiển thị trên sân khấu (null = chưa rút lá nào).
