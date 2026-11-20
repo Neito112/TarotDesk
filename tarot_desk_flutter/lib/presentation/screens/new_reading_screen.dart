@@ -116,7 +116,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   /// Thu lá đang đọc xuống khay KÈM hoạt ảnh mượt (chỉ dùng trên
   /// bàn PC): lá bay nhỏ dần xuống khay dưới trong 450ms rồi mới
-  /// rời khỏi bàn — giống hệt nút "Thu xuống khay" về kết quả.
+  /// rời khỏi bàn — kết quả giống hệt chạm vào lá lớn để thu.
   void _collectCardAnimated() {
     if (_isCollecting || _selectedCardIndex < 0) return;
     final index = _selectedCardIndex;
@@ -408,8 +408,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             if (prefs.showDecor && prefs.decorItems.isNotEmpty)
               Positioned(
                 top: 0,
-                left: 96,
-                right: 12,
+                left: 120,
+                right: 24,
                 height: 76,
                 child: IgnorePointer(
                   child: AnimatedSwitcher(
@@ -530,7 +530,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       ),
     );
     if (_isCollecting) {
-      // Thu xuống khay: bay xuống + nhỏ dần + mờ dần về phía khay.
+      // Thu lá xuống khay: bay xuống + nhỏ dần + mờ dần về phía khay.
       return TweenAnimationBuilder<double>(
         key: ValueKey('collect-${activeCard.id}'),
         tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -587,18 +587,24 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Một sprite phụ kiện: ảnh thật bo tròn, hoặc icon cũ làm
-  /// fallback cho món không có ảnh (Lá Khô). Vật thể BÁM SÁT mặt
-  /// bàn: KHÔNG còn bóng đổ lơ lửng quanh sprite (boxShadow offset).
+  /// Một sprite phụ kiện: ảnh vẽ (painted) hiện TOÀN BỘ khung ảnh,
+  /// không bo tròn như trước — cách bo tròn cũ cắt mất ngọn nến, khói trầm và các
+  /// chi tiết cao của vật. Ảnh nền đen, đặt trên bàn tối nên hòa
+  /// vào mặt bàn như một bức ảnh hoàn chỉnh. Món không có ảnh
+  /// (Lá Khô) giữ icon cũ làm fallback. Vật thể BÁM SÁT mặt bàn:
+  /// KHÔNG còn bóng đổ lơ lửng quanh sprite (boxShadow offset).
   /// Thay vào đó là một ellipse đen nằm NGAY DƯỚI CHÂN vật, chạm
   /// vào đáy sprite — vật "đứng trên" mặt gỗ/khăn, chân đặt đúng
   /// đường mặt bàn.
   Widget _buildDecorSprite(String item, double size) {
     final asset = _decorImageAsset(item);
     final body = asset != null
-        ? ClipOval(
+        ? Container(
+            width: size,
+            height: size,
+            color: Colors.black,
             child: Image.asset(asset,
-                fit: BoxFit.cover, width: size, height: size),
+                fit: BoxFit.contain, width: size, height: size),
           )
         : Container(
             width: size,
@@ -643,18 +649,20 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Ảnh thật cho từng món decor, null = không có ảnh (dùng icon).
-  /// Ảnh nền đen, đặt trên bàn tối nên bo tròn là đủ để hòa nền.
+  /// Ảnh vẽ (painted) cho từng món decor, null = không có ảnh (dùng
+  /// icon). Cùng cách vẽ với tranh bàn gỗ và khăn vẽ, để mọi vật
+  /// trên bàn nhìn như một bức ảnh hoàn chỉnh. Ảnh nền đen, đặt
+  /// trên bàn tối nên hòa nền.
   String? _decorImageAsset(String item) {
     switch (item) {
       case 'Đá Thạch Anh':
-        return 'assets/images/decor_crystal.png';
+        return 'assets/images/decor_crystal_painted.png';
       case 'Quả Cầu':
-        return 'assets/images/decor_crystal_ball.png';
+        return 'assets/images/decor_crystal_ball_painted.png';
       case 'Hương Trầm':
-        return 'assets/images/decor_incense.png';
+        return 'assets/images/decor_incense_painted.png';
       case 'Nến Đen':
-        return 'assets/images/decor_candle.png';
+        return 'assets/images/decor_candle_painted.png';
       default:
         return null; // 'Lá Khô': chưa có ảnh thật, dùng icon.
     }
@@ -901,7 +909,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Panel giải nghĩa gọn trên PC: tên lá + nút "Thu xuống khay" + nội dung.
+  /// Panel giải nghĩa gọn trên PC: tên lá + nội dung. Thu lá bằng
+  /// cách chạm vào lá lớn trên sân khấu (xem _collectCardAnimated).
   Widget _buildDesktopMeaningPanel(TarotCardModel activeCard, dynamic theme) {
     return GlassPanel(
       backgroundColor: Colors.black.withOpacity(0.72),
@@ -918,22 +927,6 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 color: theme.primaryColor,
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 36,
-              child: OutlinedButton.icon(
-                // Thu kèm hoạt ảnh bay xuống khay (xem _collectCardAnimated);
-                // chạm trực tiếp vào lá lớn cũng thu giống hệt.
-                onPressed: _collectCardAnimated,
-                icon: const Icon(Icons.archive, size: 16),
-                label: const Text('Thu xuống khay',
-                    style: TextStyle(fontSize: 13)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: theme.primaryColor,
-                  side: BorderSide(color: theme.primaryColor),
-                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -1290,8 +1283,9 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Panel giải nghĩa: tên lá bài + nút "Thu xuống khay" + nội dung cuộn
-  /// được. PC: chữ 14pt, tên 17pt. Phone giữ 15pt / 20pt như cũ.
+  /// Panel giải nghĩa: tên lá bài + nội dung cuộn được. Thu lá bằng
+  /// cách chạm / vuốt xuống trên lá đang đọc (xem _collectCard).
+  /// PC: chữ 14pt, tên 17pt. Phone giữ 15pt / 20pt như cũ.
   Widget _buildMeaningPanel(TarotCardModel activeCard, dynamic theme) {
     return GlassPanel(
       backgroundColor: Colors.black.withOpacity(0.65),
@@ -1308,21 +1302,6 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 color: theme.primaryColor,
                 fontSize: _cardNameFontSize(),
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Thu lá đã đọc xuống khay: lá vẫn ở trong khay dưới cùng.
-            SizedBox(
-              height: _isPhone ? 48 : 36,
-              child: OutlinedButton.icon(
-                onPressed: _collectCard,
-                icon: const Icon(Icons.archive, size: 16),
-                label: Text('Thu xuống khay',
-                    style: TextStyle(fontSize: _isDesktop ? 13 : 14)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: theme.primaryColor,
-                  side: BorderSide(color: theme.primaryColor),
-                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -1904,16 +1883,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Tấm khăn riêng trên bàn PC: nhung phẳng BÁM SÁT mặt gỗ, KHÔNG
-  /// còn là hình chữ nhật lơ lửng. Khăn là một HÌNH THANG phối cảnh
-  /// (ClipPath: mép xa/trên hẹp hơn mép gần/dưới, khớp phối cảnh
-  /// của tranh bàn gỗ), với bóng tiếp xúc nằm SÁT dưới mép khăn
-  /// (hình thang đen mờ lệch xuống 7px) và viền vẽ theo đúng hình
-  /// thang — khăn đọc là nhung phẳng đặt TRÊN gỗ. Key theo kiểu
-  /// khăn để AnimatedSwitcher ở trên nhận ra khi đổi khăn và chạy
-  /// cross-fade.
+  /// Tấm khăn riêng trên bàn PC: khăn VẼ (painted) BÁM SÁT mặt gỗ,
+  /// KHÔNG còn là hình chữ nhật lơ lửng. Khăn là một HÌNH THANG
+  /// phối cảnh (ClipPath: mép xa/trên hẹp hơn mép gần/dưới, khớp
+  /// phối cảnh của tranh bàn gỗ), với bóng tiếp xúc nằm SÁT dưới
+  /// mép khăn (hình thang đen mờ lệch xuống 7px) và viền vẽ theo
+  /// đúng hình thang — khăn vẽ cùng cách vẽ với tranh bàn gỗ và
+  /// phụ kiện vẽ, đặt lên bàn như một bức ảnh hoàn chỉnh. Key theo
+  /// kiểu khăn để AnimatedSwitcher ở trên nhận ra khi đổi khăn và
+  /// chạy cross-fade.
   Widget _buildDesktopCloth(String clothStyle) {
-    final palette = _clothPalette(clothStyle);
+    final borderColor = _clothBorderColor(clothStyle);
     return Container(
       key: ValueKey('cloth-$clothStyle'),
       child: Padding(
@@ -1933,16 +1913,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 child: Container(color: Colors.black.withOpacity(0.55)),
               ),
             ),
-            // Tấm nhung phẳng hình thang phối cảnh.
+            // Khăn vẽ (painted) hình thang phối cảnh — cùng cách vẽ
+            // với tranh bàn gỗ, phủ kín hình thang (BoxFit.cover).
             ClipPath(
               clipper: _TablePlaneClipper(),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [palette.top, palette.bottom],
-                  ),
+              child: SizedBox.expand(
+                child: Image.asset(
+                  _clothImageAsset(clothStyle),
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
@@ -1950,7 +1928,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             // cắt mất ở hai cạnh xiên, nên vẽ viền bằng CustomPaint).
             Positioned.fill(
               child: CustomPaint(
-                painter: _TablePlaneBorderPainter(palette.border),
+                painter: _TablePlaneBorderPainter(borderColor),
               ),
             ),
           ],
@@ -1959,38 +1937,38 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Bảng màu khăn theo kiểu đã chọn (màu đầu / màu cuối gradient /
-  /// màu viền). Nhung Tím = tím đậm, Lụa Vàng = vàng gold,
-  /// Thảm Đen = gần đen.
-  ({Color top, Color bottom, Color border}) _clothPalette(
-      String clothStyle) {
+  /// Ảnh khăn vẽ (painted) theo kiểu đã chọn — cùng cách vẽ với
+  /// tranh bàn gỗ, để khăn đặt lên bàn như một bức ảnh hoàn chỉnh.
+  String _clothImageAsset(String clothStyle) {
     switch (clothStyle) {
       case 'Lụa Vàng':
-        return (
-          top: const Color(0xFF8A6D1F),
-          bottom: const Color(0xFF5C4710),
-          border: const Color(0xFFD4AF37),
-        );
+        return 'assets/images/cloth_gold_painted.png';
       case 'Thảm Đen':
-        return (
-          top: const Color(0xFF262626),
-          bottom: const Color(0xFF0E0E0E),
-          border: const Color(0xFF5A5A5A),
-        );
+        return 'assets/images/cloth_black_painted.png';
       case 'Nhung Tím':
       default:
-        return (
-          top: const Color(0xFF4A1E63),
-          bottom: const Color(0xFF2E173C),
-          border: const Color(0xFF9D4EDD),
-        );
+        return 'assets/images/cloth_purple_painted.png';
+    }
+  }
+
+  /// Màu viền khăn theo kiểu đã chọn. Nhung Tím = tím, Lụa Vàng =
+  /// vàng gold, Thảm Đen = xám.
+  Color _clothBorderColor(String clothStyle) {
+    switch (clothStyle) {
+      case 'Lụa Vàng':
+        return const Color(0xFFD4AF37);
+      case 'Thảm Đen':
+        return const Color(0xFF5A5A5A);
+      case 'Nhung Tím':
+      default:
+        return const Color(0xFF9D4EDD);
     }
   }
 
   /// Các biểu tượng trang trí: chỉ trả về widget, vị trí do hàng
   /// ở trên cùng của _buildTableBackground quyết định.
-  /// Món nào có ảnh thật (thạch anh, quả cầu, trầm, nến) dùng
-  /// sprite ảnh bo tròn (_buildDecorSprite); món không có ảnh
+  /// Món nào có ảnh vẽ (thạch anh, quả cầu, trầm, nến) dùng
+  /// sprite ảnh vẽ (_buildDecorSprite); món không có ảnh
   /// (Lá Khô) giữ icon cũ làm fallback. Bản PC dùng sprite ảnh
   /// trên mép xa của bàn (xem _buildDesktopDecorSprites).
   List<Widget> _buildDynamicDecorWidgets(List<String> items, [double size = 28]) {
