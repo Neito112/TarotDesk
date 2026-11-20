@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../core/responsive.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/models/tarot_card.dart';
 import '../../logic/deck_provider.dart';
@@ -8,11 +9,22 @@ import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/tarot_card_image.dart';
 
-/// Màn hình Chỉnh sửa thông tin giải nghĩa và hình ảnh của một lá bài (Tối giản theo dạng Text thuần)
+/// Màn hình Chỉnh sửa thông tin giải nghĩa và hình ảnh của một lá bài (Tối giản theo dạng Text thuần).
+/// Hai chế độ: sửa lá đã có (EditCardScreen(card: ...)) và tạo lá
+/// MỚI trong một bộ đã có (EditCardScreen.create(deckId: ...),
+/// dùng từ kho bộ bài → chi tiết bộ → nút +).
 class EditCardScreen extends StatefulWidget {
-  final TarotCardModel card;
+  /// Lá cần sửa; null = tạo lá mới trong bộ `deckId`.
+  final TarotCardModel? card;
+  final int deckId;
 
-  const EditCardScreen({Key? key, required this.card}) : super(key: key);
+  const EditCardScreen({Key? key, required TarotCardModel card})
+      : card = card,
+        deckId = card.deckId;
+
+  /// Tạo lá bài MỚI trong bộ bài `deckId` (từ kho bộ bài).
+  const EditCardScreen.create({Key? key, required this.deckId})
+      : card = null;
 
   @override
   State<EditCardScreen> createState() => _EditCardScreenState();
@@ -27,9 +39,9 @@ class _EditCardScreenState extends State<EditCardScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController.text = widget.card.name;
-    _meaningController.text = widget.card.meaning;
-    _selectedImagePath = widget.card.imagePath;
+    _nameController.text = widget.card?.name ?? '';
+    _meaningController.text = widget.card?.meaning ?? '';
+    _selectedImagePath = widget.card?.imagePath;
   }
 
   @override
@@ -63,25 +75,39 @@ class _EditCardScreenState extends State<EditCardScreen> {
       return;
     }
 
-    final updatedCard = TarotCardModel(
-      id: widget.card.id,
-      deckId: widget.card.deckId,
-      name: name,
-      meaning: _meaningController.text.trim(),
-      imagePath: _selectedImagePath ?? widget.card.imagePath,
-    );
+    final isNew = widget.card?.id == null;
+    if (isNew) {
+      // Tạo lá MỚI trong bộ đã có (kho bộ bài → chi tiết bộ → +).
+      await DatabaseHelper.instance.insertCard(TarotCardModel(
+        deckId: widget.deckId,
+        name: name,
+        meaning: _meaningController.text.trim(),
+        imagePath: _selectedImagePath ?? '',
+      ));
+    } else {
+      final updatedCard = TarotCardModel(
+        id: widget.card!.id,
+        deckId: widget.card!.deckId,
+        name: name,
+        meaning: _meaningController.text.trim(),
+        imagePath: _selectedImagePath ?? widget.card!.imagePath,
+      );
 
-    await DatabaseHelper.instance.updateCard(updatedCard);
+      await DatabaseHelper.instance.updateCard(updatedCard);
+    }
 
     // Refresh provider
     final deckProvider = context.read<DeckProvider>();
-    if (deckProvider.selectedDeck?.id == widget.card.deckId) {
+    if (deckProvider.selectedDeck?.id == widget.deckId) {
       await deckProvider.fetchCardsForSelectedDeck();
     }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã cập nhật thông tin lá bài thành công!')),
+        SnackBar(
+            content: Text(isNew
+                ? 'Đã thêm lá bài "$name" vào bộ bài!'
+                : 'Đã cập nhật thông tin lá bài thành công!')),
       );
       Navigator.pop(context, true);
     }
@@ -91,11 +117,17 @@ class _EditCardScreenState extends State<EditCardScreen> {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final theme = settings.currentThemeData;
+    final isDesktop = Responsive.isDesktop(context);
+    final isNew = widget.card == null;
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: Text('Sửa Lá Bài: ${widget.card.name}'),
+        toolbarHeight: isDesktop ? 48 : null,
+        title: Text(
+          isNew ? 'Thêm Lá Bài Mới' : 'Sửa Lá Bài: ${widget.card!.name}',
+          style: TextStyle(fontSize: isDesktop ? 16 : 20),
+        ),
         backgroundColor: Colors.transparent,
         foregroundColor: theme.primaryColor,
         elevation: 0,
@@ -122,6 +154,8 @@ class _EditCardScreenState extends State<EditCardScreen> {
                       width: 130,
                       height: 210,
                       decoration: BoxDecoration(
+                        // Nền đen: ảnh lá hiện trọn (contain), không cắt.
+                        color: Colors.black,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: theme.primaryColor, width: 1.5),
                         boxShadow: [
@@ -133,12 +167,12 @@ class _EditCardScreenState extends State<EditCardScreen> {
                         child: _selectedImagePath != null
                             ? TarotCardImage(
                                 card: TarotCardModel(
-                                  deckId: widget.card.deckId,
+                                  deckId: widget.deckId,
                                   name: '',
                                   meaning: '',
                                   imagePath: _selectedImagePath!,
                                 ),
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
                               )
                             : const Icon(Icons.auto_stories, size: 50, color: Colors.white24),
                       ),
@@ -194,14 +228,21 @@ class _EditCardScreenState extends State<EditCardScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Button Lưu thay đổi ở cuối
+              // Button Lưu thay đổi ở cuối (PC gọn: cao ~40).
               ElevatedButton.icon(
                 onPressed: _saveCard,
                 icon: const Icon(Icons.save, color: Colors.black87),
-                label: const Text('Lưu Thay Đổi', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                label: Text(
+                  isNew ? 'Thêm Lá Bài' : 'Lưu Thay Đổi',
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    fontSize: isDesktop ? 14 : 15,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),

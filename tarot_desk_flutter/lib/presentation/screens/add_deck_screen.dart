@@ -203,9 +203,9 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                       borderRadius: BorderRadius.circular(12),
                       child: kIsWeb
                           ? Image.network(_selectedImagePath!,
-                              fit: BoxFit.cover, width: double.infinity)
+                              fit: BoxFit.contain, width: double.infinity)
                           : Image.file(File(_selectedImagePath!),
-                              fit: BoxFit.cover, width: double.infinity),
+                              fit: BoxFit.contain, width: double.infinity),
                     )
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -238,14 +238,17 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            height: isDesktop ? 44 : 48,
+            height: isDesktop ? 36 : 48,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.accentColor,
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.add),
-              label: const Text('Thêm Lá Bài Vào Bộ Bài'),
+              label: Text(
+                'Thêm Lá Bài Vào Bộ Bài',
+                style: TextStyle(fontSize: isDesktop ? 13 : 14),
+              ),
               onPressed: _addCardToDraft,
             ),
           ),
@@ -255,10 +258,13 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
   }
 
   /// Một lá bài nháp hiển thị như một lá bài Tarot thật: tỉ lệ 5:8,
-  /// ảnh phủ kín, tên + giải nghĩa trên lớp phủ tối ở chân lá,
-  /// nút xóa 48dp ở góc trên-phải. Cùng ngôn ngữ 5:8 với lá bài
-  /// trên bàn trải (bàn gỗ + khăn lớn + decor ảnh).
+  /// ảnh hiện trọn (contain, không cắt), tên + giải nghĩa trên lớp
+  /// phủ tối ở chân lá, nút xóa 36dp (PC) / 48dp ở góc trên-phải.
+  /// Cùng ngôn ngữ 5:8 với lá bài trên bàn trải (bàn gỗ + khăn lớn
+  /// + decor ảnh).
   Widget _draftCardItem(dynamic theme, TarotCardModel card, int index) {
+    final isDesktop = Responsive.isDesktop(context);
+    final deleteSize = isDesktop ? 36.0 : 48.0;
     return AspectRatio(
       aspectRatio: 5 / 8,
       child: ClipRRect(
@@ -278,8 +284,8 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                       ),
                     )
                   : kIsWeb
-                      ? Image.network(card.imagePath, fit: BoxFit.cover)
-                      : Image.file(File(card.imagePath), fit: BoxFit.cover),
+                      ? Image.network(card.imagePath, fit: BoxFit.contain)
+                      : Image.file(File(card.imagePath), fit: BoxFit.contain),
               Positioned(
                 left: 0,
                 right: 0,
@@ -328,8 +334,8 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                 top: 4,
                 right: 4,
                 child: Container(
-                  width: 48,
-                  height: 48,
+                  width: deleteSize,
+                  height: deleteSize,
                   alignment: Alignment.center,
                   child: IconButton(
                     icon: const Icon(
@@ -338,9 +344,9 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                       size: 20,
                     ),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
+                    constraints: BoxConstraints(
+                      minWidth: deleteSize,
+                      minHeight: deleteSize,
                     ),
                     onPressed: () => _removeCardFromDraft(index),
                   ),
@@ -472,7 +478,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                   ),
                   child: SizedBox(
                     width: double.infinity,
-                    height: isDesktop ? 48 : 54,
+                    height: isDesktop ? 40 : 54,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.primaryColor,
@@ -485,7 +491,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                       label: Text(
                         'LƯU TOÀN BỘ BỘ BÀI (${_draftCards.length} LÁ)',
                         style: TextStyle(
-                            fontSize: isDesktop ? 14 : 16,
+                            fontSize: isDesktop ? 13 : 16,
                             fontWeight: FontWeight.bold),
                       ),
                       onPressed: _saveEntireDeck,

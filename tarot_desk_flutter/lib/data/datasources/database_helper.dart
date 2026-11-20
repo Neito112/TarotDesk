@@ -223,6 +223,13 @@ class DatabaseHelper {
     );
   }
 
+  /// Thêm MỘT lá mới vào bộ bài đã có (kho bộ bài → xem chi tiết
+  /// bộ → nút +). toMap() bỏ id null nên id tự tăng.
+  Future<int> insertCard(TarotCardModel card) async {
+    final db = await instance.database;
+    return await db.insert('TarotCards', card.toMap());
+  }
+
   // ================= TarotReading Operations =================
   Future<int> insertReading(TarotReadingModel reading) async {
     final db = await instance.database;

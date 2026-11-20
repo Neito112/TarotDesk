@@ -11,6 +11,7 @@ import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
 import '../widgets/twinkling_title.dart';
 import 'select_deck_screen.dart';
+import 'deck_detail_screen.dart';
 import 'new_reading_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
@@ -26,7 +27,7 @@ import 'settings_screen.dart';
 ///   rộng màn hình: hero gọn bên trái, bộ bài + CTA + action phụ bên phải,
 ///   nền bàn gỗ (cùng thế giới bàn trải bài góc nhìn thứ nhất), chữ và lá
 ///   bài thu nhỏ cho gọn ở 4K. Hero desktop 160 rộng (bằng cỡ lá bài trên
-///   bàn), tiêu đề 24, CTA cao 48.
+///   bàn), tiêu đề 24, CTA cao 40.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -89,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // nhìn thứ nhất với màn Trải bài mới. Điện thoại/tablet giữ
             // nền sao như cũ.
             image: AssetImage(isDesktop
-                ? 'assets/images/table_wood_only.png'
+                ? 'assets/images/table_bare_wood.png'
                 : 'assets/images/tarot_main_background.jpg'),
             fit: BoxFit.cover,
           ),
@@ -353,6 +354,8 @@ class _HomeScreenState extends State<HomeScreen> {
             width: width,
             height: height,
             decoration: BoxDecoration(
+              // Nền đen: ảnh lá 7:12 hiện trọn (contain) trong khung 5:8.
+              color: Colors.black,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: theme.primaryColor, width: 2),
               boxShadow: [
@@ -380,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       card: dailyCard,
                       width: width,
                       height: height,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                     ),
             ),
           ),
@@ -419,15 +422,17 @@ class _HomeScreenState extends State<HomeScreen> {
     dynamic theme, {
     bool compact = false,
   }) {
+    // PC gọn: nút cao 40 thay vì 48, chữ 14, icon 20.
+    final height = compact ? 40.0 : 56.0;
     return SizedBox(
-      height: compact ? 48 : 56,
+      height: height,
       child: ElevatedButton.icon(
         onPressed: () => _startNewReading(context),
-        icon: const Icon(Icons.auto_awesome, size: 22),
+        icon: Icon(Icons.auto_awesome, size: compact ? 20 : 22),
         label: Text(
           'Trải bài mới',
           style: TextStyle(
-            fontSize: compact ? 15 : 17,
+            fontSize: compact ? 14 : 17,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -499,9 +504,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final cardCount = deckProvider.currentDeckCards.length;
     return GestureDetector(
       onTap: () {
+        // "Bộ bài hiện tại": mở CHẾ ĐỘ XEM (chỉ xem, không sửa) —
+        // khác hẳn "Kho bộ bài" (quản lý: thêm/sửa). Chưa chọn bộ
+        // nào thì mở kho để chọn.
+        final deck = deckProvider.selectedDeck;
+        if (deck == null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SelectDeckScreen()),
+          );
+          return;
+        }
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const SelectDeckScreen()),
+          MaterialPageRoute(
+            builder: (_) => DeckDetailScreen(deck: deck, readOnly: true),
+          ),
         );
       },
       child: GlassPanel(
@@ -625,6 +643,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     final settings = context.watch<SettingsProvider>();
     final theme = settings.currentThemeData;
+    // PC gọn: đệm dọc 12 thay vì 16, icon 20, chữ 14.
+    final isDesktop = Responsive.isDesktop(context);
 
     return InkWell(
       onTap: onTap,
@@ -633,17 +653,17 @@ class _HomeScreenState extends State<HomeScreen> {
         blurAmount: settings.userPrefs.enableGlassmorphism ? 10 : 0,
         backgroundColor: theme.cardBackgroundColor,
         borderColor: theme.glassBorderColor,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: isDesktop ? 12 : 16),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: EdgeInsets.all(isDesktop ? 8 : 10),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.15),
                 shape: BoxShape.circle,
                 border: Border.all(color: color.withOpacity(0.3)),
               ),
-              child: Icon(icon, color: color, size: 22),
+              child: Icon(icon, color: color, size: isDesktop ? 20 : 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -651,7 +671,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 title,
                 style: TextStyle(
                   color: theme.textColor,
-                  fontSize: 15,
+                  fontSize: isDesktop ? 14 : 15,
                   fontWeight: FontWeight.bold,
                 ),
               ),

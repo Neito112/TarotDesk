@@ -227,6 +227,8 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
           aspectRatio: 5 / 8,
           child: Container(
             decoration: BoxDecoration(
+              // Nền đen: ảnh lá hiện trọn (contain), không cắt.
+              color: Colors.black,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: theme.primaryColor, width: 2),
               boxShadow: [
@@ -239,7 +241,7 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: TarotCardImage(card: card, fit: BoxFit.cover),
+              child: TarotCardImage(card: card, fit: BoxFit.contain),
             ),
           ),
         ),
@@ -275,6 +277,8 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
               child: Container(
                 width: itemWidth,
                 decoration: BoxDecoration(
+                  // Nền đen: ảnh lá hiện trọn (contain), không cắt.
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isSelected ? theme.primaryColor : theme.glassBorderColor,
@@ -289,7 +293,7 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
                   child: Column(
                     children: [
                       Expanded(
-                        child: TarotCardImage(card: card, fit: BoxFit.cover),
+                        child: TarotCardImage(card: card, fit: BoxFit.contain),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 4),
