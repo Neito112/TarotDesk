@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // nhìn thứ nhất với màn Trải bài mới. Điện thoại/tablet giữ
             // nền sao như cũ.
             image: AssetImage(isDesktop
-                ? 'assets/images/table_wood_only.png'
+                ? 'assets/images/table_bare_wood.png'
                 : 'assets/images/tarot_main_background.jpg'),
             fit: BoxFit.cover,
           ),
