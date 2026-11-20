@@ -198,13 +198,16 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
                         color: Colors.amber,
                       ),
                       tooltip: playing ? 'Dừng nhạc' : 'Phát nhạc',
-                      onPressed: value.isReady
-                          ? () {
-                              playing
-                                  ? widget.controller.pause()
-                                  : widget.controller.play();
-                            }
-                          : null,
+                      // API youtube_player_iframe 6.x: playVideo() /
+                      // pauseVideo() (không có play()/pause()); giá trị
+                      // YoutubePlayerValue cũng không có isReady nên
+                      // nút luôn bật — video đã được cue sẵn từ lúc
+                      // tạo controller (fromVideoId) nên bấm là phát.
+                      onPressed: () {
+                        playing
+                            ? widget.controller.pauseVideo()
+                            : widget.controller.playVideo();
+                      },
                     );
                   },
                 ),
