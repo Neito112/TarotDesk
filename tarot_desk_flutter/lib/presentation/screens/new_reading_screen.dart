@@ -56,12 +56,22 @@ class NewReadingScreen extends StatefulWidget {
   State<NewReadingScreen> createState() => _NewReadingScreenState();
 }
 
-class _NewReadingScreenState extends State<NewReadingScreen> {
+class _NewReadingScreenState extends State<NewReadingScreen>
+    with SingleTickerProviderStateMixin {
   int _selectedCardIndex = -1; // Mặc định là -1 (Không hiển thị khung giải nghĩa khi bắt đầu để nhìn rõ bàn bói)
   bool _showSelectionPanel = false; // Trạng thái mở khay chọn bài từ xấp bài
   TarotSuit _selectedSuit = TarotSuit.major; // Nhóm bài được chọn mặc định ban đầu là Ẩn Chính
   int? _lastDrawnId; // Lá vừa rút: bay từ xấp bài ra bàn (desktop) / bay lên (phone)
   bool _isCollecting = false; // Đang chạy hoạt ảnh thu lá lớn xuống khay (desktop)
+
+  // Bay thu lá: lá bay THẬT từ sân khấu xuống đúng ô của nó trong
+  // khay (đo vị trí thật bằng GlobalKey), không mờ dần giữa chừng.
+  final _stageCardKey = GlobalKey();
+  final _trayKey = GlobalKey();
+  final _trayScrollController = ScrollController();
+  TarotCardModel? _flyingCard; // Lá đang bay xuống khay (overlay).
+  AnimationController? _flyController;
+  OverlayEntry? _flyEntry;
 
   // Lá ĐÃ THU xuống khay: chỉ còn trong khay, KHÔNG còn trên bàn
   // (không ở vùng trải, không ở sân khấu). Tách riêng khỏi
@@ -69,6 +79,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   // (để khay + lưới chọn bài còn biết nó đã rút), nhưng bàn thì
   // không hiện gì cho nó nữa.
   final Set<int> _collectedIds = {};
+
+  @override
+  void dispose() {
+    _flyEntry?.remove();
+    _flyController?.dispose();
+    _trayScrollController.dispose();
+    super.dispose();
+  }
 
   // Mật độ gọn cho PC 4K: mọi thứ nhỏ lại, bàn chiếm toàn bộ khung hình.
   bool get _isDesktop => Responsive.isDesktop(context);
@@ -121,21 +139,98 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     });
   }
 
-  /// Thu lá đang đọc xuống khay KÈM hoạt ảnh mượt (chỉ dùng trên
-  /// bàn PC): lá bay nhỏ dần xuống khay dưới trong 450ms rồi mới
-  /// rời khỏi bàn — kết quả giống hệt chạm vào lá lớn để thu.
+  /// Thu lá đang đọc xuống khay KÈM hoạt ảnh BAY THẬT (chỉ dùng
+  /// trên bàn PC): lá bay từ giữa màn hình (sân khấu) xuống ĐÚNG
+  /// ô của nó trong khay dưới, nhỏ dần theo quãng bay, rồi mới
+  /// rời khỏi bàn — không biến mất giữa chừng rồi hiện ở khay.
+  /// Vị trí đầu/cuối đo thật bằng GlobalKey (sân khấu + khay).
   void _collectCardAnimated() {
     if (_isCollecting || _selectedCardIndex < 0) return;
     final index = _selectedCardIndex;
-    final cardId =
-        context.read<ReadingProvider>().drawnCards[index].id;
-    setState(() => _isCollecting = true);
-    Future.delayed(const Duration(milliseconds: 450), () {
+    final drawnCards = context.read<ReadingProvider>().drawnCards;
+    if (index >= drawnCards.length) return;
+    final card = drawnCards[index];
+    final cardId = card.id;
+
+    // Đo vị trí lá trên sân khấu và ô đích trong khay.
+    final stageBox =
+        _stageCardKey.currentContext?.findRenderObject() as RenderBox?;
+    final trayBox =
+        _trayKey.currentContext?.findRenderObject() as RenderBox?;
+    final stageRect = stageBox != null
+        ? stageBox.localToGlobal(Offset.zero) & stageBox.size
+        : null;
+    Rect? targetRect;
+    if (trayBox != null) {
+      final trayOrigin = trayBox.localToGlobal(Offset.zero);
+      final traySize = trayBox.size;
+      final thumbW = _isDesktop ? 100.0 : 64.0;
+      final thumbH = thumbW * 8 / 5;
+      final pitch = thumbW + 8.0; // Margin ngang 4 mỗi bên.
+      final scrolled = _trayScrollController.hasClients
+          ? _trayScrollController.offset
+          : 0.0;
+      final slotX = trayOrigin.dx + 4.0 + index * pitch - scrolled;
+      final slotY = trayOrigin.dy + (traySize.height - thumbH) / 2;
+      // Kẹp ô đích trong vùng khay nhìn thấy được.
+      targetRect = Rect.fromLTWH(
+        slotX
+            .clamp(trayOrigin.dx, trayOrigin.dx + traySize.width - thumbW)
+            .toDouble(),
+        slotY,
+        thumbW,
+        thumbH,
+      );
+    }
+    if (stageRect == null || targetRect == null) {
+      // Đo không được (chưa layout xong): thu ngay như cũ.
+      _collectIndex(index);
+      return;
+    }
+
+    setState(() {
+      _isCollecting = true;
+      _flyingCard = card; // Sân khấu ẩn lá, overlay bay thay.
+    });
+    _flyController?.dispose();
+    _flyController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    final anim = CurvedAnimation(
+      parent: _flyController!,
+      curve: Curves.easeInOutCubic,
+    );
+    final theme = context.read<SettingsProvider>().currentThemeData;
+    final start = stageRect;
+    final end = targetRect;
+    _flyEntry = OverlayEntry(
+      builder: (ctx) => AnimatedBuilder(
+        animation: anim,
+        builder: (ctx, _) {
+          final r = Rect.lerp(start, end, anim.value)!;
+          return Positioned(
+            left: r.left,
+            top: r.top,
+            width: r.width,
+            height: r.height,
+            child: _buildFlyingCard(card, theme),
+          );
+        },
+      ),
+    );
+    Overlay.of(context).insert(_flyEntry!);
+    _flyController!.forward().then((_) {
+      _flyEntry?.remove();
+      _flyEntry = null;
+      _flyController?.dispose();
+      _flyController = null;
       if (!mounted) return;
       setState(() {
         _isCollecting = false;
+        _flyingCard = null;
         // Chỉ đánh dấu đã thu nếu lá vẫn còn trong lượt trải (người
-        // dùng có thể đã bấm "Xóa hết" trong lúc hoạt ảnh đang chạy).
+        // dùng có thể đã bấm "Xóa hết" trong lúc lá đang bay).
         if (context
             .read<ReadingProvider>()
             .drawnCards
@@ -146,6 +241,31 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         _lastDrawnId = null; // Không chạy lại hoạt ảnh rút cho lá đã thu.
       });
     });
+  }
+
+  /// Lá đang bay xuống khay: khung lá như lá sân khấu (viền vàng,
+  /// nền đen, bóng đổ), ảnh hiện TRỌN (không cắt), kích thước theo
+  /// ô bay (Positioned) nên nhỏ dần khi tới khay.
+  Widget _buildFlyingCard(TarotCardModel card, dynamic theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.primaryColor, width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 14,
+            spreadRadius: 1,
+            offset: Offset(8, 14),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: TarotCardImage(card: card, fit: BoxFit.contain),
+      ),
+    );
   }
 
   @override
@@ -498,41 +618,32 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   /// Lá lớn trên sân khấu PC: 150 rộng, viền vàng + glow. Lá vừa rút
   /// bay từ xấp bài (góc trên-trái) ra vị trí này trong 450ms
-  /// (easeOutBack, giống trước). Đang thu thì bay nhỏ dần xuống khay
-  /// dưới trong 450ms (easeInOut). Chạm vào lá để thu xuống khay.
+  /// (easeOutBack, giống trước). Đang thu thì lá BAY THẬT từ sân
+  /// khấu xuống đúng ô trong khay (overlay, 600ms easeInOutCubic
+  /// — xem _collectCardAnimated); sân khấu để trống đúng khung.
+  /// Chạm vào lá để thu xuống khay.
   Widget _buildDesktopStageCard(
       TarotCardModel activeCard, dynamic theme, double width) {
     final isNew = activeCard.id == _lastDrawnId;
+    // Lá đang bay xuống khay: sân khấu để trống đúng khung (overlay
+    // bay thay), bố cục không nhảy, khay chưa hiện lá cho tới khi
+    // lá đáp xuống ô của nó.
+    if (_flyingCard != null && _flyingCard!.id == activeCard.id) {
+      return SizedBox(
+        key: _stageCardKey,
+        width: width,
+        height: width * 8 / 5,
+      );
+    }
     final tile = GestureDetector(
       onTap: _collectCardAnimated,
       child: SizedBox(
+        key: _stageCardKey,
         width: width,
         height: width * 8 / 5,
         child: _cardFrame(activeCard, theme, width),
       ),
     );
-    if (_isCollecting) {
-      // Thu lá xuống khay: bay xuống + nhỏ dần + mờ dần về phía khay.
-      return TweenAnimationBuilder<double>(
-        key: ValueKey('collect-${activeCard.id}'),
-        tween: Tween<double>(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 450),
-        curve: Curves.easeInOut,
-        builder: (context, v, child) {
-          return Opacity(
-            opacity: 1.0 - v,
-            child: Transform.translate(
-              offset: Offset(0, 280 * v),
-              child: Transform.scale(
-                scale: 1.0 - 0.65 * v,
-                child: child,
-              ),
-            ),
-          );
-        },
-        child: tile,
-      );
-    }
     if (!isNew) return tile;
     // Hoạt ảnh rút bài: bay từ xấp bài ra sân khấu, scale từ 0.6 lên 1.
     return TweenAnimationBuilder<double>(
@@ -1038,6 +1149,9 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           height: width * 8 / 5,
           child: Container(
             decoration: BoxDecoration(
+              // Nền đen: ảnh lá 7:12 hiện trọn (contain) trong khung
+              // 5:8, hai viền đen mỏng hai bên thay vì bị cắt đầu/cuối.
+              color: Colors.black,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                   color: isSelected ? theme.primaryColor : Colors.transparent,
@@ -1053,7 +1167,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(7),
-              child: TarotCardImage(card: card, fit: BoxFit.cover),
+              child: TarotCardImage(card: card, fit: BoxFit.contain),
             ),
           ),
         ),
@@ -1414,10 +1528,13 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Khung lá bài: viền vàng + glow, tỉ lệ 5:8.
+  /// Khung lá bài: viền vàng + glow, tỉ lệ 5:8. Ảnh lá hiện TRỌN
+  /// (BoxFit.contain, nền đen) vì ảnh gốc 7:12 hẹp hơn khung 5:8
+  /// — cover cắt mất đầu/cuối tranh và chữ tên lá ở chân lá.
   Widget _cardFrame(TarotCardModel card, dynamic theme, double cardWidth) {
     return Container(
       decoration: BoxDecoration(
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: theme.primaryColor, width: 2),
         boxShadow: [
@@ -1438,7 +1555,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: TarotCardImage(card: card, fit: BoxFit.cover),
+        child: TarotCardImage(card: card, fit: BoxFit.contain),
       ),
     );
   }
@@ -1672,6 +1789,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             opacity: isAlreadyDrawn ? 0.35 : 1.0,
             child: Container(
               decoration: BoxDecoration(
+                // Nền đen: ảnh lá 7:12 hiện trọn (contain) trong ô 5:8.
+                color: Colors.black,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isAlreadyDrawn ? Colors.white24 : theme.glassBorderColor,
@@ -1680,7 +1799,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(7),
-                child: TarotCardImage(card: card, fit: BoxFit.cover),
+                child: TarotCardImage(card: card, fit: BoxFit.contain),
               ),
             ),
           );
@@ -1698,12 +1817,13 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 width: 64,
                 height: 102,
                 decoration: BoxDecoration(
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: theme.primaryColor, width: 2),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(7),
-                  child: TarotCardImage(card: card, fit: BoxFit.cover),
+                  child: TarotCardImage(card: card, fit: BoxFit.contain),
                 ),
               ),
             ),
@@ -1750,6 +1870,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     }
 
     return Container(
+      key: _trayKey,
       height: trayHeight,
       padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
@@ -1781,6 +1902,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             child: ScrollConfiguration(
               behavior: MouseDragScrollBehavior(), // Hỗ trợ kéo chuột để trượt ngang mượt mà
               child: ListView.builder(
+                controller: _trayScrollController,
                 scrollDirection: Axis.horizontal,
                 physics: const AlwaysScrollableScrollPhysics(),
                 itemCount: drawnCards.length,
@@ -1805,12 +1927,13 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                           width: trayThumbWidth,
                           height: trayThumbWidth * 8 / 5,
                           decoration: BoxDecoration(
+                            color: Colors.black,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: theme.primaryColor, width: 2),
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(6),
-                            child: TarotCardImage(card: card, fit: BoxFit.cover),
+                            child: TarotCardImage(card: card, fit: BoxFit.contain),
                           ),
                         ),
                       ),
@@ -1838,7 +1961,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Thumbnail lá bài trong khay: PC 100 rộng (gần bằng lá trên
-  /// bàn), phone/tablet 64 rộng, tỉ lệ 5:8.
+  /// bàn), phone/tablet 64 rộng, tỉ lệ 5:8. Ảnh lá hiện TRỌN
+  /// (contain, nền đen) — ảnh gốc 7:12, cover cắt mất tên lá.
   Widget _buildBottomTrayItem(
       TarotCardModel card, bool isSelected, dynamic theme, double width) {
     return AnimatedContainer(
@@ -1846,6 +1970,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       width: width,
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
+        // Nền đen cho contain: hai viền đen mỏng hai bên lá.
+        color: Colors.black,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isSelected ? theme.primaryColor : theme.glassBorderColor,
@@ -1859,7 +1985,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         borderRadius: BorderRadius.circular(6),
         child: AspectRatio(
           aspectRatio: 5 / 8,
-          child: TarotCardImage(card: card, fit: BoxFit.cover),
+          child: TarotCardImage(card: card, fit: BoxFit.contain),
         ),
       ),
     );
