@@ -1460,7 +1460,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 28),
                     SizedBox(height: 12),
                     Text(
-                      'Chạm vào xấp bài bên trái để bắt đầu chọn.\n\nKéo các lá bài từ khay lịch sử lên đây hoặc chạm để xem giải nghĩa.\n\nKéo lá bài đang chọn xuống hoặc vuốt xuống để thu hồi.',
+                      'Chạm vào xấp bài ở giữa để bắt đầu chọn.\n\nKéo các lá bài từ khay lịch sử lên đây hoặc chạm để xem giải nghĩa.\n\nKéo lá bài đang chọn xuống hoặc vuốt xuống để thu hồi.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
