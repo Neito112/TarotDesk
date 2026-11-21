@@ -125,17 +125,19 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
     // background (fire-and-forget, best-effort) so it already
     // displays in the active system language when the user opens
     // it. The saved deck keeps exactly what the user typed —
-    // translations live only in the Worker D1 cache + memory
-    // (see TranslationService). Guests (no session token) are
-    // served under the Worker's anonymous cap.
+    // translations live in the Worker's permanent
+    // `deck_translations` table + memory (see
+    // TranslationService). Guests (no session token) are served
+    // under the Worker's anonymous cap for the warm-up.
     final targetLang = settings.language.code;
     final sourceLang = detectDeckLanguage(deckName, _draftCards);
+    final translator = TranslationService(
+      TarotdeskApiService(),
+      sessionToken: () => auth.sessionToken,
+      targetLanguageCode: () => targetLang,
+      userSub: () => auth.user?.sub,
+    );
     if (sourceLang == null || sourceLang != targetLang) {
-      final translator = TranslationService(
-        TarotdeskApiService(),
-        sessionToken: () => auth.sessionToken,
-        targetLanguageCode: () => targetLang,
-      );
       unawaited(
         translator.warmCache(
           List<TarotCardModel>.of(_draftCards),
@@ -145,6 +147,26 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
         ),
       );
     }
+    // PERMANENT STORE (write-time, V2): store the same deck's
+    // translations PERMANENTLY for ALL FOUR UI languages, in the
+    // background (see TranslationService.storeDeckTranslations).
+    // The current-language warm-up above makes the deck readable
+    // right now; this makes every language switch instant later.
+    // Runs even when source == target — the other languages
+    // still need storing. Any signed-in user: the owner is
+    // decided server-side from the session ('shared' for the
+    // admin, the author's email otherwise); guests (no session)
+    // store nothing and translate on demand. The deck_key is
+    // derived from the just-created deck's local id — the new
+    // deck is already the selected deck at this point.
+    unawaited(
+      translator.storeDeckTranslations(
+        List<TarotCardModel>.of(_draftCards),
+        deckId: deckProvider.selectedDeck?.id,
+        deckName: deckName,
+        sourceLang: sourceLang,
+      ),
+    );
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/models/tarot_card.dart';
+import '../../data/models/tarot_deck.dart';
 import '../../data/models/tarot_reading.dart';
 import '../../core/translation_service.dart';
+import '../../logic/deck_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/localized_card_text.dart';
@@ -40,8 +42,35 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
   }
 
   Future<void> _loadCards() async {
+    final translation = context.read<TranslationService>();
     setState(() => _isLoading = true);
     final loaded = await DatabaseHelper.instance.getCardsByIds(widget.reading.cardIds);
+    // WIRING (V2 display path): nạp bản dịch vĩnh viễn đã lưu của
+    // bộ bài của trải bài này (ngôn ngữ hiện tại) TRƯỚC khi hiện
+    // các lá, để các lá vẽ từ bản đã lưu thay vì dịch theo yêu cầu
+    // từng lá. Cần toàn bộ bộ bài theo đúng thứ tự (vị trí lá là
+    // cách hàng đã lưu map về lá) nên tải riêng danh sách đầy đủ
+    // của bộ bài — danh sách lá đã rút ở trên chỉ là tập con theo
+    // thứ tự rút, không dùng để nạp được. Chờ có giới hạn (timeout
+    // ngắn trong service); Worker chậm / mất mạng thì các lá dịch
+    // theo yêu cầu như trước. Không tìm thấy bộ bài (đã xóa) thì
+    // bỏ qua nạp, chỉ hiện các lá đã rút.
+    TarotDeckModel? deck;
+    for (final d in context.read<DeckProvider>().decks) {
+      if (d.id == widget.reading.deckId) {
+        deck = d;
+        break;
+      }
+    }
+    if (deck != null) {
+      final fullDeckCards =
+          await DatabaseHelper.instance.getCardsByDeckId(deck.id!);
+      await translation.preloadLocalDeck(
+        deckId: deck.id,
+        deckName: deck.name,
+        cards: fullDeckCards,
+      );
+    }
     if (mounted) {
       setState(() {
         _cards = loaded;

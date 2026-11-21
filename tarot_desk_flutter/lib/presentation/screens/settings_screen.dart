@@ -7,7 +7,6 @@ import '../../core/localization.dart';
 import '../../core/responsive.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/translation_service.dart';
-import '../../data/datasources/cloud_sync_service.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/datasources/tarotdesk_api_service.dart';
 import '../../data/models/tarot_card.dart';
@@ -201,6 +200,7 @@ class SettingsScreen extends StatelessWidget {
       // tổng số lá (cho thanh tiến độ) trước khi hiện dialog.
       // Đọc từ DB local nên nhanh; không dịch gì ở bước này.
       final deckNames = <String>[];
+      final deckIds = <int?>[];
       final deckCardsList = <List<TarotCardModel>>[];
       var totalCards = 0;
       for (final deck in deckProvider.decks) {
@@ -209,6 +209,7 @@ class SettingsScreen extends StatelessWidget {
             await DatabaseHelper.instance.getCardsByDeckId(deck.id!);
         if (cards.isEmpty) continue;
         deckNames.add(deck.name);
+        deckIds.add(deck.id);
         deckCardsList.add(cards);
         totalCards += cards.length;
       }
@@ -266,6 +267,26 @@ class SettingsScreen extends StatelessWidget {
       unawaited(dialogFuture.then((_) => doneCards.dispose()));
 
       try {
+        // WIRING (V2 display path): nạp TRƯỚC bản dịch vĩnh viễn
+        // đã lưu của mọi bộ bài sang ngôn ngữ mới (một lần tra
+        // cứu D1 nhanh cho mỗi bộ, chạy song song). warmCache ở
+        // dưới sẽ BỎ QUA các chuỗi đã có trong bộ nhớ đệm, nên
+        // bộ bài đã dịch trước không tốn gọi MT và bản dịch đã
+        // lưu không bị ghi đè. Bộ nào chưa có bản dịch lưu sẵn
+        // thì preload trả 0 và warmCache dịch như trước. Không
+        // bao giờ ném lỗi (mỗi preload có timeout ngắn riêng);
+        // khách chưa đăng nhập vẫn nạp được bộ bài cơ bản (dữ
+        // liệu chung, công khai), còn bộ riêng của họ thì không
+        // có danh tính server nên preload trả 0.
+        await Future.wait(<Future<int>>[
+          for (var d = 0; d < deckCardsList.length; d++)
+            translation.preloadLocalDeck(
+              deckId: deckIds[d],
+              deckName: deckNames[d],
+              cards: deckCardsList[d],
+              lang: targetLang.code,
+            ),
+        ]);
         // Dịch từng bộ bài (theo lô 20 chuỗi), cộng dồn tiến độ.
         // targetLang được truyền rõ ràng — KHÔNG dựa vào ngôn ngữ
         // trong SettingsProvider vì nó chưa đổi lúc này.
@@ -670,77 +691,42 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-/// Sync + logout buttons inside the Google account section.
-/// A separate StatefulWidget so the syncing state lives here
-/// without turning SettingsScreen into a StatefulWidget.
-class _AccountActions extends StatefulWidget {
+/// Logout (+ guest link) buttons inside the Google account section.
+///
+/// Sync is automatic now (on login and on page reload), so there is
+/// no manual sync button and no syncing state here — this is a plain
+/// StatelessWidget. The guest "link Google account" button and the
+/// logout button are the only actions left.
+class _AccountActions extends StatelessWidget {
   const _AccountActions({required this.settings, required this.theme});
 
   final SettingsProvider settings;
   final AppThemeData theme;
 
-  @override
-  State<_AccountActions> createState() => _AccountActionsState();
-}
-
-class _AccountActionsState extends State<_AccountActions> {
-  bool _isSyncing = false;
-
-  Future<void> _syncNow() async {
-    if (_isSyncing) return;
-    final auth = context.read<AuthProvider>();
-    if (auth.sessionToken == null || auth.sessionToken!.isEmpty) {
-      // Guests cannot sync: readable error, no crash.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(widget.settings.tr('settings.loginRequired'))),
-      );
-      return;
-    }
-    setState(() => _isSyncing = true);
-    try {
-      await CloudSyncService(auth, targetLanguageCode: () => widget.settings.language.code).uploadFromLocal();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(widget.settings.tr('settings.syncSuccess'))),
-      );
-    } on TarotdeskApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                '${widget.settings.tr('settings.syncFailed')} ${e.message}')),
-      );
-    } finally {
-      if (mounted) setState(() => _isSyncing = false);
-    }
-  }
-
-  Future<void> _confirmLogout() async {
+  Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(widget.settings.tr('settings.logoutTitle')),
-        content: Text(widget.settings.tr('settings.logoutBody')),
+        title: Text(settings.tr('settings.logoutTitle')),
+        content: Text(settings.tr('settings.logoutBody')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(widget.settings.tr('common.cancel')),
+            child: Text(settings.tr('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text(
-              widget.settings.tr('settings.logout'),
+              settings.tr('settings.logout'),
               style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
       ),
     );
-    if (confirmed == true && mounted) {
+    if (confirmed == true && context.mounted) {
       await context.read<AuthProvider>().logout();
-      if (!mounted) return;
+      if (!context.mounted) return;
       // Settings was pushed on top of Home; after logout the gate
       // rebuilds to the login screen, but this pushed route would
       // still cover it. Pop back to the first route so the login
@@ -759,27 +745,15 @@ class _AccountActionsState extends State<_AccountActions> {
           ElevatedButton.icon(
             icon: const Icon(Icons.link, size: 18),
             label:
-                Text(widget.settings.tr('settings.linkGoogleAccount')),
+                Text(settings.tr('settings.linkGoogleAccount')),
             onPressed: () =>
                 context.read<AuthProvider>().startGoogleLogin(),
           ),
-        if (!isGuest)
-          ElevatedButton.icon(
-            icon: _isSyncing
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.cloud_upload, size: 18),
-            label: Text(widget.settings.tr('settings.syncNow')),
-            onPressed: _isSyncing ? null : _syncNow,
-          ),
         const SizedBox(height: 8),
         TextButton(
-          onPressed: _confirmLogout,
+          onPressed: () => _confirmLogout(context),
           child: Text(
-            widget.settings.tr('settings.logout'),
+            settings.tr('settings.logout'),
             style: const TextStyle(color: Colors.red),
           ),
         ),

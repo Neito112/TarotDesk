@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
+import '../../core/translation_service.dart';
+import '../../data/datasources/tarotdesk_api_service.dart';
+import '../../logic/auth_provider.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/models/tarot_card.dart';
 import '../../logic/deck_provider.dart';
@@ -71,6 +76,10 @@ class _EditCardScreenState extends State<EditCardScreen> {
 
   Future<void> _saveCard() async {
     final settings = context.read<SettingsProvider>();
+    // Read before the awaits below (no context use after an
+    // async gap): the pre-translation after saving only needs
+    // the session token / admin flag, captured here.
+    final auth = context.read<AuthProvider>();
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -104,6 +113,68 @@ class _EditCardScreenState extends State<EditCardScreen> {
     final deckProvider = context.read<DeckProvider>();
     if (deckProvider.selectedDeck?.id == widget.deckId) {
       await deckProvider.fetchCardsForSelectedDeck();
+    }
+
+    // PERMANENT STORE (write-time, V2): the saved card's new text
+    // is translated for all four languages in the background and
+    // stored PERMANENTLY — only this card is re-translated, at
+    // its 0-based position in the deck's card list (INSERT OR
+    // REPLACE for that card_id + langs); the rest of the deck's
+    // stored rows are untouched. The deck name did not change
+    // here, so no deck-name row is sent. Any signed-in user: the
+    // owner is decided server-side from the session; guests store
+    // nothing. Everyone else is covered when the deck is
+    // (re-)submitted, and the PR #43 dialog covers anything still
+    // unstored. Best-effort, never blocks the save.
+    final savedCard = TarotCardModel(
+      id: isNew ? null : widget.card!.id,
+      deckId: widget.deckId,
+      name: name,
+      meaning: _meaningController.text.trim(),
+      imagePath: _selectedImagePath ?? widget.card?.imagePath ?? '',
+    );
+    // The card's position in the deck's card list, read fresh from
+    // the local database: an edited card keeps its position (found
+    // by id), a new card was appended last. (A deck whose cards
+    // were added/deleted shifts positions — that is healed by
+    // re-storing the whole deck on the next create/import/submit.)
+    final deckCards =
+        await DatabaseHelper.instance.getCardsByDeckId(widget.deckId);
+    final cardIndex = isNew
+        ? deckCards.length - 1
+        : deckCards.indexWhere((c) => c.id == widget.card!.id);
+    // The deck's name, for source-language detection (and the
+    // deck-name row on a whole-deck store). The store key itself
+    // is always the personal key — the app never stores under
+    // 'base', even for the base deck (see TranslationService).
+    String? editedDeckName;
+    for (final deck in await DatabaseHelper.instance.getDecks()) {
+      if (deck.id == widget.deckId) {
+        editedDeckName = deck.name;
+        break;
+      }
+    }
+    final translator = TranslationService(
+      TarotdeskApiService(),
+      sessionToken: () => auth.sessionToken,
+      targetLanguageCode: () => settings.language.code,
+      userSub: () => auth.user?.sub,
+    );
+    // Only store when the card's position is known: an unknown
+    // position must never be guessed (a wrong card_id would
+    // overwrite another card's stored translation).
+    if (cardIndex >= 0) {
+      unawaited(
+        translator.storeDeckTranslations(
+          <TarotCardModel>[savedCard],
+          deckId: widget.deckId,
+          deckName: editedDeckName,
+          // Single-card store: the list holds one card, so its
+          // position is passed explicitly instead of the list index.
+          cardIndex: cardIndex,
+          sourceLang: detectLanguage('$name ${savedCard.meaning}'),
+        ),
+      );
     }
 
     if (mounted) {

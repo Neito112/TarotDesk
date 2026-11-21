@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
+import '../../core/translation_service.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/models/tarot_card.dart';
 import '../../data/models/tarot_deck.dart';
@@ -48,8 +49,25 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
   }
 
   Future<void> _loadCards() async {
+    final translation = context.read<TranslationService>();
     setState(() => _isLoading = true);
     final loaded = await DatabaseHelper.instance.getCardsByDeckId(widget.deck.id!);
+    // WIRING (V2 display path): nạp bản dịch vĩnh viễn đã lưu của
+    // bộ bài này (ngôn ngữ hiện tại) TRƯỚC khi hiện lưới lá, để
+    // các lá vẽ từ bản đã lưu thay vì dịch theo yêu cầu từng lá.
+    // Phải chờ (có giới hạn timeout ngắn trong service) vì
+    // LocalizedCardName chỉ tạo Future dịch một lần khi lá hiện
+    // ra — nếu nạp nền không chờ, lá đã hiện bằng bản dịch theo
+    // yêu cầu rồi và lần mở sau mới dùng được bản đã lưu. Worker
+    // chậm / mất mạng cũng không kẹt màn hình (timeout → dịch
+    // theo yêu cầu như trước). Khách chưa đăng nhập vẫn nạp được
+    // bộ bài cơ bản (dữ liệu chung, công khai); bộ riêng của họ
+    // không có danh tính server nên preload trả 0.
+    await translation.preloadLocalDeck(
+      deckId: widget.deck.id,
+      deckName: widget.deck.name,
+      cards: loaded,
+    );
     if (mounted) {
       setState(() {
         _cards = loaded;
