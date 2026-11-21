@@ -516,6 +516,20 @@ class AppStrings {
       AppLanguage.ko: "네트워크에 연결되어 있지 않습니다. 연결을 확인하고 다시 시도해 주세요.",
       AppLanguage.ja: "ネットワークに接続されていません。接続を確認してもう一度お試しください。",
     },
+    'auth.guestButton': {
+      AppLanguage.vi: "Dùng offline (không đăng nhập)",
+      AppLanguage.en: "Use offline (no sign-in)",
+      AppLanguage.zh: "离线使用（无需登录）",
+      AppLanguage.ko: "오프라인으로 사용 (로그인 없이)",
+      AppLanguage.ja: "オフラインで使う（ログインなし）",
+    },
+    'auth.guestNote': {
+      AppLanguage.vi: "Dùng offline vẫn trải bài, lưu bộ bài và lịch sử trên máy. Đăng nhập sau để đồng bộ và dùng kho bài chung.",
+      AppLanguage.en: "Offline still lets you read, save decks and history on this device. Sign in later to sync and use shared decks.",
+      AppLanguage.zh: "离线仍可在本设备上占卜、保存牌组与记录。稍后登录即可同步并使用共享牌组。",
+      AppLanguage.ko: "오프라인으로도 이 기기에서 리딩하고 덱과 기록을 저장할 수 있습니다. 나중에 로그인하면 동기화와 공유 덱을 사용할 수 있습니다.",
+      AppLanguage.ja: "オフラインでもこのデバイスでリーディングし、デッキと履歴を保存できます。後でログインすれば同期と共有デッキが使えます。",
+    },
     'auth.instruction': {
       AppLanguage.vi: "Mở liên kết trên, đăng nhập GitHub rồi nhập mã xác nhận.",
       AppLanguage.en: "Open the link above, sign in to GitHub, then enter the code.",
