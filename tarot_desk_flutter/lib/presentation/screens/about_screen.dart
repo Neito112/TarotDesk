@@ -26,7 +26,7 @@ class AboutScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Giới thiệu & Hướng dẫn'),
+        title: Text(settings.tr('about.title')),
         backgroundColor: Colors.transparent,
         foregroundColor: theme.primaryColor,
         elevation: 0,
@@ -40,75 +40,48 @@ class AboutScreen extends StatelessWidget {
               children: [
                 _section(
                   theme,
-                  'TarotDesk là gì?',
+                  settings.tr('about.whatIsTitle'),
                   [
-                    'TarotDesk là một công cụ — nơi bạn lưu trữ, sắp xếp '
-                        'và tập luyện với bộ bài Tarot của mình.',
-                    'TarotDesk KHÔNG phải là phần mềm giải nghĩa hay trải '
-                        'bài tự động. App không bói toán, không đọc bài '
-                        'thay bạn, và không thay thế được bộ bài vật lý. '
-                        'Ý nghĩa của một lá bài đến từ việc bạn học, bạn '
-                        'cảm và bạn suy ngẫm — app chỉ giúp bạn lưu lại '
-                        'và xem lại những gì bạn đã học.',
-                    'Bạn vẫn cần một bộ bài vật lý của riêng mình. Trải '
-                        'bài thật là khi bạn cầm lá bài trên tay, xào bài, '
-                        'rút bài, đặt bài lên bàn.',
-                    'Trước khi mua bộ bài của riêng mình, bạn có thể vào '
-                        'Kho bộ bài để xem có bộ nào mình muốn mua không '
-                        '— rồi tập luyện với bộ đó trong app trước khi '
-                        'quyết định mua. Thử trước, mua sau.',
+                    settings.tr('about.para1'),
+                    settings.tr('about.para2'),
+                    settings.tr('about.para3'),
+                    settings.tr('about.para4'),
                   ],
                 ),
                 const SizedBox(height: 16),
                 _section(
                   theme,
-                  'Hướng dẫn sử dụng',
+                  settings.tr('about.guideTitle'),
                   const [],
                   steps: [
                     (
-                      'Kho bộ bài',
-                      'Duyệt các bộ bài có sẵn. Chạm vào một bộ để xem '
-                          'các lá bài và đọc ý nghĩa từng lá. Tìm được bộ '
-                          'mình thích thì tập luyện với nó trước khi mua '
-                          'bản vật lý.'
+                      settings.tr('about.step1Title'),
+                      settings.tr('about.step1Body')
                     ),
                     (
-                      'Thêm bộ bài của bạn',
-                      'Khi đã có bộ bài vật lý, hãy tạo bộ bài của riêng '
-                          'mình trong app: đặt tên bộ bài, thêm từng lá '
-                          '(ảnh + ý nghĩa). Bộ bài của bạn sẽ được lưu lại '
-                          'để dùng cho mọi lần trải bài sau.'
+                      settings.tr('about.step2Title'),
+                      settings.tr('about.step2Body')
                     ),
                     (
-                      'Trải bài mới',
-                      'Bấm "Trải bài mới" để bắt đầu. Chạm vào xấp bài để '
-                          'rút lá. Lá vừa rút hiện lên sân khấu cùng ý '
-                          'nghĩa của nó. Chạm vào lá trên sân khấu để thu '
-                          'lá xuống khay. Chạm vào lá trong khay để xem '
-                          'lại lá đó.'
+                      settings.tr('about.step3Title'),
+                      settings.tr('about.step3Body')
                     ),
                     (
-                      'Lá bài ngày',
-                      'Mỗi ngày app chọn một lá cho bạn. Chạm vào lá để '
-                          'đọc ý nghĩa của nó — một gợi ý nhỏ để suy ngẫm '
-                          'trong ngày.'
+                      settings.tr('about.step4Title'),
+                      settings.tr('about.step4Body')
                     ),
                     (
-                      'Lịch sử trải bài',
-                      'Các lần trải bài đã lưu nằm ở đây. Mở lại để xem '
-                          'các lá đã rút và ý nghĩa của chúng.'
+                      settings.tr('about.step5Title'),
+                      settings.tr('about.step5Body')
                     ),
                     (
-                      'Tùy chỉnh bàn trải bài',
-                      'Đổi khăn trải bàn, chọn phụ kiện (pha lê, quả cầu, '
-                          'trầm, nến), bật/tắt nhạc huyền bí trong phần '
-                          'Cài đặt. Bàn trải bài là không gian của riêng '
-                          'bạn — hãy bày biện theo cách bạn thích.'
+                      settings.tr('about.step6Title'),
+                      settings.tr('about.step6Body')
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                _donateSection(context, theme),
+                _donateSection(context, theme, settings),
                 const SizedBox(height: 24),
               ],
             ),
@@ -121,7 +94,8 @@ class AboutScreen extends StatelessWidget {
   /// Mục mời cà phê: mã QR VietQR (BIDV) + lời mời. Chạm vào mã
   /// để xem phóng to cho dễ quét. Đây là một liên kết/dạng chạm
   /// được, không chỉ là ảnh tĩnh.
-  Widget _donateSection(BuildContext context, dynamic theme) {
+  Widget _donateSection(
+      BuildContext context, dynamic theme, SettingsProvider settings) {
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
       borderColor: theme.glassBorderColor,
@@ -131,7 +105,7 @@ class AboutScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              'Mời mình một tách cà phê',
+              settings.tr('about.coffeeTitle'),
               style: TextStyle(
                 color: theme.primaryColor,
                 fontSize: 18,
@@ -140,7 +114,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Nếu thấy hữu ích hãy mời mình một tách cafe <3',
+              settings.tr('about.coffeeText'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: theme.textColor,
@@ -150,9 +124,9 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             GestureDetector(
-              onTap: () => _showDonateQrDialog(context, theme),
+              onTap: () => _showDonateQrDialog(context, theme, settings),
               child: Tooltip(
-                message: 'Chạm để xem mã QR phóng to',
+                message: settings.tr('about.qrTooltip'),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.asset(
@@ -165,7 +139,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Chạm vào mã QR để phóng to • Quét bằng app ngân hàng',
+              settings.tr('about.qrHint'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: theme.textColor.withOpacity(0.7),
@@ -181,7 +155,8 @@ class AboutScreen extends StatelessWidget {
 
   /// Hộp thoại phóng to mã QR để quét cho dễ, kèm thông tin tài
   /// khoản để chuyển khoản thủ công nếu cần.
-  void _showDonateQrDialog(BuildContext context, dynamic theme) {
+  void _showDonateQrDialog(
+      BuildContext context, dynamic theme, SettingsProvider settings) {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -221,7 +196,7 @@ class AboutScreen extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'BIDV - CN Hà Nội',
+                settings.tr('about.bankBranch'),
                 style: TextStyle(
                   color: theme.textColor.withOpacity(0.75),
                   fontSize: 13,
@@ -231,7 +206,7 @@ class AboutScreen extends StatelessWidget {
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
                 child: Text(
-                  'Đóng',
+                  settings.tr('common.close'),
                   style: TextStyle(color: theme.primaryColor),
                 ),
               ),

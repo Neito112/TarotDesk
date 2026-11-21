@@ -59,17 +59,22 @@ class _EditCardScreenState extends State<EditCardScreen> {
         });
       }
     } catch (e) {
+      final settings = context.read<SettingsProvider>();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể mở thư viện ảnh: $e')),
+        SnackBar(
+            content: Text(settings
+                .tr('editCard.imagePickerError')
+                .replaceAll('{error}', '$e'))),
       );
     }
   }
 
   Future<void> _saveCard() async {
+    final settings = context.read<SettingsProvider>();
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tên lá bài không được để trống!')),
+        SnackBar(content: Text(settings.tr('editCard.nameEmpty'))),
       );
       return;
     }
@@ -105,8 +110,10 @@ class _EditCardScreenState extends State<EditCardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(isNew
-                ? 'Đã thêm lá bài "$name" vào bộ bài!'
-                : 'Đã cập nhật thông tin lá bài thành công!')),
+                ? settings
+                    .tr('editCard.added')
+                    .replaceAll('{name}', name)
+                : settings.tr('editCard.updated'))),
       );
       Navigator.pop(context, true);
     }
@@ -124,7 +131,11 @@ class _EditCardScreenState extends State<EditCardScreen> {
       appBar: AppBar(
         toolbarHeight: isDesktop ? 48 : null,
         title: Text(
-          isNew ? 'Thêm Lá Bài Mới' : 'Sửa Lá Bài: ${widget.card!.name}',
+          isNew
+              ? settings.tr('editCard.titleNew')
+              : settings
+                  .tr('editCard.titleEdit')
+                  .replaceAll('{name}', widget.card!.name),
           style: TextStyle(fontSize: isDesktop ? 16 : 20),
         ),
         backgroundColor: Colors.transparent,
@@ -133,7 +144,7 @@ class _EditCardScreenState extends State<EditCardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.check),
-            tooltip: 'Lưu thay đổi',
+            tooltip: settings.tr('editCard.saveTooltip'),
             onPressed: _saveCard,
           ),
         ],
@@ -188,14 +199,14 @@ class _EditCardScreenState extends State<EditCardScreen> {
                             bottomRight: Radius.circular(14),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.camera_alt, color: Colors.amberAccent, size: 14),
-                            SizedBox(width: 4),
+                            const Icon(Icons.camera_alt, color: Colors.amberAccent, size: 14),
+                            const SizedBox(width: 4),
                             Text(
-                              'Đổi Ảnh',
-                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                              settings.tr('editCard.changeImage'),
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -207,23 +218,23 @@ class _EditCardScreenState extends State<EditCardScreen> {
               const SizedBox(height: 24),
 
               // Form chỉnh sửa Tên
-              _buildSectionTitle('Tên lá bài', theme),
+              _buildSectionTitle(settings.tr('editCard.cardNameLabel'), theme),
               const SizedBox(height: 8),
               TextField(
                 controller: _nameController,
                 style: TextStyle(color: theme.textColor),
-                decoration: _buildInputDecoration('Nhập tên lá bài...', theme),
+                decoration: _buildInputDecoration(settings.tr('editCard.cardNameHint'), theme),
               ),
               const SizedBox(height: 20),
 
               // Ý nghĩa dạng văn bản gộp duy nhất
-              _buildSectionTitle('Nội dung giải nghĩa (toàn bộ)', theme),
+              _buildSectionTitle(settings.tr('editCard.meaningLabel'), theme),
               const SizedBox(height: 8),
               TextField(
                 controller: _meaningController,
                 style: TextStyle(color: theme.textColor),
                 maxLines: 15,
-                decoration: _buildInputDecoration('Nhập toàn bộ nội dung giải nghĩa của lá bài tại đây...', theme),
+                decoration: _buildInputDecoration(settings.tr('editCard.meaningHint'), theme),
               ),
               const SizedBox(height: 32),
 
@@ -232,7 +243,9 @@ class _EditCardScreenState extends State<EditCardScreen> {
                 onPressed: _saveCard,
                 icon: const Icon(Icons.save, color: Colors.black87),
                 label: Text(
-                  isNew ? 'Thêm Lá Bài' : 'Lưu Thay Đổi',
+                  isNew
+                      ? settings.tr('editCard.addButton')
+                      : settings.tr('editCard.saveButton'),
                   style: TextStyle(
                     color: Colors.black87,
                     fontWeight: FontWeight.bold,

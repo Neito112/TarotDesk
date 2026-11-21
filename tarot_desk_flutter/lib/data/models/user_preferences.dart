@@ -37,6 +37,10 @@ class UserPreferencesModel {
     'gothic_night'
   ];
 
+  /// Mã ngôn ngữ giao diện hợp lệ (xem AppLanguage trong
+  /// core/localization.dart). Giữ đồng bộ với [AppLanguage.values].
+  static const List<String> languageCodes = ['vi', 'en', 'zh', 'ko', 'ja'];
+
   /// Mặc định khi chưa có dữ liệu lưu (key thiếu) — dùng chung cho
   /// cả fromMap và trường hợp người dùng bỏ chọn hết decor.
   static const List<String> defaultDecorItems = [
@@ -59,6 +63,10 @@ class UserPreferencesModel {
   List<String> decorItems; // Tối đa [maxDecorItems] món trong [decorOptions]
   String spreadMode; // Kiểu trải bài trên bàn: 'single' (1 hàng) hoặc 'multi' (nhiều hàng)
 
+  /// Mã ngôn ngữ giao diện, một trong [languageCodes].
+  /// Dữ liệu cũ chưa có key này -> mặc định 'vi' (Tiếng Việt).
+  String languageCode;
+
   UserPreferencesModel({
     this.themeId = 'default_dark',
     this.enableGlassmorphism = true,
@@ -71,6 +79,7 @@ class UserPreferencesModel {
     this.clothStyle = 'Nhung Tím',
     this.decorItems = defaultDecorItems,
     this.spreadMode = 'multi',
+    this.languageCode = 'vi',
   });
 
   Map<String, dynamic> toMap() {
@@ -86,6 +95,7 @@ class UserPreferencesModel {
       'cloth_style': clothStyle,
       'decor_items': decorItems.join(','),
       'spread_mode': spreadMode,
+      'language_code': languageCode,
     };
   }
 
@@ -144,6 +154,9 @@ class UserPreferencesModel {
       spreadMode: (map['spread_mode'] as String? ?? 'multi') == 'single'
           ? 'single'
           : 'multi',
+      // Dữ liệu cũ chưa có key này -> mặc định 'vi' (Tiếng Việt).
+      languageCode:
+          _choiceFrom(map['language_code'], languageCodes, 'vi'),
     );
   }
 }

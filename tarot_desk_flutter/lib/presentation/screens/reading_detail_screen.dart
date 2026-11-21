@@ -88,7 +88,9 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 8, bottom: 12),
                       child: Text(
-                        'Lịch sử ngày: ${widget.reading.date.day}/${widget.reading.date.month}/${widget.reading.date.year} ${widget.reading.date.hour}:${widget.reading.date.minute}',
+                        settings.tr('readingDetail.date').replaceAll(
+                            '{datetime}',
+                            '${widget.reading.date.day}/${widget.reading.date.month}/${widget.reading.date.year} ${widget.reading.date.hour}:${widget.reading.date.minute}'),
                         style: TextStyle(
                           color: theme.secondaryTextColor,
                           fontSize: isWide ? 13 : 12,
@@ -100,7 +102,7 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
                       child: _cards.isEmpty
                           ? Center(
                               child: Text(
-                                'Không tìm thấy dữ liệu các lá bài.',
+                                settings.tr('readingDetail.empty'),
                                 style: TextStyle(color: theme.secondaryTextColor),
                               ),
                             )

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/localization.dart';
 import '../../core/responsive.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/user_preferences.dart';
@@ -105,6 +106,50 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  /// Chọn ngôn ngữ giao diện bằng chip: mỗi chip hiện tên ngôn ngữ
+  /// bằng chính ngôn ngữ đó, ngôn ngữ đang chọn được tô nổi.
+  Widget _languageSection(
+      BuildContext context, SettingsProvider settings, AppThemeData theme) {
+    return GlassPanel(
+      backgroundColor: theme.cardBackgroundColor,
+      borderColor: theme.glassBorderColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(theme, settings.tr('settings.language')),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: AppLanguage.values.map((lang) {
+              final isSelected = settings.language == lang;
+              return ChoiceChip(
+                label: Text(lang.label,
+                    style: TextStyle(
+                        color: isSelected
+                            ? Colors.black
+                            : theme.textColor,
+                        fontSize: 12,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal)),
+                selected: isSelected,
+                selectedColor: theme.primaryColor,
+                backgroundColor: Colors.white10,
+                side: BorderSide(
+                    color: isSelected
+                        ? theme.primaryColor
+                        : theme.glassBorderColor),
+                visualDensity: VisualDensity.compact,
+                onSelected: (_) => settings.setLanguage(lang),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Chọn theme bằng chip nhìn (không còn danh sách radio dọc dài):
   /// gọn, quét nhanh, cùng ngôn ngữ chip với phần bàn/khăn/decor.
   Widget _themeSection(BuildContext context, SettingsProvider settings,
@@ -115,7 +160,7 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(theme, 'Chọn Chủ Đề Giao Diện (Theme)'),
+          _sectionTitle(theme, settings.tr('settings.themeTitle')),
           const SizedBox(height: 10),
           Wrap(
             spacing: 6,
@@ -157,26 +202,26 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(theme, 'Hiệu Ứng Giao Diện'),
+          _sectionTitle(theme, settings.tr('settings.effectsTitle')),
           const SizedBox(height: 4),
           _toggleTile(
             theme: theme,
-            title: 'Hiệu ứng kính mờ (Glassmorphism)',
-            subtitle: 'Bật/Tắt lớp kính mờ trên các panel',
+            title: settings.tr('settings.glassTitle'),
+            subtitle: settings.tr('settings.glassSubtitle'),
             value: settings.userPrefs.enableGlassmorphism,
             onChanged: (val) => settings.toggleGlassmorphism(val),
           ),
           _toggleTile(
             theme: theme,
-            title: 'Hiệu ứng khói sương',
-            subtitle: 'Bật/Tắt các hạt khói bay trên nền',
+            title: settings.tr('settings.smokeTitle'),
+            subtitle: settings.tr('settings.smokeSubtitle'),
             value: settings.userPrefs.enableSmokeParticles,
             onChanged: (val) => settings.toggleSmokeParticles(val),
           ),
           _toggleTile(
             theme: theme,
-            title: 'Chữ tiêu đề nhấp nháy',
-            subtitle: 'Bật/Tắt hiệu ứng nhấp nháy của tiêu đề',
+            title: settings.tr('settings.twinkleTitle'),
+            subtitle: settings.tr('settings.twinkleSubtitle'),
             value: settings.userPrefs.enableTwinklingText,
             onChanged: (val) => settings.toggleTwinklingText(val),
           ),
@@ -201,7 +246,7 @@ class SettingsScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _fieldLabel(theme, 'Chất liệu mặt bàn:'),
+        _fieldLabel(theme, settings.tr('settings.tableMaterialLabel')),
         const SizedBox(height: 6),
         _optionChips(
           theme: theme,
@@ -210,10 +255,9 @@ class SettingsScreen extends StatelessWidget {
           onSelected: (val) => settings.setTableStyle(val),
         ),
         const SizedBox(height: 4),
-        _hintText(theme,
-            'Áp dụng trên điện thoại / máy tính bảng. Bản PC dùng tranh bàn gỗ trống, chất liệu không đổi nền PC.'),
+        _hintText(theme, settings.tr('settings.tableHint')),
         const SizedBox(height: 14),
-        _fieldLabel(theme, 'Khăn trải bàn:'),
+        _fieldLabel(theme, settings.tr('settings.clothLabel')),
         const SizedBox(height: 6),
         _optionChips(
           theme: theme,
@@ -222,8 +266,7 @@ class SettingsScreen extends StatelessWidget {
           onSelected: (val) => settings.setClothStyle(val),
         ),
         const SizedBox(height: 4),
-        _hintText(theme,
-            'Đổi ngay trên bàn: khăn là lớp riêng to và phẳng trên mặt gỗ, chuyển màu mượt.'),
+        _hintText(theme, settings.tr('settings.clothHint')),
       ],
     );
 
@@ -231,8 +274,10 @@ class SettingsScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _fieldLabel(theme,
-            'Đồ trang trí (Chọn tối đa ${UserPreferencesModel.maxDecorItems} món):'),
+        _fieldLabel(
+            theme,
+            settings.tr('settings.decorLabel').replaceAll(
+                '{n}', '${UserPreferencesModel.maxDecorItems}')),
         const SizedBox(height: 6),
         Wrap(
           spacing: 6,
@@ -261,10 +306,12 @@ class SettingsScreen extends StatelessWidget {
                     settings.setDecorItems(current);
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text(
-                              'Chỉ được chọn tối đa 3 món trang trí!'),
-                          duration: Duration(seconds: 1)),
+                      SnackBar(
+                          content: Text(settings
+                              .tr('settings.decorLimit')
+                              .replaceAll('{n}',
+                                  '${UserPreferencesModel.maxDecorItems}')),
+                          duration: const Duration(seconds: 1)),
                     );
                   }
                 } else {
@@ -276,27 +323,26 @@ class SettingsScreen extends StatelessWidget {
           }).toList(),
         ),
         const SizedBox(height: 14),
-        _fieldLabel(theme, 'Hiển thị các lớp trên bàn:'),
+        _fieldLabel(theme, settings.tr('settings.layersLabel')),
         const SizedBox(height: 2),
         _toggleTile(
           theme: theme,
-          title: 'Hiển thị lớp Mặt Bàn',
-          subtitle: 'Bật/Tắt lớp nền chất liệu bàn bên dưới',
+          title: settings.tr('settings.showTableTitle'),
+          subtitle: settings.tr('settings.showTableSubtitle'),
           value: settings.userPrefs.showTable,
           onChanged: (val) => settings.toggleTable(val),
         ),
         _toggleTile(
           theme: theme,
-          title: 'Hiển thị lớp Khăn Trải Bàn',
-          subtitle: 'Bật/Tắt tấm khăn phẳng đặt trên bàn bói',
+          title: settings.tr('settings.showClothTitle'),
+          subtitle: settings.tr('settings.showClothSubtitle'),
           value: settings.userPrefs.showCloth,
           onChanged: (val) => settings.toggleCloth(val),
         ),
         _toggleTile(
           theme: theme,
-          title: 'Hiển thị lớp Đồ Decor',
-          subtitle:
-              'Bật/Tắt các vật phẩm thạch anh, quả cầu, trầm hương',
+          title: settings.tr('settings.showDecorTitle'),
+          subtitle: settings.tr('settings.showDecorSubtitle'),
           value: settings.userPrefs.showDecor,
           onChanged: (val) => settings.toggleDecor(val),
         ),
@@ -309,7 +355,7 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(theme, 'Cấu Hình Bàn Trải Bài Tarot'),
+          _sectionTitle(theme, settings.tr('settings.tableTitle')),
           const SizedBox(height: 12),
           if (isWide)
             Row(
@@ -341,7 +387,7 @@ class SettingsScreen extends StatelessWidget {
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         toolbarHeight: Responsive.isDesktop(context) ? 48 : null,
-        title: Text('Cài Đặt Giao Diện',
+        title: Text(settings.tr('settings.title'),
             style: TextStyle(
                 fontSize: Responsive.isDesktop(context) ? 16 : 20)),
         backgroundColor: Colors.transparent,
@@ -355,6 +401,8 @@ class SettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _languageSection(context, settings, theme),
+                const SizedBox(height: _sectionGap),
                 if (isWide)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

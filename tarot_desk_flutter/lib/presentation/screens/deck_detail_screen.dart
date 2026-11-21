@@ -69,9 +69,10 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
   }
 
   void _showRandomCardDialog(dynamic theme) {
+    final settings = context.read<SettingsProvider>();
     if (_cards.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bộ bài này trống, không có lá nào để học.')),
+        SnackBar(content: Text(settings.tr('deckDetail.emptyDeckStudy'))),
       );
       return;
     }
@@ -80,7 +81,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
     final cardIds = _cards.map((c) => c.id).whereType<int>().toList();
     if (cardIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không tìm thấy danh sách ID lá bài hợp lệ.')),
+        SnackBar(content: Text(settings.tr('deckDetail.noValidCardIds'))),
       );
       return;
     }
@@ -109,12 +110,12 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
         final theme = settings.currentThemeData;
         return AlertDialog(
           backgroundColor: theme.backgroundColor, // Thay thế cardBackgroundColor đục hoàn toàn để không lỗi trộn text
-          title: Text('Đổi tên bộ bài', style: TextStyle(color: theme.textColor)),
+          title: Text(settings.tr('deckDetail.renameTitle'), style: TextStyle(color: theme.textColor)),
           content: TextField(
             controller: controller,
             style: TextStyle(color: theme.textColor),
             decoration: InputDecoration(
-              hintText: 'Nhập tên bộ bài mới...',
+              hintText: settings.tr('deckDetail.renameHint'),
               hintStyle: TextStyle(color: theme.secondaryTextColor),
               enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: theme.primaryColor)),
             ),
@@ -122,7 +123,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Hủy', style: TextStyle(color: theme.secondaryTextColor)),
+              child: Text(settings.tr('common.cancel'), style: TextStyle(color: theme.secondaryTextColor)),
             ),
             TextButton(
               onPressed: () async {
@@ -137,7 +138,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                   Navigator.pop(context);
                 }
               },
-              child: Text('Lưu', style: TextStyle(color: theme.primaryColor)),
+              child: Text(settings.tr('common.save'), style: TextStyle(color: theme.primaryColor)),
             ),
           ],
         );
@@ -149,6 +150,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
   /// Ở chế độ quản lý (kho bộ bài) có thêm nút Sửa để sửa nội dung
   /// lá; ở chế độ xem (bộ bài hiện tại) chỉ có nút Đóng.
   void _showCardDetailDialog(BuildContext context, TarotCardModel card, dynamic theme) {
+    final settings = context.read<SettingsProvider>();
     final isDesktop = Responsive.isDesktop(context);
     showDialog(
       context: context,
@@ -174,8 +176,8 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                         children: [
                           Icon(Icons.auto_stories, color: theme.primaryColor),
                           const SizedBox(width: 8),
-                          const Text(
-                            'Chi tiết lá bài',
+                          Text(
+                            settings.tr('deckDetail.cardDetailTitle'),
                             style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -210,7 +212,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
 
                   // Tên lá bài
                   Text(
-                    card.name.isNotEmpty ? card.name : 'Lá bài chưa đặt tên',
+                    card.name.isNotEmpty ? card.name : settings.tr('deckDetail.unnamedCard'),
                     style: TextStyle(color: theme.primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
@@ -221,7 +223,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                     child: SingleChildScrollView(
                       child: SelectionArea(
                         child: Text(
-                          card.meaning.isNotEmpty ? card.meaning : 'Chưa có ý nghĩa/nội dung chi tiết cho lá bài này.',
+                          card.meaning.isNotEmpty ? card.meaning : settings.tr('deckDetail.noMeaning'),
                           style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
                         ),
                       ),
@@ -251,7 +253,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                               padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
-                            child: const Text('Sửa', style: TextStyle(fontWeight: FontWeight.bold)),
+                            child: Text(settings.tr('common.edit'), style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
                         ),
                       if (!widget.readOnly) const SizedBox(width: 12),
@@ -263,7 +265,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                             padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                          child: const Text('Đóng', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                          child: Text(settings.tr('common.close'), style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],
@@ -325,7 +327,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
           TextButton.icon(
             icon: Icon(Icons.school, size: isDesktop ? 16 : 18),
             label: Text(
-              'Ngẫu nhiên 1 lá',
+              settings.tr('deckDetail.randomCard'),
               style: TextStyle(fontSize: isDesktop ? 12 : 14),
             ),
             style: TextButton.styleFrom(
@@ -339,7 +341,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
           if (!widget.readOnly)
             IconButton(
               icon: const Icon(Icons.add),
-              tooltip: 'Thêm lá bài mới',
+              tooltip: settings.tr('deckDetail.addNewCard'),
               onPressed: _addCard,
             ),
         ],
@@ -356,7 +358,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                       onChanged: (val) => setState(() => _searchQuery = val),
                       style: TextStyle(color: theme.textColor, fontSize: isDesktop ? 13 : 15),
                       decoration: InputDecoration(
-                        hintText: 'Tìm kiếm lá bài...',
+                        hintText: settings.tr('deckDetail.searchHint'),
                         hintStyle: TextStyle(color: theme.secondaryTextColor),
                         prefixIcon: Icon(Icons.search, color: theme.primaryColor, size: isDesktop ? 20 : 24),
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: isDesktop ? 10 : 14),
@@ -379,7 +381,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                       child: filteredCards.isEmpty
                           ? Center(
                               child: Text(
-                                'Không tìm thấy lá bài nào khớp.',
+                                settings.tr('deckDetail.noMatchingCards'),
                                 style: TextStyle(color: theme.secondaryTextColor),
                               ),
                             )
@@ -452,6 +454,7 @@ class _RandomCardStudyDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
     final isDesktop = MediaQuery.of(context).size.width > 1024;
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -475,8 +478,8 @@ class _RandomCardStudyDialog extends StatelessWidget {
                     children: [
                       Icon(Icons.school, color: theme.primaryColor),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Học thuộc lá bài',
+                      Text(
+                        settings.tr('deckDetail.studyCardTitle'),
                         style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -511,7 +514,7 @@ class _RandomCardStudyDialog extends StatelessWidget {
 
               // Tên và toàn bộ ý nghĩa bên dưới đầy đủ chi tiết
               Text(
-                card.name.isNotEmpty ? card.name : 'Lá bài chưa đặt tên',
+                card.name.isNotEmpty ? card.name : settings.tr('deckDetail.unnamedCard'),
                 style: TextStyle(color: theme.primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
@@ -521,7 +524,7 @@ class _RandomCardStudyDialog extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: SelectionArea(
                     child: Text(
-                      card.meaning.isNotEmpty ? card.meaning : 'Chưa có ý nghĩa/nội dung chi tiết cho lá bài này.',
+                      card.meaning.isNotEmpty ? card.meaning : settings.tr('deckDetail.noMeaning'),
                       style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
                     ),
                   ),
@@ -539,7 +542,7 @@ class _RandomCardStudyDialog extends StatelessWidget {
                     padding: EdgeInsets.symmetric(vertical: isDesktop ? 10 : 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text('Hoàn Thành Học', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                  child: Text(settings.tr('deckDetail.finishStudy'), style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
