@@ -56,7 +56,6 @@ import '../data/models/tarot_card.dart';
 /// This file has NO new package dependencies and imports no
 /// `dart:io` — it builds for Flutter web. No API key or secret
 /// lives here (or anywhere in the app).
-library;
 
 /// The seeded base deck ships in Vietnamese (see
 /// `DatabaseHelper._seedDefaultCards` / `defaultTarotMeanings`).
