@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
+import '../../core/translation_service.dart';
+import '../../data/datasources/tarotdesk_api_service.dart';
 import '../../data/models/tarot_card.dart';
+import '../../logic/auth_provider.dart';
 import '../../logic/deck_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
@@ -108,7 +112,37 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
     }
 
     final deckProvider = context.read<DeckProvider>();
+    // Read before the await below (no context use after an
+    // async gap): the warm-up after saving only needs the
+    // session token, captured here via the provider reference.
+    final auth = context.read<AuthProvider>();
     await deckProvider.createFullDeckWithCards(deckName, _draftCards);
+
+    // NORMALISATION (i18n): the deck the user just typed may be
+    // in any language. Warm the translation cache for it in the
+    // background (fire-and-forget, best-effort) so it already
+    // displays in the active system language when the user opens
+    // it. The saved deck keeps exactly what the user typed —
+    // translations live only in the Worker D1 cache + memory
+    // (see TranslationService). Guests (no session token) are
+    // served under the Worker's anonymous cap.
+    final targetLang = settings.language.code;
+    final sourceLang = detectDeckLanguage(deckName, _draftCards);
+    if (sourceLang == null || sourceLang != targetLang) {
+      final translator = TranslationService(
+        TarotdeskApiService(),
+        sessionToken: () => auth.sessionToken,
+        targetLanguageCode: () => targetLang,
+      );
+      unawaited(
+        translator.warmCache(
+          List<TarotCardModel>.of(_draftCards),
+          deckName: deckName,
+          sourceLang: sourceLang,
+          targetLang: targetLang,
+        ),
+      );
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

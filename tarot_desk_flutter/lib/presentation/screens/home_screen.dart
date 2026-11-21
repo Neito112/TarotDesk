@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/tarot_symbols.dart';
 import '../../core/responsive.dart';
 import '../../data/models/tarot_card.dart';
@@ -47,6 +49,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _dayRolloverTimer;
   int _dailyCardDay = -1;
 
+  /// Seed ổn định cho khách (không đăng nhập): một UUID lưu trong
+  /// SharedPreferences, tạo một lần duy nhất ở lần chạy đầu tiên và
+  /// không bao giờ tạo lại trừ khi người dùng xóa dữ liệu app. Nhờ
+  /// đó lá ngày của khách ổn định cả ngày, đổi lúc 0h, và khác nhau
+  /// giữa các thiết bị.
+  static const String _guestSeedKey = 'tarotdesk_guest_device_seed';
+  String? _guestSeed;
+
   static int _dayIndex(DateTime d) =>
       d.difference(DateTime(d.year, 1, 1)).inDays;
 
@@ -54,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _dailyCardDay = _dayIndex(DateTime.now());
+    _ensureGuestSeed();
     _dayRolloverTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       final today = _dayIndex(DateTime.now());
       if (today != _dailyCardDay && mounted) {
@@ -72,10 +83,74 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  TarotCardModel? _dailyCard(List<TarotCardModel> cards) {
+  /// Đọc / tạo seed thiết bị cho khách. Chỉ đọc-ghi SharedPreferences,
+  /// không bao giờ ném lỗi ra ngoài: lỗi lưu trữ thì _guestSeed giữ
+  /// null và lá ngày dùng seed tạm 'guest:pending' (xem [_dailyCardSeed]).
+  Future<void> _ensureGuestSeed() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      var seed = prefs.getString(_guestSeedKey);
+      if (seed == null || seed.isEmpty) {
+        final random = Random.secure();
+        seed = List<int>.generate(16, (_) => random.nextInt(256))
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join();
+        await prefs.setString(_guestSeedKey, seed);
+      }
+      if (mounted && seed != _guestSeed) {
+        setState(() => _guestSeed = seed);
+      } else {
+        _guestSeed = seed;
+      }
+    } catch (_) {
+      // Lưu trữ lỗi: giữ _guestSeed == null, lá ngày dùng seed tạm.
+    }
+  }
+
+  /// FNV-1a 32-bit — hàm băm xác định, phân bố đều, không phụ thuộc
+  /// platform (không dùng Object.hashCode / Random không seed, vì
+  /// chúng không ổn định giữa các lần chạy / nền tảng).
+  static int _fnv1a32(String input) {
+    var hash = 0x811c9dc5; // offset basis
+    for (final byte in input.codeUnits) {
+      hash ^= byte;
+      hash = (hash * 0x01000193) & 0xFFFFFFFF; // prime, giữ 32-bit
+    }
+    return hash;
+  }
+
+  /// Seed cho lá ngày của tài khoản hiện tại.
+  ///
+  /// - Đã đăng nhập: `'account:<sub>'` — `sub` là Google account id
+  ///   ổn định của [AuthProvider.user] (không đổi khi đổi email);
+  ///   nếu `sub` trống thì dùng email. KHÔNG dùng session token làm
+  ///   seed: token xoay vòng / bị thu hồi, lá ngày sẽ đổi giữa ngày.
+  /// - Khách / chưa có identity (đang loading, token hết hạn, lỗi
+  ///   khôi phục session): dùng seed thiết bị `'guest:<uuid>'`;
+  ///   nếu seed thiết bị chưa tải xong thì tạm dùng
+  ///   `'guest:pending'` — lá vẫn hiện, không crash, và đổi sang lá
+  ///   đúng ngay khi seed tải xong (setState trong [_ensureGuestSeed]).
+  String _dailyCardSeed(AuthProvider auth) {
+    final user = auth.user;
+    if (auth.isLoggedIn && user != null) {
+      final id = user.sub.isNotEmpty ? user.sub : user.email;
+      if (id.isNotEmpty) return 'account:$id';
+    }
+    return 'guest:${_guestSeed ?? 'pending'}';
+  }
+
+  /// Lá ngày: băm (seed tài khoản/thiết bị + ngày đầy đủ) rồi lấy
+  /// modulo số lá. Cùng tài khoản + cùng ngày => cùng lá cả ngày;
+  /// khác tài khoản (hoặc khác thiết bị khách) + cùng ngày => lá
+  /// khác nhau; qua 0h (ngày đổi) => lá đổi (timer 1 phút đã có
+  /// sẵn ở [initState] sẽ build lại). Danh sách rỗng => null như cũ.
+  TarotCardModel? _dailyCard(List<TarotCardModel> cards, String seed) {
     if (cards.isEmpty) return null;
-    final dayOfYear = _dayIndex(DateTime.now());
-    return cards[dayOfYear % cards.length];
+    final now = DateTime.now();
+    final dateKey =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final index = _fnv1a32('$seed|$dateKey') % cards.length;
+    return cards[index];
   }
 
   void _startNewReading(BuildContext context) {
@@ -168,7 +243,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = settings.currentThemeData;
     final deckProvider = context.watch<DeckProvider>();
     final readingProvider = context.watch<ReadingProvider>();
-    final dailyCard = _dailyCard(deckProvider.currentDeckCards);
+    // Watch AuthProvider để lá ngày đổi ngay khi tài khoản đổi
+    // (đăng nhập / đăng xuất / liên kết Google) mà không cần reload.
+    final dailyCard = _dailyCard(
+      deckProvider.currentDeckCards,
+      _dailyCardSeed(context.watch<AuthProvider>()),
+    );
     final isDesktop = Responsive.isDesktop(context);
 
     return Scaffold(

@@ -345,7 +345,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           IconButton(
             icon: const Icon(Icons.tune),
             tooltip: settings.tr('reading.changeTable'),
-            onPressed: () => _showTableSettingsDialog(context, settings, theme),
+            onPressed: () => _showTableSettingsDialog(context),
           ),
           IconButton(
             icon: const Icon(Icons.delete_sweep),
@@ -859,22 +859,13 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     final asset = _decorCutoutAsset(item);
     final rect = _decorCutoutRect(item);
     if (asset == null || rect == null) {
-      // 'Lá Khô' chưa có ảnh cắt: icon fallback đặt ở ô của
-      // Hương Trầm (x .52, y .10), 60 rộng.
-      return Positioned(
-        left: w * 0.52,
-        top: h * 0.10,
-        width: 60,
-        height: 60,
-        child: Container(
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.black54,
-          ),
-          child: const Icon(Icons.eco,
-              color: Colors.orangeAccent, size: 54),
-        ),
-      );
+      // Món chưa có ảnh cắt vẽ (hiện là 'Lá Khô'): KHÔNG vẽ gì cả.
+      // Tuyệt đối không dùng icon phẳng (Icons.eco) làm fallback —
+      // người dùng đã từ chối icon Material cho decor, và icon cũ
+      // còn đè đúng ô của Hương Trầm (x .52, y .10) nên hai món
+      // chồng lên nhau khi chọn cả hai. Muốn hiện món này thì vẽ
+      // ảnh cắt thật rồi thêm vào _decorCutoutAsset/_decorCutoutRect.
+      return const SizedBox.shrink();
     }
     // Rộng theo phân số của bàn; cao suy từ tỉ lệ thật của ảnh.
     final boxWidth = w * rect.width;
@@ -967,7 +958,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Ảnh cắt (cut-out) của từng món decor trong tranh bàn gốc,
-  /// null = không có ảnh cắt (dùng icon fallback).
+  /// null = chưa có ảnh cắt: món đó không được chọn trong dialog
+  /// và không vẽ gì trên bàn (tuyệt đối không dùng icon fallback).
   String? _decorCutoutAsset(String item) {
     switch (item) {
       case 'Đá Thạch Anh':
@@ -979,7 +971,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       case 'Nến Đen':
         return 'assets/images/cut_candle.png';
       default:
-        return null; // 'Lá Khô': chưa có ảnh cắt, dùng icon.
+        return null; // 'Lá Khô': chưa có ảnh cắt.
     }
   }
 
@@ -1008,28 +1000,22 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// Một sprite phụ kiện: ảnh CẮT VẼ (cut_*.png, trong suốt) như
   /// PC — không còn sprite cũ (decor_*_painted.png) trong ô đen.
   /// Ảnh cắt trong suốt nên KHÔNG có nền đen sau ảnh; vật hòa vào
-  /// mặt bàn như một bức ảnh hoàn chỉnh. Món không có ảnh
-  /// (Lá Khô) giữ icon cũ làm fallback. Vật thể BÁM SÁT mặt bàn:
+  /// mặt bàn như một bức ảnh hoàn chỉnh. Món chưa có ảnh cắt
+  /// (Lá Khô) KHÔNG vẽ gì cả — tuyệt đối không dùng icon phẳng
+  /// làm fallback. Vật thể BÁM SÁT mặt bàn:
   /// KHÔNG còn bóng đổ lơ lửng quanh sprite (boxShadow offset).
   /// Thay vào đó là một ellipse đen nằm NGAY DƯỚI CHÂN vật, chạm
   /// vào đáy sprite — vật "đứng trên" mặt gỗ/khăn, chân đặt đúng
   /// đường mặt bàn.
   Widget _buildDecorSprite(String item, double size) {
     final asset = _decorCutoutAsset(item);
-    final body = asset != null
-        ? Image.asset(asset,
-            fit: BoxFit.contain, width: size, height: size)
-        : Container(
-            width: size,
-            height: size,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.black54,
-            ),
-            // Fallback: món không có ảnh thật (Lá Khô) giữ icon cũ.
-            child: Icon(Icons.eco,
-                color: Colors.orangeAccent, size: size * 0.9),
-          );
+    if (asset == null) {
+      // Món chưa có ảnh cắt vẽ (hiện là 'Lá Khô'): không vẽ gì —
+      // không icon phẳng, không ô đen (xem _buildDesktopDecorCutout).
+      return const SizedBox.shrink();
+    }
+    final body = Image.asset(asset,
+        fit: BoxFit.contain, width: size, height: size);
     return SizedBox(
       width: size,
       height: size + 12,
@@ -1198,228 +1184,292 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Dialog đổi bàn / khăn / decor ngay trong lúc trải bài (PC + phone).
-  /// Dialog đổi bàn / khăn / decor ngay trong lúc trải bài (PC + phone).
-  /// Bố cục lại: hai cột trên desktop (trái: bàn + khăn, phải:
+  /// Bố cục: hai cột trên desktop (trái: bàn + khăn, phải:
   /// decor + lớp hiển thị), một cột trên phone; chọn bằng chip
   /// nhìn (không còn dropdown) cho nhanh; danh sách dùng chung
   /// hằng số trong UserPreferencesModel (không hard-code riêng
   /// nữa) để không lệch với màn Cài đặt.
-  void _showTableSettingsDialog(
-      BuildContext context, SettingsProvider settings, dynamic theme) {
-    final prefs = settings.userPrefs;
-    final isDesktop = Responsive.isDesktop(context);
-
-    Widget sectionTitle(String title) => Text(title,
-        style: TextStyle(
-            color: theme.primaryColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 13));
-
-    Widget optionChips({
-      required List<String> options,
-      required String selected,
-      required ValueChanged<String> onSelected,
-    }) {
-      return Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: options.map((opt) {
-          final isSelected = opt == selected;
-          return ChoiceChip(
-            label: Text(opt,
-                style: TextStyle(
-                    color:
-                        isSelected ? Colors.black : theme.textColor,
-                    fontSize: 12,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal)),
-            selected: isSelected,
-            selectedColor: theme.primaryColor,
-            backgroundColor: Colors.white10,
-            side: BorderSide(
-                color: isSelected
-                    ? theme.primaryColor
-                    : theme.glassBorderColor),
-            visualDensity: VisualDensity.compact,
-            onSelected: (_) => onSelected(opt),
-          );
-        }).toList(),
-      );
-    }
-
-    Widget decorChips() {
-      return Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: UserPreferencesModel.decorOptions.map((item) {
-          final selected = prefs.decorItems.contains(item);
-          return FilterChip(
-            selectedColor: theme.primaryColor.withOpacity(0.3),
-            checkmarkColor: theme.primaryColor,
-            label: Text(item,
-                style: TextStyle(
-                    color: selected ? theme.primaryColor : theme.textColor,
-                    fontSize: 12)),
-            selected: selected,
-            visualDensity: VisualDensity.compact,
-            onSelected: (v) {
-              final current = List<String>.from(prefs.decorItems);
-              if (v) {
-                if (current.length <
-                    UserPreferencesModel.maxDecorItems) {
-                  current.add(item);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(settings
-                            .tr('reading.maxDecor')
-                            .replaceAll('{n}',
-                                '${UserPreferencesModel.maxDecorItems}')),
-                        duration: const Duration(seconds: 1)),
-                  );
-                }
-              } else {
-                current.remove(item);
-              }
-              settings.setDecorItems(current);
-            },
-          );
-        }).toList(),
-      );
-    }
-
-    Widget layerSwitch({
-      required String title,
-      required bool value,
-      required ValueChanged<bool> onChanged,
-    }) {
-      return SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        dense: true,
-        visualDensity: VisualDensity.compact,
-        title: Text(title,
-            style: TextStyle(color: theme.textColor, fontSize: 13)),
-        value: value,
-        activeColor: theme.primaryColor,
-        onChanged: onChanged,
-      );
-    }
-
-    final tableAndCloth = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        sectionTitle(settings.tr('reading.tableSurface')),
-        const SizedBox(height: 6),
-        optionChips(
-          options: UserPreferencesModel.tableStyles,
-          selected: prefs.tableStyle,
-          onSelected: (v) => settings.setTableStyle(v),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          settings.tr('reading.tableNote'),
-          style: TextStyle(
-              color: theme.secondaryTextColor, fontSize: 11, height: 1.4),
-        ),
-        const SizedBox(height: 14),
-        sectionTitle(settings.tr('reading.tablecloth')),
-        const SizedBox(height: 6),
-        optionChips(
-          options: UserPreferencesModel.clothStyles,
-          selected: prefs.clothStyle,
-          onSelected: (v) => settings.setClothStyle(v),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          settings.tr('reading.clothNote'),
-          style: TextStyle(
-              color: theme.secondaryTextColor, fontSize: 11, height: 1.4),
-        ),
-      ],
-    );
-
-    final decorAndLayers = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        sectionTitle(settings
-            .tr('reading.decor')
-            .replaceAll('{n}', '${UserPreferencesModel.maxDecorItems}')),
-        const SizedBox(height: 6),
-        decorChips(),
-        const SizedBox(height: 14),
-        sectionTitle(settings.tr('reading.showLayers')),
-        layerSwitch(
-          title: settings.tr('reading.showTable'),
-          value: prefs.showTable,
-          onChanged: (v) => settings.toggleTable(v),
-        ),
-        layerSwitch(
-          title: settings.tr('reading.showCloth'),
-          value: prefs.showCloth,
-          onChanged: (v) => settings.toggleCloth(v),
-        ),
-        layerSwitch(
-          title: settings.tr('reading.showDecor'),
-          value: prefs.showDecor,
-          onChanged: (v) => settings.toggleDecor(v),
-        ),
-      ],
-    );
-
+  ///
+  /// Nội dung dialog VẼ LẠI theo SettingsProvider (Consumer trong
+  /// builder của showDialog): trước đây các cột chip/toggle được
+  /// dựng MỘT LẦN từ `prefs` chụp lúc mở dialog, còn builder
+  /// không watch provider, nên chạm chọn gì cũng không đổi trạng
+  /// thái hiển thị trong dialog (chip không tick, toggle không
+  /// gạt, đổi ngôn ngữ/theme lúc dialog mở cũng không cập nhật)
+  /// — chỉ mở lại dialog mới thấy đúng. Bàn phía sau thì vẫn đổi
+  /// ngay vì màn hình chính có watch, nên dialog trông như "chọn
+  /// mà không ăn".
+  ///
+  /// Chỉ món/kiểu CÓ TRANH VẼ mới được chọn ở đây (xem
+  /// _tableStyleHasPaintedArt / _decorCutoutAsset): 'Đá Cổ' /
+  /// 'Vũ Trụ' chưa có tranh bàn vẽ, 'Lá Khô' chưa có ảnh cắt —
+  /// chọn chúng cũng không đổi được gì trên bàn, nên không hiện
+  /// làm lựa chọn. Danh sách gốc trong UserPreferencesModel giữ
+  /// nguyên (không đổi tên giá trị đã lưu).
+  void _showTableSettingsDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: theme.backgroundColor,
-          title: Text(settings.tr('reading.changeTableTitle'),
-              style: TextStyle(color: theme.textColor, fontSize: 16)),
-          content: SizedBox(
-            width: isDesktop ? 560 : 340,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // PC: bàn là cảnh vẽ lớp — nền gỗ trống, khăn là
-                  // một ảnh cắt trong suốt toàn khung (vẽ thẳng trên
-                  // bàn gỗ rồi tách nền, khớp điểm tụ với bàn), phụ
-                  // kiện là ảnh cắt trong suốt đặt theo tọa độ cố
-                  // định. Đổi ở đây sẽ đổi ngay trên bàn (cross-fade).
-                  if (isDesktop)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        settings.tr('reading.desktopTableIntro'),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12, height: 1.5),
+      builder: (dialogContext) {
+        return Consumer<SettingsProvider>(
+          builder: (context, settings, _) {
+            final theme = settings.currentThemeData;
+            final prefs = settings.userPrefs;
+            final isDesktop = Responsive.isDesktop(context);
+
+            Widget sectionTitle(String title) => Text(title,
+                style: TextStyle(
+                    color: theme.primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13));
+
+            Widget optionChips({
+              required List<String> options,
+              required String selected,
+              required ValueChanged<String> onSelected,
+            }) {
+              return Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: options.map((opt) {
+                  final isSelected = opt == selected;
+                  return ChoiceChip(
+                    label: Text(opt,
+                        style: TextStyle(
+                            color: isSelected
+                                ? Colors.black
+                                : theme.textColor,
+                            fontSize: 12,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal)),
+                    selected: isSelected,
+                    selectedColor: theme.primaryColor,
+                    backgroundColor: Colors.white10,
+                    side: BorderSide(
+                        color: isSelected
+                            ? theme.primaryColor
+                            : theme.glassBorderColor),
+                    visualDensity: VisualDensity.compact,
+                    onSelected: (_) => onSelected(opt),
+                  );
+                }).toList(),
+              );
+            }
+
+            Widget decorChips() {
+              // Chỉ món có ảnh cắt vẽ thật mới hiện làm lựa chọn
+              // ('Lá Khô' chưa có ảnh cắt nên không có ở đây).
+              final availableDecor = UserPreferencesModel.decorOptions
+                  .where((item) => _decorCutoutAsset(item) != null)
+                  .toList();
+              return Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: availableDecor.map((item) {
+                  final selected = prefs.decorItems.contains(item);
+                  return FilterChip(
+                    selectedColor: theme.primaryColor.withOpacity(0.3),
+                    checkmarkColor: theme.primaryColor,
+                    label: Text(item,
+                        style: TextStyle(
+                            color: selected
+                                ? theme.primaryColor
+                                : theme.textColor,
+                            fontSize: 12)),
+                    selected: selected,
+                    visualDensity: VisualDensity.compact,
+                    onSelected: (v) {
+                      // Bỏ món không có ảnh vẽ ra khỏi danh sách đã
+                      // lưu TRƯỚC khi đếm: món đó không hiện trong
+                      // dialog và không vẽ trên bàn, nhưng vẫn chiếm
+                      // 1 trong 3 suất nếu còn sót trong decorItems
+                      // đã lưu (vd. đã chọn 'Lá Khô' từ bản cũ) —
+                      // không lọc thì người dùng không thêm được món
+                      // mới dù trên dialog chỉ thấy 2 món đã chọn.
+                      final current = prefs.decorItems
+                          .where((i) => _decorCutoutAsset(i) != null)
+                          .toList();
+                      if (v) {
+                        if (current.length <
+                            UserPreferencesModel.maxDecorItems) {
+                          current.add(item);
+                          settings.setDecorItems(current);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(settings
+                                    .tr('reading.maxDecor')
+                                    .replaceAll('{n}',
+                                        '${UserPreferencesModel.maxDecorItems}')),
+                                duration: const Duration(seconds: 1)),
+                          );
+                          // Danh sách không đổi -> không gọi setter
+                          // (trước đây vẫn gọi setDecorItems với
+                          // danh sách cũ, gây notify + ghi lại vô ích).
+                        }
+                      } else {
+                        current.remove(item);
+                        settings.setDecorItems(current);
+                      }
+                    },
+                  );
+                }).toList(),
+              );
+            }
+
+            Widget layerSwitch({
+              required String title,
+              required bool value,
+              required ValueChanged<bool> onChanged,
+            }) {
+              return SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                visualDensity: VisualDensity.compact,
+                title: Text(title,
+                    style:
+                        TextStyle(color: theme.textColor, fontSize: 13)),
+                value: value,
+                activeColor: theme.primaryColor,
+                onChanged: onChanged,
+              );
+            }
+
+            // Kiểu bàn đang HIỆU LỰC trên bàn: giá trị đã lưu mà
+            // chưa có tranh vẽ ('Đá Cổ' / 'Vũ Trụ') thì bàn thực tế
+            // vẫn là gỗ vẽ, nên chip 'Gỗ Sồi' phải hiện là đã chọn
+            // chứ không phải không có chip nào được chọn.
+            final effectiveTableStyle =
+                _tableStyleHasPaintedArt(prefs.tableStyle)
+                    ? prefs.tableStyle
+                    : 'Gỗ Sồi';
+
+            final tableAndCloth = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                sectionTitle(settings.tr('reading.tableSurface')),
+                const SizedBox(height: 6),
+                optionChips(
+                  options: UserPreferencesModel.tableStyles
+                      .where(_tableStyleHasPaintedArt)
+                      .toList(),
+                  selected: effectiveTableStyle,
+                  onSelected: (v) => settings.setTableStyle(v),
+                ),
+                // KHÔNG còn ghi chú reading.tableNote ở đây: nó nói
+                // "áp dụng trên điện thoại / máy tính bảng, bản PC
+                // dùng tranh bàn gỗ trống" — sai cả hai vế, vì
+                // _buildTableBackground dùng tranh gỗ vẽ cho MỌI
+                // thiết bị và tableStyle không đổi được mặt bàn nào.
+                // Chỉ còn một kiểu bàn có tranh vẽ nên cũng không
+                // còn gì để giải thích thêm.
+                const SizedBox(height: 14),
+                sectionTitle(settings.tr('reading.tablecloth')),
+                const SizedBox(height: 6),
+                optionChips(
+                  options: UserPreferencesModel.clothStyles,
+                  selected: prefs.clothStyle,
+                  onSelected: (v) => settings.setClothStyle(v),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  settings.tr('reading.clothNote'),
+                  style: TextStyle(
+                      color: theme.secondaryTextColor,
+                      fontSize: 11,
+                      height: 1.4),
+                ),
+              ],
+            );
+
+            final decorAndLayers = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                sectionTitle(settings
+                    .tr('reading.decor')
+                    .replaceAll(
+                        '{n}', '${UserPreferencesModel.maxDecorItems}')),
+                const SizedBox(height: 6),
+                decorChips(),
+                const SizedBox(height: 14),
+                sectionTitle(settings.tr('reading.showLayers')),
+                layerSwitch(
+                  title: settings.tr('reading.showTable'),
+                  value: prefs.showTable,
+                  onChanged: (v) => settings.toggleTable(v),
+                ),
+                layerSwitch(
+                  title: settings.tr('reading.showCloth'),
+                  value: prefs.showCloth,
+                  onChanged: (v) => settings.toggleCloth(v),
+                ),
+                layerSwitch(
+                  title: settings.tr('reading.showDecor'),
+                  value: prefs.showDecor,
+                  onChanged: (v) => settings.toggleDecor(v),
+                ),
+              ],
+            );
+
+            return AlertDialog(
+              // scrollable: true để nút "Xong" (actions) luôn nằm
+              // ngoài vùng cuộn và chạm được, kể cả khi viewport
+              // thấp (điện thoại xoay ngang, cửa sổ PC lùn).
+              scrollable: true,
+              backgroundColor: theme.backgroundColor,
+              title: Text(settings.tr('reading.changeTableTitle'),
+                  style:
+                      TextStyle(color: theme.textColor, fontSize: 16)),
+              content: SizedBox(
+                width: isDesktop ? 560 : 340,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // PC: bàn là cảnh vẽ lớp — nền gỗ trống, khăn là
+                    // một ảnh cắt trong suốt toàn khung (vẽ thẳng trên
+                    // bàn gỗ rồi tách nền, khớp điểm tụ với bàn), phụ
+                    // kiện là ảnh cắt trong suốt đặt theo tọa độ cố
+                    // định. Đổi ở đây sẽ đổi ngay trên bàn (cross-fade).
+                    if (isDesktop)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          settings.tr('reading.desktopTableIntro'),
+                          style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              height: 1.5),
+                        ),
                       ),
-                    ),
-                  if (isDesktop)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: tableAndCloth),
-                        const SizedBox(width: 20),
-                        Expanded(child: decorAndLayers),
-                      ],
-                    )
-                  else ...[
-                    tableAndCloth,
-                    const SizedBox(height: 16),
-                    decorAndLayers,
+                    if (isDesktop)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: tableAndCloth),
+                          const SizedBox(width: 20),
+                          Expanded(child: decorAndLayers),
+                        ],
+                      )
+                    else ...[
+                      tableAndCloth,
+                      const SizedBox(height: 16),
+                      decorAndLayers,
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(settings.tr('common.done'), style: TextStyle(color: theme.primaryColor)),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text(settings.tr('common.done'),
+                      style: TextStyle(color: theme.primaryColor)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -2060,7 +2110,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     // sprite decor cũ trong ô đen). Kiểu bàn cũ (Đá Cổ / Vũ Trụ)
     // không còn ảnh vẽ tương ứng nên mọi máy đều dùng bàn gỗ vẽ.
     final isDesktop = Responsive.isDesktop(context);
-    const tableImage = 'assets/images/table_bare_wood.png';
+    // Ảnh nền bàn theo kiểu đã chọn; kiểu chưa có tranh vẽ thì
+    // RƠI VỀ gỗ vẽ (xem _tableImageAsset) — dialog chỉ cho chọn
+    // kiểu có tranh vẽ nên đây chỉ là lưới an toàn, không phải
+    // lựa chọn lặng lẽ.
+    final tableImage = _tableImageAsset(prefs.tableStyle) ??
+        'assets/images/table_bare_wood.png';
 
     // PC: không build icon decor ở đây — phụ kiện là ảnh cắt trong
     // suốt, đặt theo tọa độ cố định trên mép xa của bàn (xem
@@ -2161,6 +2216,24 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
+  /// Ảnh nền bàn theo kiểu đã chọn, null = kiểu đó chưa có tranh
+  /// vẽ. Hiện chỉ 'Gỗ Sồi' có tranh vẽ (`table_bare_wood.png`);
+  /// 'Đá Cổ' / 'Vũ Trụ' chưa có tranh vẽ tương ứng nên chọn cũng
+  /// không đổi được mặt bàn — đó là lý do dialog chỉ cho chọn
+  /// kiểu có tranh vẽ (xem _tableStyleHasPaintedArt).
+  String? _tableImageAsset(String tableStyle) {
+    switch (tableStyle) {
+      case 'Gỗ Sồi':
+        return 'assets/images/table_bare_wood.png';
+      default:
+        return null; // 'Đá Cổ' / 'Vũ Trụ': chưa có tranh vẽ.
+    }
+  }
+
+  /// Kiểu mặt bàn nào CÓ tranh vẽ: chỉ 'Gỗ Sồi'. Dùng để lọc lựa
+  /// chọn trong dialog đổi bàn (xem _showTableSettingsDialog).
+  bool _tableStyleHasPaintedArt(String style) => style == 'Gỗ Sồi';
+
   /// Ảnh khăn theo kiểu đã chọn: khăn CẮT TRONG SUỐT toàn khung,
   /// vẽ thẳng trên bàn gỗ trống rồi tách nền — chỉ còn khăn, khớp
   /// điểm tụ và góc độ với bàn.
@@ -2180,7 +2253,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// do hàng ở trên cùng của _buildTableBackground quyết định.
   /// Món nào có ảnh cắt vẽ (thạch anh, quả cầu, trầm, nến) dùng
   /// ảnh CẮT trong suốt (_buildDecorSprite + _decorCutoutAsset,
-  /// như PC); món không có ảnh (Lá Khô) giữ icon cũ làm fallback.
+  /// như PC); món chưa có ảnh cắt (Lá Khô) không vẽ gì.
   /// Bản PC dùng ảnh cắt đặt đúng vị trí (xem
   /// _buildDesktopDecorCutouts).
   List<Widget> _buildDynamicDecorWidgets(List<String> items, [double size = 40]) {

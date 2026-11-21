@@ -26,6 +26,11 @@ import 'deck_detail_screen.dart';
 /// Phía dưới lưới bộ bài của mình là mục "Bộ bài chung" từ server
 /// (chỉ xem + sao chép về kho của mình); mỗi bộ bài của mình
 /// có thêm nút gửi lên server để chờ duyệt.
+/// Mỗi nhóm có một tiêu đề mục màu vàng + số lượng, cùng kiểu với
+/// tiêu đề nhóm bài ("Ẩn Chính (Major Arcana)") trong panel chọn lá
+/// ở màn trải bài: "Bộ bài của tôi (n)" trên lưới của mình,
+/// "Bộ bài chung (n)" trên danh sách chung (số lượng chỉ hiện khi
+/// đã tải xong danh sách chung).
 class SelectDeckScreen extends StatelessWidget {
   const SelectDeckScreen({Key? key}) : super(key: key);
 
@@ -80,46 +85,58 @@ class SelectDeckScreen extends StatelessWidget {
                       ),
                     )
                   else
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: deckProvider.decks.length,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: Responsive.gridColumns(context),
-                        crossAxisSpacing: isDesktop ? 10 : 12,
-                        mainAxisSpacing: isDesktop ? 10 : 12,
-                        childAspectRatio: isDesktop ? 0.47 : 0.44,
-                      ),
-                      itemBuilder: (context, index) {
-                        final deck = deckProvider.decks[index];
-                        final isSelected =
-                            deckProvider.selectedDeck?.id == deck.id;
-                        return _DeckCard(
-                          deck: deck,
-                          isSelected: isSelected,
-                          theme: theme,
-                          isDesktop: isDesktop,
-                          onSelect: () => deckProvider.selectDeck(deck),
-                          onDelete: () => _confirmDelete(
-                            context,
-                            deckProvider,
-                            deck.id!,
-                            deck.name,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _SectionHeader(
+                          label: settings
+                              .tr('library.myTitle')
+                              .replaceAll(
+                                  '{count}', '${deckProvider.decks.length}'),
+                        ),
+                        const SizedBox(height: 8),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: deckProvider.decks.length,
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: Responsive.gridColumns(context),
+                            crossAxisSpacing: isDesktop ? 10 : 12,
+                            mainAxisSpacing: isDesktop ? 10 : 12,
+                            childAspectRatio: isDesktop ? 0.47 : 0.44,
                           ),
-                          onOpen: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DeckDetailScreen(deck: deck),
+                          itemBuilder: (context, index) {
+                            final deck = deckProvider.decks[index];
+                            final isSelected =
+                                deckProvider.selectedDeck?.id == deck.id;
+                            return _DeckCard(
+                              deck: deck,
+                              isSelected: isSelected,
+                              theme: theme,
+                              isDesktop: isDesktop,
+                              onSelect: () => deckProvider.selectDeck(deck),
+                              onDelete: () => _confirmDelete(
+                                context,
+                                deckProvider,
+                                deck.id!,
+                                deck.name,
                               ),
+                              onOpen: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        DeckDetailScreen(deck: deck),
+                                  ),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
                   const _SharedDecksSection(),
                   // Khoảng trống cuối để FAB không che mất mục cuối.
                   const SizedBox(height: 80),
@@ -186,6 +203,35 @@ class SelectDeckScreen extends StatelessWidget {
     if (confirmed == true) {
       await deckProvider.deleteDeck(deckId);
     }
+  }
+}
+
+/// Tiêu đề mục màu vàng, cùng kiểu với tên nhóm bài trong panel chọn
+/// lá ở màn trải bài ("Ẩn Chính (Major Arcana)": chữ vàng đậm 15,
+/// đệm dọc 4 — xem _buildSelectionPanel trong new_reading_screen).
+/// Dùng cho cả hai nhóm của kho: bộ bài của mình và bộ bài chung.
+/// Không có chip lọc: bộ bài không có trường loại/nguồn để lọc
+/// (TarotDeckModel chỉ có id, tên, ngày tạo), nên chỉ có tiêu đề.
+class _SectionHeader extends StatelessWidget {
+  final String label;
+
+  const _SectionHeader({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final theme = settings.currentThemeData;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: theme.primaryColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 15,
+        ),
+      ),
+    );
   }
 }
 
@@ -630,13 +676,13 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          settings.tr('library.sharedTitle'),
-          style: TextStyle(
-            color: theme.textColor,
-            fontSize: isDesktop ? 16 : 18,
-            fontWeight: FontWeight.bold,
-          ),
+        // Cùng kiểu tiêu đề mục vàng như nhóm "Bộ bài của tôi" phía
+        // trên. Số lượng chỉ hiện khi đã tải xong (đang tải / lỗi /
+        // rỗng thì chưa biết có bao nhiêu bộ).
+        _SectionHeader(
+          label: _decks == null
+              ? settings.tr('library.sharedTitle')
+              : '${settings.tr('library.sharedTitle')} (${_decks!.length})',
         ),
         const SizedBox(height: 8),
         if (_isLoading)
