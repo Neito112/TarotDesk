@@ -1815,6 +1815,20 @@ class AppStrings {
       AppLanguage.ko: "인터페이스 설정",
       AppLanguage.ja: "インターフェース設定",
     },
+    'settings.translatingBody': {
+      AppLanguage.vi: "Đang dịch sang {language}… {done}/{total} lá",
+      AppLanguage.en: "Translating to {language}… {done}/{total} cards",
+      AppLanguage.zh: "正在翻译为{language}… {done}/{total} 张牌",
+      AppLanguage.ko: "{language}로 번역 중… {done}/{total} 장",
+      AppLanguage.ja: "{language}に翻訳中… {done}/{total} 枚",
+    },
+    'settings.translatingTitle': {
+      AppLanguage.vi: "Đang đổi ngôn ngữ…",
+      AppLanguage.en: "Switching language…",
+      AppLanguage.zh: "正在切换语言…",
+      AppLanguage.ko: "언어 변경 중…",
+      AppLanguage.ja: "言語を切り替え中…",
+    },
     'settings.twinkleSubtitle': {
       AppLanguage.vi: "Bật/Tắt hiệu ứng nhấp nháy của tiêu đề",
       AppLanguage.en: "Turn the title twinkling effect on/off",

@@ -1,13 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/display_labels.dart';
 import '../../core/localization.dart';
 import '../../core/responsive.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/translation_service.dart';
 import '../../data/datasources/cloud_sync_service.dart';
+import '../../data/datasources/database_helper.dart';
 import '../../data/datasources/tarotdesk_api_service.dart';
+import '../../data/models/tarot_card.dart';
 import '../../data/models/user_preferences.dart';
 import '../../logic/auth_provider.dart';
+import '../../logic/deck_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 
@@ -149,13 +155,148 @@ class SettingsScreen extends StatelessWidget {
                         ? theme.primaryColor
                         : theme.glassBorderColor),
                 visualDensity: VisualDensity.compact,
-                onSelected: (_) => settings.setLanguage(lang),
+                onSelected: (_) => _switchLanguageWithLoading(context, lang),
               );
             }).toList(),
           ),
         ],
       ),
     );
+  }
+
+  /// Chặn chạm đúp: một lần đổi ngôn ngữ đang chạy thì chạm thêm
+  /// chip khác không làm gì (dialog đang chặn tương tác nên gần
+  /// như không chạm được, nhưng vẫn chặn cho chắc).
+  static bool _isSwitchingLanguage = false;
+
+  /// Đổi ngôn ngữ kèm màn hình chờ: dịch HẾT nội dung các lá bài
+  /// sang ngôn ngữ mới TRƯỚC, rồi mới chuyển ngôn ngữ.
+  ///
+  /// Hiện dialog loading chặn tương tác (không đóng được bằng nút
+  /// back hay chạm ngoài), dịch toàn bộ tên + ý nghĩa của mọi lá
+  /// trong mọi bộ bài local qua Worker (theo lô 20 chuỗi, dùng
+  /// lại [TranslationService.warmCache]), cập nhật tiến độ theo
+  /// từng lô, rồi mới gọi [SettingsProvider.setLanguage] và đóng
+  /// dialog. Nhờ đó sau khi đổi ngôn ngữ, nội dung các lá đã
+  /// dịch sẵn — không còn hiện tiếng Việt trước rồi mới chuyển
+  /// sang tiếng mới, không chờ từng lá khi mở ra.
+  ///
+  /// Chạm vào ngôn ngữ đang dùng thì không làm gì. Lô nào lỗi
+  /// (Worker chậm / mất mạng) thì bỏ qua lô đó — các lá đó sẽ
+  /// dịch khi mở ra sau (on demand) — và ngôn ngữ vẫn được đổi.
+  /// Dialog luôn đóng và ngôn ngữ luôn đổi, kể cả khi dịch lỗi.
+  Future<void> _switchLanguageWithLoading(
+    BuildContext context,
+    AppLanguage targetLang,
+  ) async {
+    final settings = context.read<SettingsProvider>();
+    if (settings.language == targetLang) return;
+    if (_isSwitchingLanguage) return;
+    _isSwitchingLanguage = true;
+    try {
+      final deckProvider = context.read<DeckProvider>();
+      final translation = context.read<TranslationService>();
+
+      // Thu thập toàn bộ lá bài của mọi bộ bài local để biết
+      // tổng số lá (cho thanh tiến độ) trước khi hiện dialog.
+      // Đọc từ DB local nên nhanh; không dịch gì ở bước này.
+      final deckNames = <String>[];
+      final deckCardsList = <List<TarotCardModel>>[];
+      var totalCards = 0;
+      for (final deck in deckProvider.decks) {
+        if (deck.id == null) continue;
+        final cards =
+            await DatabaseHelper.instance.getCardsByDeckId(deck.id!);
+        if (cards.isEmpty) continue;
+        deckNames.add(deck.name);
+        deckCardsList.add(cards);
+        totalCards += cards.length;
+      }
+
+      // Không có lá nào để dịch: đổi ngôn ngữ ngay, không cần dialog.
+      if (totalCards == 0) {
+        settings.setLanguage(targetLang);
+        return;
+      }
+
+      // Tiến độ cho dialog: số lá đã xử lý (dịch xong hoặc bỏ qua).
+      final doneCards = ValueNotifier<int>(0);
+      // Text trong dialog dùng ngôn ngữ HIỆN TẠI (chưa đổi).
+      final title = settings.tr('settings.translatingTitle');
+      final bodyTemplate = settings.tr('settings.translatingBody');
+
+      // Hiện dialog loading chặn tương tác. Không await — dialog
+      // chạy song song với quá trình dịch; đóng lại ở cuối.
+      var dialogOpen = true;
+      final dialogFuture = showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) {
+          return PopScope(
+            canPop: false,
+            child: AlertDialog(
+              title: Text(title),
+              content: ValueListenableBuilder<int>(
+                valueListenable: doneCards,
+                builder: (context, done, _) {
+                  final body = bodyTemplate
+                      .replaceAll('{language}', targetLang.label)
+                      .replaceAll('{done}', '$done')
+                      .replaceAll('{total}', '$totalCards');
+                  final progress =
+                      totalCards > 0 ? done / totalCards : 0.0;
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(body),
+                      const SizedBox(height: 16),
+                      LinearProgressIndicator(value: progress),
+                      const SizedBox(height: 16),
+                      const Center(child: CircularProgressIndicator()),
+                    ],
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      );
+      // Dọn progress notifier khi dialog đã đóng hẳn.
+      unawaited(dialogFuture.then((_) => doneCards.dispose()));
+
+      try {
+        // Dịch từng bộ bài (theo lô 20 chuỗi), cộng dồn tiến độ.
+        // targetLang được truyền rõ ràng — KHÔNG dựa vào ngôn ngữ
+        // trong SettingsProvider vì nó chưa đổi lúc này.
+        var doneBefore = 0;
+        for (var d = 0; d < deckCardsList.length; d++) {
+          final cards = deckCardsList[d];
+          await translation.warmCache(
+            cards,
+            deckName: deckNames[d],
+            targetLang: targetLang.code,
+            onProgress: (doneStrings, _) {
+              // Mỗi lá = 2 chuỗi (tên + ý nghĩa), lô 20 chuỗi
+              // luôn khớp ranh giới lá nên chia 2 là chính xác.
+              doneCards.value = doneBefore + (doneStrings ~/ 2);
+            },
+          );
+          doneBefore += cards.length;
+          // Đảm bảo tiến độ không kẹt nếu warmCache về sớm.
+          doneCards.value = doneBefore;
+        }
+      } finally {
+        // Dù dịch xong hay lỗi, vẫn đổi ngôn ngữ rồi đóng dialog.
+        settings.setLanguage(targetLang);
+        if (dialogOpen) {
+          dialogOpen = false;
+          if (context.mounted) Navigator.of(context).pop();
+        }
+      }
+    } finally {
+      _isSwitchingLanguage = false;
+    }
   }
 
   /// Google account section: the signed-in Google account, sync data

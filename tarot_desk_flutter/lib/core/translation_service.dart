@@ -486,31 +486,40 @@ class TranslationService {
   /// is swallowed; the deck is fully usable untranslated.
   /// Returns the number of translated strings (names +
   /// meanings) that came back translated.
+  ///
+  /// [onProgress] is called after each batch with
+  /// (strings processed so far, total strings). A failed batch
+  /// still counts as processed — it is skipped, not retried —
+  /// so a caller showing a loading dialog always reaches 100%
+  /// and the flow never hangs. Each card contributes exactly
+  /// 2 strings (name + meaning), so cards done = strings ~/ 2.
   Future<int> warmCache(
     List<TarotCardModel> cards, {
     String? deckName,
     String? sourceLang,
     String? targetLang,
+    void Function(int doneStrings, int totalStrings)? onProgress,
   }) async {
     final target = (targetLang ?? targetLanguageCode).toLowerCase();
     final source = sourceLang ??
         (deckName != null ? detectDeckLanguage(deckName, cards) : null);
     if (source != null && source.toLowerCase() == target) return 0;
     var translated = 0;
-    try {
-      // Batch the names + meanings of the whole deck into as
-      // few Worker calls as possible: one call per 20 strings.
-      final texts = <String>[];
-      for (final card in cards) {
-        texts.add(card.name);
-        texts.add(card.meaning);
-      }
-      const batchSize = 20;
-      for (var i = 0; i < texts.length; i += batchSize) {
-        final batch = texts.sublist(
-          i,
-          i + batchSize > texts.length ? texts.length : i + batchSize,
-        );
+    // Batch the names + meanings of the whole deck into as
+    // few Worker calls as possible: one call per 20 strings.
+    final texts = <String>[];
+    for (final card in cards) {
+      texts.add(card.name);
+      texts.add(card.meaning);
+    }
+    const batchSize = 20;
+    var doneStrings = 0;
+    for (var i = 0; i < texts.length; i += batchSize) {
+      final batch = texts.sublist(
+        i,
+        i + batchSize > texts.length ? texts.length : i + batchSize,
+      );
+      try {
         final results = await _api.translateTexts(
           sessionToken: _sessionToken?.call(),
           texts: batch,
@@ -530,10 +539,16 @@ class TranslationService {
             ),
           );
         }
+      } catch (_) {
+        // One failed batch (Worker down / timeout / quota) only
+        // skips that batch — the remaining batches still run,
+        // and the skipped cards translate on demand later.
+      } finally {
+        // Progress always advances past this batch (translated
+        // or skipped) so a loading dialog reaches 100%.
+        doneStrings += batch.length;
+        onProgress?.call(doneStrings, texts.length);
       }
-    } catch (_) {
-      // Best-effort warming: a failed warm-up only means the
-      // first view of the deck translates on demand instead.
     }
     return translated;
   }
