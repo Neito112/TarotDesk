@@ -40,6 +40,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
   }
 
   Future<void> _pickCardImage() async {
+    final settings = context.read<SettingsProvider>();
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image != null) {
@@ -49,18 +50,19 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể mở thư viện ảnh: $e')),
+        SnackBar(content: Text(settings.tr('addDeck.cannotOpenGallery').replaceAll('{error}', '$e'))),
       );
     }
   }
 
   void _addCardToDraft() {
+    final settings = context.read<SettingsProvider>();
     final name = _cardNameController.text.trim();
     final meaning = _cardMeaningController.text.trim();
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập Tên lá bài!')),
+        SnackBar(content: Text(settings.tr('addDeck.enterCardName'))),
       );
       return;
     }
@@ -78,7 +80,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Đã thêm lá bài "$name"!')),
+      SnackBar(content: Text(settings.tr('addDeck.cardAdded').replaceAll('{name}', name))),
     );
   }
 
@@ -89,17 +91,18 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
   }
 
   Future<void> _saveEntireDeck() async {
+    final settings = context.read<SettingsProvider>();
     final deckName = _deckNameController.text.trim();
     if (deckName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập Tên bộ bài!')),
+        SnackBar(content: Text(settings.tr('addDeck.enterDeckName'))),
       );
       return;
     }
 
     if (_draftCards.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng thêm ít nhất 1 lá bài trước khi lưu!')),
+        SnackBar(content: Text(settings.tr('addDeck.addAtLeastOneCard'))),
       );
       return;
     }
@@ -109,7 +112,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã lưu bộ bài "$deckName"!')),
+        SnackBar(content: Text(settings.tr('addDeck.deckSaved').replaceAll('{name}', deckName))),
       );
       Navigator.pop(context);
     }
@@ -156,6 +159,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
   /// Tên bộ bài — đặt riêng một hàng full-width ở trên cùng (đây
   /// là định danh của bộ, không nhét chung cột với form thêm lá).
   Widget _deckNamePanel(dynamic theme, bool isDesktop) {
+    final settings = context.watch<SettingsProvider>();
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
       borderColor: theme.glassBorderColor,
@@ -167,12 +171,12 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
             child: TextField(
               controller: _deckNameController,
               style: TextStyle(color: theme.textColor),
-              decoration: _fieldDecoration(theme, 'Tên bộ bài'),
+              decoration: _fieldDecoration(theme, settings.tr('addDeck.deckName')),
             ),
           ),
           const SizedBox(width: 10),
           Chip(
-            label: Text('${_draftCards.length} lá',
+            label: Text(settings.tr('addDeck.cardCount').replaceAll('{n}', '${_draftCards.length}'),
                 style: TextStyle(
                     color: theme.primaryColor,
                     fontSize: 12,
@@ -191,6 +195,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
   /// Trên màn rộng form này nằm cột trái, danh sách lá nháp nằm
   /// cột phải để vừa nhập vừa thấy các lá đã thêm.
   Widget _addCardPanel(BuildContext context, dynamic theme, bool isDesktop) {
+    final settings = context.watch<SettingsProvider>();
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
       borderColor: theme.glassBorderColor,
@@ -200,7 +205,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
           _stepHeader(theme,
               icon: Icons.add_photo_alternate,
               iconColor: theme.accentColor,
-              title: 'Thêm Lá Bài',
+              title: settings.tr('addDeck.addCardTitle'),
               isDesktop: isDesktop),
           const SizedBox(height: 12),
           // Hàng chọn ảnh gọn: thumbnail 5:8 bên trái, nút + gợi ý
@@ -235,7 +240,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                                 color: theme.primaryColor, size: 28),
                             const SizedBox(height: 6),
                             Text(
-                              'Chọn ảnh',
+                              settings.tr('addDeck.chooseImage'),
                               style: TextStyle(
                                   color: theme.secondaryTextColor,
                                   fontSize: 11),
@@ -255,8 +260,8 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                         icon: const Icon(Icons.photo_library, size: 18),
                         label: Text(
                           _selectedImagePath != null
-                              ? 'Đổi ảnh khác'
-                              : 'Chọn ảnh từ thư viện',
+                              ? settings.tr('addDeck.changeImage')
+                              : settings.tr('addDeck.chooseFromGallery'),
                           style: TextStyle(fontSize: isDesktop ? 12 : 13),
                         ),
                         onPressed: _pickCardImage,
@@ -264,7 +269,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Ảnh lá bài (tỉ lệ 5:8). Chưa chọn ảnh thì lá dùng ảnh mặc định.',
+                      settings.tr('addDeck.imageHint'),
                       style: TextStyle(
                           color: theme.secondaryTextColor,
                           fontSize: 11,
@@ -279,14 +284,14 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
           TextField(
             controller: _cardNameController,
             style: TextStyle(color: theme.textColor),
-            decoration: _fieldDecoration(theme, 'Tên lá bài'),
+            decoration: _fieldDecoration(theme, settings.tr('addDeck.cardName')),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _cardMeaningController,
             maxLines: 3,
             style: TextStyle(color: theme.textColor),
-            decoration: _fieldDecoration(theme, 'Nội dung giải nghĩa'),
+            decoration: _fieldDecoration(theme, settings.tr('addDeck.cardMeaning')),
           ),
           const SizedBox(height: 14),
           SizedBox(
@@ -299,7 +304,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
               ),
               icon: const Icon(Icons.add),
               label: Text(
-                'Thêm Lá Bài Vào Bộ Bài',
+                settings.tr('addDeck.addCardToDeck'),
                 style: TextStyle(fontSize: isDesktop ? 13 : 14),
               ),
               onPressed: _addCardToDraft,
@@ -314,6 +319,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
   /// tất cả, rồi lưới thẻ 5:8. Panel riêng để đặt cạnh form thêm
   /// lá trên màn rộng (vừa nhập vừa thấy).
   Widget _draftListPanel(dynamic theme, bool isDesktop) {
+    final settings = context.watch<SettingsProvider>();
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
       borderColor: theme.glassBorderColor,
@@ -325,7 +331,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
             children: [
               Flexible(
                 child: Text(
-                  'Danh sách lá bài đã nhập (${_draftCards.length}):',
+                  settings.tr('addDeck.draftListTitle').replaceAll('{n}', '${_draftCards.length}'),
                   style: TextStyle(
                     color: theme.textColor,
                     fontSize: isDesktop ? 14 : 16,
@@ -340,7 +346,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                       _draftCards.clear();
                     });
                   },
-                  child: const Text('Xóa Tất Cả',
+                  child: Text(settings.tr('addDeck.clearAll'),
                       style: TextStyle(color: Colors.redAccent)),
                 ),
             ],
@@ -351,7 +357,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Text(
-                  'Chưa có lá bài nào được thêm.',
+                  settings.tr('addDeck.noDraftCards'),
                   style: TextStyle(
                       color: theme.secondaryTextColor, fontSize: 13),
                 ),
@@ -493,7 +499,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
       appBar: AppBar(
         toolbarHeight: isDesktop ? 48 : null,
         title: Text(
-          'Tạo Bộ Bài Tarot Mới',
+          settings.tr('addDeck.title'),
           style: TextStyle(fontSize: isDesktop ? 16 : 20),
         ),
         backgroundColor: Colors.transparent,
@@ -558,7 +564,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                       ),
                       icon: const Icon(Icons.save, size: 24),
                       label: Text(
-                        'LƯU TOÀN BỘ BỘ BÀI (${_draftCards.length} LÁ)',
+                        settings.tr('addDeck.saveEntireDeck').replaceAll('{n}', '${_draftCards.length}'),
                         style: TextStyle(
                             fontSize: isDesktop ? 13 : 16,
                             fontWeight: FontWeight.bold),

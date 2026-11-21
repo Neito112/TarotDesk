@@ -79,15 +79,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void _startNewReading(BuildContext context) {
     final deckProvider = context.read<DeckProvider>();
     final readingProvider = context.read<ReadingProvider>();
+    final settings = context.read<SettingsProvider>();
     if (deckProvider.currentDeckCards.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng chọn hoặc thêm lá bài trước khi trải bài!'),
+        SnackBar(
+          content: Text(settings.tr('home.selectCardsFirst')),
         ),
       );
       return;
     }
-    readingProvider.startManualReading('Lượt Trải Bài Mới');
+    readingProvider.startManualReading(settings.tr('home.newReadingSession'));
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const NewReadingScreen()),
@@ -100,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showDailyCardDetail(
       BuildContext context, TarotCardModel card, dynamic theme) {
     final width = Responsive.isPhone(context) ? 180.0 : 200.0;
+    final settings = context.read<SettingsProvider>();
     showDialog(
       context: context,
       builder: (context) {
@@ -150,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Đóng'),
+              child: Text(settings.tr('common.close')),
             ),
           ],
         );
@@ -236,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             const SizedBox(height: 16),
                             _buildHistoryFooter(
-                                context, theme, readingProvider),
+                                context, theme, settings, readingProvider),
                             const SizedBox(height: 8),
                           ],
                         ),
@@ -276,6 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: _buildHeroCard(
                     context,
                     theme,
+                    settings,
                     dailyCard,
                     heroWidth: 160,
                     nameFontSize: 16,
@@ -289,9 +292,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       _buildDeckCard(context, theme, settings, deckProvider),
                       const SizedBox(height: 14),
-                      _buildPrimaryCta(context, theme, compact: true),
+                      _buildPrimaryCta(context, theme, settings, compact: true),
                       const SizedBox(height: 12),
-                      _buildSecondaryActions(context, theme, horizontal: true),
+                      _buildSecondaryActions(context, theme, settings,
+                          horizontal: true),
                     ],
                   ),
                 ),
@@ -304,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
               color: theme.primaryColor.withOpacity(0.25),
             ),
             const SizedBox(height: 12),
-            _buildHistoryFooter(context, theme, readingProvider),
+            _buildHistoryFooter(context, theme, settings, readingProvider),
             const SizedBox(height: 8),
           ],
         ),
@@ -352,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> {
             IconButton(
               icon: Icon(Icons.info_outline,
                   color: theme.primaryColor, size: 24),
-              tooltip: 'Giới thiệu & Hướng dẫn sử dụng',
+              tooltip: settings.tr('home.aboutTooltip'),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -362,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             IconButton(
               icon: Icon(Icons.settings, color: theme.primaryColor, size: 24),
-              tooltip: 'Cài đặt giao diện',
+              tooltip: settings.tr('home.settingsTooltip'),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -386,13 +390,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildHeroCard(context, theme, dailyCard),
+        _buildHeroCard(context, theme, settings, dailyCard),
         const SizedBox(height: 20),
-        _buildPrimaryCta(context, theme),
+        _buildPrimaryCta(context, theme, settings),
         const SizedBox(height: 12),
         _buildDeckCard(context, theme, settings, deckProvider),
         const SizedBox(height: 12),
-        _buildSecondaryActions(context, theme),
+        _buildSecondaryActions(context, theme, settings),
       ],
     );
   }
@@ -409,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Expanded(
           flex: 5,
-          child: _buildHeroCard(context, theme, dailyCard),
+          child: _buildHeroCard(context, theme, settings, dailyCard),
         ),
         const SizedBox(width: 24),
         Expanded(
@@ -419,9 +423,9 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildDeckCard(context, theme, settings, deckProvider),
               const SizedBox(height: 16),
-              _buildPrimaryCta(context, theme),
+              _buildPrimaryCta(context, theme, settings),
               const SizedBox(height: 12),
-              _buildSecondaryActions(context, theme),
+              _buildSecondaryActions(context, theme, settings),
             ],
           ),
         ),
@@ -432,6 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeroCard(
     BuildContext context,
     dynamic theme,
+    SettingsProvider settings,
     TarotCardModel? dailyCard, {
     double? heroWidth,
     double nameFontSize = 18,
@@ -442,7 +447,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: [
         Text(
-          'Lá bài hôm nay',
+          settings.tr('home.dailyCardTitle'),
           style: TextStyle(
             color: theme.secondaryTextColor,
             fontSize: 12,
@@ -498,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          dailyCard?.name ?? 'Chưa chọn bộ bài',
+          dailyCard?.name ?? settings.tr('home.noDeckSelected'),
           textAlign: TextAlign.center,
           style: TextStyle(
             color: theme.textColor,
@@ -530,7 +535,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPrimaryCta(
     BuildContext context,
-    dynamic theme, {
+    dynamic theme,
+    SettingsProvider settings, {
     bool compact = false,
   }) {
     // PC gọn: nút cao 40 thay vì 48, chữ 14, icon 20.
@@ -541,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () => _startNewReading(context),
         icon: Icon(Icons.auto_awesome, size: compact ? 20 : 22),
         label: Text(
-          'Trải bài mới',
+          settings.tr('home.newReading'),
           style: TextStyle(
             fontSize: compact ? 14 : 17,
             fontWeight: FontWeight.bold,
@@ -561,12 +567,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSecondaryActions(
     BuildContext context,
-    dynamic theme, {
+    dynamic theme,
+    SettingsProvider settings, {
     bool horizontal = false,
   }) {
     final khoBoBai = _buildMenuCard(
       context,
-      title: 'Kho bộ bài',
+      title: settings.tr('home.deckLibrary'),
       icon: Icons.auto_stories,
       color: theme.accentColor,
       onTap: () {
@@ -578,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     final traiBaiCu = _buildMenuCard(
       context,
-      title: 'Trải bài cũ',
+      title: settings.tr('home.pastReadings'),
       icon: Icons.history_edu,
       color: theme.primaryColor,
       onTap: () {
@@ -647,7 +654,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bộ bài hiện tại:',
+                    settings.tr('home.currentDeck'),
                     style: TextStyle(
                       color: theme.secondaryTextColor,
                       fontSize: 11,
@@ -655,7 +662,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    deckProvider.selectedDeck?.name ?? 'Chưa chọn bộ bài',
+                    deckProvider.selectedDeck?.name ??
+                        settings.tr('home.noDeckSelected'),
                     style: TextStyle(
                       color: theme.textColor,
                       fontSize: 15,
@@ -667,7 +675,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (cardCount > 0) ...[
                     const SizedBox(height: 2),
                     Text(
-                      '$cardCount lá bài',
+                      settings
+                          .tr('home.cardCount')
+                          .replaceAll('{n}', '$cardCount'),
                       style: TextStyle(
                         color: theme.secondaryTextColor,
                         fontSize: 11,
@@ -691,6 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHistoryFooter(
     BuildContext context,
     dynamic theme,
+    SettingsProvider settings,
     ReadingProvider readingProvider,
   ) {
     if (readingProvider.readingsHistory.isEmpty) {
@@ -722,7 +733,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Đã lưu $count lượt trải bài · Gần nhất: ${readingProvider.readingsHistory.first.name}',
+                      settings
+                          .tr('home.historyFooter')
+                          .replaceAll('{count}', '$count')
+                          .replaceAll('{name}',
+                              readingProvider.readingsHistory.first.name),
                       style: TextStyle(
                         color: theme.secondaryTextColor,
                         fontSize: 12,

@@ -47,6 +47,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _readingTile(BuildContext context, TarotReadingModel reading,
       dynamic theme, ReadingProvider readingProvider) {
+    final settings = context.watch<SettingsProvider>();
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
       borderColor: theme.glassBorderColor,
@@ -122,13 +123,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Ngày bói: ${reading.date.day}/${reading.date.month}/${reading.date.year} ${reading.date.hour}:${reading.date.minute}',
+                      settings.tr('history.date').replaceAll(
+                          '{datetime}',
+                          '${reading.date.day}/${reading.date.month}/${reading.date.year} ${reading.date.hour}:${reading.date.minute}'),
                       style: TextStyle(
                           color: theme.secondaryTextColor, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${reading.cardIds.length} lá bài',
+                      settings
+                          .tr('history.cardCount')
+                          .replaceAll('{n}', '${reading.cardIds.length}'),
                       style: TextStyle(
                           color: theme.secondaryTextColor, fontSize: 12),
                     ),
@@ -166,7 +171,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(
         toolbarHeight: isDesktop ? 44 : null,
         title: Text(
-          'Lịch Sử Bói Bài',
+          settings.tr('history.title'),
           style: TextStyle(fontSize: isDesktop ? 15 : 18),
         ),
         backgroundColor: Colors.transparent,
@@ -180,7 +185,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: readings.isEmpty
                 ? Center(
                     child: Text(
-                      'Chưa có lịch sử bói bài nào được lưu.',
+                      settings.tr('history.empty'),
                       style:
                           TextStyle(color: theme.secondaryTextColor),
                     ),

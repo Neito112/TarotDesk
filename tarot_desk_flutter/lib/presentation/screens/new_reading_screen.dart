@@ -335,8 +335,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   color: playing ? Colors.amber : theme.primaryColor,
                 ),
                 tooltip: playing
-                    ? 'Nhạc huyền bí: đang phát — chạm để đổi bài'
-                    : 'Nhạc huyền bí',
+                    ? settings.tr('reading.musicPlaying')
+                    : settings.tr('reading.music'),
                 onPressed: () => _openMusicSheet(context, theme),
               );
             },
@@ -344,12 +344,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           // Đổi bàn / khăn / đồ decor ngay trong lúc trải bài.
           IconButton(
             icon: const Icon(Icons.tune),
-            tooltip: 'Đổi bàn, khăn, đồ decor',
+            tooltip: settings.tr('reading.changeTable'),
             onPressed: () => _showTableSettingsDialog(context, settings, theme),
           ),
           IconButton(
             icon: const Icon(Icons.delete_sweep),
-            tooltip: 'Xóa hết lá bài đang chọn',
+            tooltip: settings.tr('reading.clearCards'),
             onPressed: () {
               readingProvider.startManualReading(readingProvider.currentReadingTitle);
               setState(() {
@@ -361,11 +361,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.save),
-            tooltip: 'Lưu lượt bói này',
+            tooltip: settings.tr('reading.saveReading'),
             onPressed: () async {
               if (drawnCards.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Vui lòng chọn ít nhất một lá bài trước khi lưu!')),
+                  SnackBar(content: Text(settings.tr('reading.saveNeedsCard'))),
                 );
                 return;
               }
@@ -373,7 +373,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 await readingProvider.saveCurrentReading(deckProvider.selectedDeck!.id!);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Đã lưu kết quả trải bài vào Lịch Sử!')),
+                    SnackBar(content: Text(settings.tr('reading.savedToHistory'))),
                   );
                 }
               }
@@ -461,6 +461,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// trên lớp này — Positioned theo tọa độ của Stack.
   Widget _buildDesktopBody(List<TarotCardModel> deckCards,
       ReadingProvider readingProvider, dynamic theme) {
+    final settings = context.watch<SettingsProvider>();
     final drawnCards = readingProvider.drawnCards;
     return SafeArea(
       child: Padding(
@@ -477,7 +478,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     children: [
                       Flexible(
                         child: Text(
-                          drawnCardsCountText(),
+                          drawnCardsCountText(settings),
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                               color: theme.secondaryTextColor, fontSize: 12),
@@ -555,9 +556,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  String drawnCardsCountText() {
+  String drawnCardsCountText(SettingsProvider settings) {
     final n = context.read<ReadingProvider>().drawnCards.length;
-    return n == 0 ? 'Chưa rút lá nào' : 'Đã rút $n lá';
+    return n == 0
+        ? settings.tr('reading.noCardsDrawn')
+        : settings.tr('reading.drawnCount').replaceAll('{n}', '$n');
   }
 
   /// Bàn trải bài góc nhìn thứ nhất trên PC (HyperFrames, các lớp
@@ -767,6 +770,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// động nào nữa.
   Widget _buildDesktopStageCard(
       TarotCardModel activeCard, dynamic theme, double width) {
+    final settings = context.watch<SettingsProvider>();
     final isNew = activeCard.id == _lastDrawnId;
     final tile = RepaintBoundary(
       child: SizedBox(
@@ -804,7 +808,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     // lượng lá — một lá chỉ ở đúng một nơi). Tooltip hiện khi
     // rê chuột qua lá.
     return Tooltip(
-      message: 'Chạm để thu lá xuống khay',
+      message: settings.tr('reading.tapToCollect'),
       child: GestureDetector(
         onTap: _collectStageCard,
         child: animated,
@@ -1059,6 +1063,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   Widget _buildDesktopEmptyHint(dynamic theme, {bool hasDrawnCards = false}) {
+    final settings = context.watch<SettingsProvider>();
     return Center(
       child: GlassPanel(
         backgroundColor: Colors.black.withOpacity(0.55),
@@ -1079,8 +1084,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     });
                   },
                   icon: const Icon(Icons.style, size: 18),
-                  label: const Text('Chọn lá bài',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  label: Text(settings.tr('reading.selectCard'),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     foregroundColor: Colors.black87,
@@ -1093,8 +1098,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               const SizedBox(height: 8),
               Text(
                 hasDrawnCards
-                    ? 'Đã thu lá xuống khay — chạm vào lá trong khay để xem lại,\nhoặc chạm xấp bài để rút thêm.'
-                    : 'Chạm vào xấp bài góc trên-trái để bắt đầu chọn.',
+                    ? settings.tr('reading.emptyHintCollected')
+                    : settings.tr('reading.emptyHintDesktop'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: Colors.white, fontSize: 13, height: 1.5),
@@ -1265,10 +1270,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   current.add(item);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content:
-                            Text('Chỉ được chọn tối đa 3 món trang trí!'),
-                        duration: Duration(seconds: 1)),
+                    SnackBar(
+                        content: Text(settings
+                            .tr('reading.maxDecor')
+                            .replaceAll('{n}',
+                                '${UserPreferencesModel.maxDecorItems}')),
+                        duration: const Duration(seconds: 1)),
                   );
                 }
               } else {
@@ -1302,7 +1309,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        sectionTitle('Mặt bàn'),
+        sectionTitle(settings.tr('reading.tableSurface')),
         const SizedBox(height: 6),
         optionChips(
           options: UserPreferencesModel.tableStyles,
@@ -1311,12 +1318,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Áp dụng trên điện thoại / máy tính bảng. Bản PC dùng tranh bàn gỗ trống.',
+          settings.tr('reading.tableNote'),
           style: TextStyle(
               color: theme.secondaryTextColor, fontSize: 11, height: 1.4),
         ),
         const SizedBox(height: 14),
-        sectionTitle('Khăn trải bàn'),
+        sectionTitle(settings.tr('reading.tablecloth')),
         const SizedBox(height: 6),
         optionChips(
           options: UserPreferencesModel.clothStyles,
@@ -1325,7 +1332,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Đổi ngay trên bàn: khăn là lớp riêng to và phẳng trên mặt gỗ.',
+          settings.tr('reading.clothNote'),
           style: TextStyle(
               color: theme.secondaryTextColor, fontSize: 11, height: 1.4),
         ),
@@ -1336,24 +1343,25 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        sectionTitle(
-            'Đồ trang trí (tối đa ${UserPreferencesModel.maxDecorItems} món)'),
+        sectionTitle(settings
+            .tr('reading.decor')
+            .replaceAll('{n}', '${UserPreferencesModel.maxDecorItems}')),
         const SizedBox(height: 6),
         decorChips(),
         const SizedBox(height: 14),
-        sectionTitle('Hiển thị các lớp trên bàn'),
+        sectionTitle(settings.tr('reading.showLayers')),
         layerSwitch(
-          title: 'Hiện mặt bàn',
+          title: settings.tr('reading.showTable'),
           value: prefs.showTable,
           onChanged: (v) => settings.toggleTable(v),
         ),
         layerSwitch(
-          title: 'Hiện khăn trải bàn',
+          title: settings.tr('reading.showCloth'),
           value: prefs.showCloth,
           onChanged: (v) => settings.toggleCloth(v),
         ),
         layerSwitch(
-          title: 'Hiện đồ decor',
+          title: settings.tr('reading.showDecor'),
           value: prefs.showDecor,
           onChanged: (v) => settings.toggleDecor(v),
         ),
@@ -1365,7 +1373,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: theme.backgroundColor,
-          title: Text('Đổi bàn trải bài',
+          title: Text(settings.tr('reading.changeTableTitle'),
               style: TextStyle(color: theme.textColor, fontSize: 16)),
           content: SizedBox(
             width: isDesktop ? 560 : 340,
@@ -1380,11 +1388,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   // kiện là ảnh cắt trong suốt đặt theo tọa độ cố
                   // định. Đổi ở đây sẽ đổi ngay trên bàn (cross-fade).
                   if (isDesktop)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
                       child: Text(
-                        'Bản PC là bàn vẽ nhiều lớp: nền gỗ trống, khăn là ảnh cắt trong suốt vẽ thẳng trên bàn (khớp điểm tụ và góc độ với bàn), phụ kiện là ảnh cắt trong suốt đặt đúng vị trí trên mép bàn. Đổi màu khăn hay phụ kiện ở đây sẽ đổi ngay trên bàn.',
-                        style: TextStyle(
+                        settings.tr('reading.desktopTableIntro'),
+                        style: const TextStyle(
                             color: Colors.white70, fontSize: 12, height: 1.5),
                       ),
                     ),
@@ -1409,7 +1417,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Xong', style: TextStyle(color: theme.primaryColor)),
+              child: Text(settings.tr('common.done'), style: TextStyle(color: theme.primaryColor)),
             ),
           ],
         );
@@ -1437,6 +1445,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// Khi chưa chọn lá bài nào: xấp bài ở giữa, nút chọn rõ ràng,
   /// hướng dẫn ngắn gọn — không còn lá bài bay đè lên khung chữ.
   Widget _buildEmptyTable(dynamic theme) {
+    final settings = context.watch<SettingsProvider>();
     return Center(
       child: SingleChildScrollView(
         child: Column(
@@ -1460,9 +1469,9 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   });
                 },
                 icon: const Icon(Icons.style, size: 20),
-                label: const Text(
-                  'Chọn lá bài',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                label: Text(
+                  settings.tr('reading.selectCard'),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.primaryColor,
@@ -1476,17 +1485,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             GlassPanel(
               backgroundColor: Colors.black.withOpacity(0.55),
               borderColor: theme.primaryColor.withOpacity(0.3),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 28),
-                    SizedBox(height: 12),
+                    const Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 28),
+                    const SizedBox(height: 12),
                     Text(
-                      'Chạm vào xấp bài ở giữa để bắt đầu chọn.\n\nKéo các lá bài từ khay lịch sử lên đây hoặc chạm để xem giải nghĩa.\n\nKéo lá bài đang chọn xuống hoặc vuốt xuống để thu hồi.',
+                      settings.tr('reading.emptyHintPhone'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
                         height: 1.6,
@@ -1539,11 +1548,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// Ấn vào lá: thu lá xuống khay (bảo toàn số lượng lá — lá trên
   /// sân không hiện trong khay). Ấn vào lá trong khay: lá đó lên sân.
   Widget _buildActiveCard(TarotCardModel activeCard, dynamic theme, double cardWidth) {
+    final settings = context.watch<SettingsProvider>();
     final cardHeight = cardWidth * 8 / 5;
     // Ấn vào lá trên sân khấu: thu lá xuống khay (bảo toàn số
     // lượng lá — một lá chỉ ở đúng một nơi).
     return Tooltip(
-      message: 'Chạm để thu lá xuống khay',
+      message: settings.tr('reading.tapToCollect'),
       child: GestureDetector(
         onTap: _collectStageCard,
         child: TweenAnimationBuilder<double>(
@@ -1650,29 +1660,30 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// Khay chọn lá bài: section riêng dạng bottom-sheet — có tay kéo,
   /// tiêu đề + nút đóng 48dp, chip chọn nhóm bài, lưới bài.
   Widget _buildSelectionPanel(List<TarotCardModel> deckCards, ReadingProvider readingProvider, dynamic theme) {
+    final settings = context.watch<SettingsProvider>();
     // Phân loại các lá bài theo Suit
     final List<TarotCardModel> activeCards;
     String suitLabel = '';
     switch (_selectedSuit) {
       case TarotSuit.major:
         activeCards = deckCards.where((c) => _getCardSuit(c) == TarotSuit.major).toList();
-        suitLabel = 'Ẩn Chính (Major Arcana)';
+        suitLabel = settings.tr('reading.suitMajorLabel');
         break;
       case TarotSuit.cups:
         activeCards = deckCards.where((c) => _getCardSuit(c) == TarotSuit.cups).toList();
-        suitLabel = 'Bộ Cốc (Cups)';
+        suitLabel = settings.tr('reading.suitCupsLabel');
         break;
       case TarotSuit.wands:
         activeCards = deckCards.where((c) => _getCardSuit(c) == TarotSuit.wands).toList();
-        suitLabel = 'Bộ Gậy (Wands)';
+        suitLabel = settings.tr('reading.suitWandsLabel');
         break;
       case TarotSuit.swords:
         activeCards = deckCards.where((c) => _getCardSuit(c) == TarotSuit.swords).toList();
-        suitLabel = 'Bộ Kiếm (Swords)';
+        suitLabel = settings.tr('reading.suitSwordsLabel');
         break;
       case TarotSuit.pentacles:
         activeCards = deckCards.where((c) => _getCardSuit(c) == TarotSuit.pentacles).toList();
-        suitLabel = 'Bộ Xu (Pentacles)';
+        suitLabel = settings.tr('reading.suitPentaclesLabel');
         break;
     }
 
@@ -1699,10 +1710,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             // Tiêu đề + nút đóng
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Chọn lá bài',
-                    style: TextStyle(
+                    settings.tr('reading.selectCard'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -1717,7 +1728,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   padding: EdgeInsets.zero,
                   constraints:
                       const BoxConstraints.tightFor(width: 32, height: 32),
-                  tooltip: 'Đóng khay chọn bài',
+                  tooltip: settings.tr('reading.closeSelectionPanel'),
                   onPressed: () {
                     setState(() {
                       _showSelectionPanel = false;
@@ -1757,17 +1768,18 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   /// Bộ chọn nhóm bài gồm các chip nằm ngang
   Widget _buildSuitSelector(dynamic theme) {
+    final settings = context.watch<SettingsProvider>();
     return ScrollConfiguration(
       behavior: MouseDragScrollBehavior(), // Tương tác trượt ngang bằng chuột/ngón tay
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _buildSuitChip(TarotSuit.major, 'Ẩn Chính', theme),
-            _buildSuitChip(TarotSuit.cups, 'Bộ Cốc', theme),
-            _buildSuitChip(TarotSuit.wands, 'Bộ Gậy', theme),
-            _buildSuitChip(TarotSuit.swords, 'Bộ Kiếm', theme),
-            _buildSuitChip(TarotSuit.pentacles, 'Bộ Xu', theme),
+            _buildSuitChip(TarotSuit.major, settings.tr('reading.suitMajor'), theme),
+            _buildSuitChip(TarotSuit.cups, settings.tr('reading.suitCups'), theme),
+            _buildSuitChip(TarotSuit.wands, settings.tr('reading.suitWands'), theme),
+            _buildSuitChip(TarotSuit.swords, settings.tr('reading.suitSwords'), theme),
+            _buildSuitChip(TarotSuit.pentacles, settings.tr('reading.suitPentacles'), theme),
           ],
         ),
       ),
@@ -1915,6 +1927,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// trên sân khấu (nếu có) thu xuống khay. Ấn vào lá trên sân khấu:
   /// lá đó thu xuống khay (xem _collectStageCard).
   Widget _buildBottomTray(List<TarotCardModel> drawnCards, ReadingProvider readingProvider, dynamic theme) {
+    final settings = context.watch<SettingsProvider>();
     // Cao cố định — không đổi theo số lá (xem doc ở trên).
     final trayHeight = _isDesktop ? 176.0 : (_isPhone ? 124.0 : 104.0);
     final trayThumbWidth = _isDesktop ? 100.0 : 64.0;
@@ -1929,7 +1942,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           border: Border(top: BorderSide(color: theme.glassBorderColor, width: 0.5)),
         ),
         child: Text(
-          'Chưa rút lá nào — chạm vào xấp bài để chọn.',
+          settings.tr('reading.trayEmpty'),
           style: TextStyle(color: theme.secondaryTextColor, fontSize: _isDesktop ? 12 : 13),
         ),
       );
@@ -2209,12 +2222,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         final theme = settings.currentThemeData;
         return AlertDialog(
           backgroundColor: theme.backgroundColor, // Sửa lỗi bị hòa vào text nền bằng cách dùng nền đục
-          title: Text('Đổi tên lượt trải bài', style: TextStyle(color: theme.textColor)),
+          title: Text(settings.tr('reading.renameReading'), style: TextStyle(color: theme.textColor)),
           content: TextField(
             controller: controller,
             style: TextStyle(color: theme.textColor),
             decoration: InputDecoration(
-              hintText: 'Nhập tên lượt trải bài...',
+              hintText: settings.tr('reading.renameHint'),
               hintStyle: TextStyle(color: theme.secondaryTextColor),
               enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: theme.primaryColor)),
             ),
@@ -2222,14 +2235,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Hủy', style: TextStyle(color: theme.secondaryTextColor)),
+              child: Text(settings.tr('common.cancel'), style: TextStyle(color: theme.secondaryTextColor)),
             ),
             TextButton(
               onPressed: () {
                 readingProvider.updateTitle(controller.text);
                 Navigator.pop(context);
               },
-              child: Text('Lưu', style: TextStyle(color: theme.primaryColor)),
+              child: Text(settings.tr('common.save'), style: TextStyle(color: theme.primaryColor)),
             ),
           ],
         );
@@ -2257,6 +2270,7 @@ class CardStackWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
     // Xấp bài ở góc bàn — to và rõ để thấy và chạm: PC 84 rộng
     // (trước 60), tablet 100, phone 84.
     final stackWidth = Responsive.isDesktop(context)
@@ -2313,7 +2327,7 @@ class CardStackWidget extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'XẤP BÀI',
+            settings.tr('reading.deckStack'),
             style: TextStyle(
               color: theme.primaryColor,
               fontSize: Responsive.isDesktop(context) ? 11 : 12,

@@ -35,7 +35,7 @@ class SelectDeckScreen extends StatelessWidget {
       appBar: AppBar(
         toolbarHeight: isDesktop ? 48 : null,
         title: Text(
-          'Danh Sách Bộ Bài Tarot',
+          settings.tr('selectDeck.title'),
           style: TextStyle(fontSize: isDesktop ? 16 : 20),
         ),
         backgroundColor: Colors.transparent,
@@ -59,7 +59,7 @@ class SelectDeckScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Chưa có bộ bài nào.\nHãy bấm "Thêm Bộ Bài Mới" bên dưới để tạo!',
+                          settings.tr('selectDeck.emptyState'),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: theme.secondaryTextColor,
@@ -114,7 +114,7 @@ class SelectDeckScreen extends StatelessWidget {
             EdgeInsets.symmetric(horizontal: isDesktop ? 12 : 16),
         icon: Icon(Icons.add, size: isDesktop ? 20 : 24),
         label: Text(
-          'Thêm Bộ Bài Mới',
+          settings.tr('selectDeck.addNewDeck'),
           style: TextStyle(fontSize: isDesktop ? 13 : 14),
         ),
         onPressed: () {
@@ -133,7 +133,8 @@ class SelectDeckScreen extends StatelessWidget {
     int deckId,
     String deckName,
   ) async {
-    final theme = context.read<SettingsProvider>().currentThemeData;
+    final settings = context.read<SettingsProvider>();
+    final theme = settings.currentThemeData;
     final isDesktop = Responsive.isDesktop(context);
     // Nút PC gọn: cao 36 thay vì 48.
     final buttonHeight = isDesktop ? 36.0 : 48.0;
@@ -141,13 +142,13 @@ class SelectDeckScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: theme.backgroundColor,
-        title: const Text('Xóa Bộ Bài'),
-        content: Text('Bạn có chắc muốn xóa bộ bài "$deckName"?\nHành động này không thể hoàn tác.'),
+        title: Text(settings.tr('selectDeck.deleteTitle')),
+        content: Text(settings.tr('selectDeck.deleteConfirm').replaceAll('{name}', deckName)),
         actions: [
           TextButton(
             style: TextButton.styleFrom(minimumSize: Size(88, buttonHeight)),
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
+            child: Text(settings.tr('common.cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -155,7 +156,7 @@ class SelectDeckScreen extends StatelessWidget {
               minimumSize: Size(88, buttonHeight),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+            child: Text(settings.tr('common.delete'), style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -187,6 +188,7 @@ class _DeckCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
     // Chiều cao vùng thao tác: 48dp trên điện thoại, gọn 32dp trên PC 4K.
     final actionHeight = isDesktop ? 32.0 : 48.0;
     return GlassPanel(
@@ -250,7 +252,7 @@ class _DeckCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Ngày tạo: ${deck.createdDate.day}/${deck.createdDate.month}/${deck.createdDate.year}',
+                  settings.tr('selectDeck.createdDate').replaceAll('{date}', '${deck.createdDate.day}/${deck.createdDate.month}/${deck.createdDate.year}'),
                   style: TextStyle(
                     color: theme.secondaryTextColor,
                     fontSize: isDesktop ? 11 : 12,
@@ -273,7 +275,7 @@ class _DeckCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Đang chọn',
+                        settings.tr('selectDeck.currentlySelected'),
                         style: TextStyle(
                           color: theme.primaryColor,
                           fontSize: isDesktop ? 13 : 14,
@@ -296,7 +298,7 @@ class _DeckCard extends StatelessWidget {
                             ),
                           ),
                           onPressed: onSelect,
-                          child: const Text('Chọn'),
+                          child: Text(settings.tr('selectDeck.select')),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -312,7 +314,7 @@ class _DeckCard extends StatelessWidget {
                             ),
                           ),
                           onPressed: onDelete,
-                          child: const Text('Xóa'),
+                          child: Text(settings.tr('common.delete')),
                         ),
                       ),
                     ],
