@@ -93,11 +93,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   final ScrollController _meaningScrollController = ScrollController();
 
   // Nhạc huyền bí (YouTube): controller + bài đang phát + ô nhập link.
-  // Player YoutubePlayer nằm trong Offstage (giữ trong cây để nhạc
-  // chạy nền khi đóng panel nhạc) — xem _buildMusicPlayer. Nhạc
-  // KHÔNG tự phát khi mở màn (autoPlay: false) — người dùng chạm
-  // một bài (hoặc nút phát) mới phát, đúng luật autoplay của trình
-  // duyệt (phát tiếng phải sau cử chỉ của người dùng).
+  // Player YoutubePlayer nằm trong hộp 1×1 ở góc trên-trái của Stack
+  // thân màn hình (giữ trong cây để nhạc chạy nền khi đóng panel
+  // nhạc) — KHÔNG dùng Offstage vì iframe YouTube trong Offstage
+  // không gắn được vào DOM trên Flutter web (làm trống cả thân màn
+  // hình và lệnh phát không tới được). Nhạc KHÔNG tự phát khi mở
+  // màn (autoPlay: false) — người dùng chạm một bài (hoặc nút phát)
+  // mới phát, đúng luật autoplay của trình duyệt (phát tiếng phải
+  // sau cử chỉ của người dùng).
   late final YoutubePlayerController _musicController =
       YoutubePlayerController.fromVideoId(
     videoId: kMysticTracks[0].videoId,
@@ -413,13 +416,25 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         ),
       ),
     ),
-    // Player nhạc YouTube: ẩn (Offstage) nhưng giữ trong cây để
-    // nhạc chạy nền khi đóng panel nhạc.
-    Offstage(
-      offstage: true,
-      child: YoutubePlayer(
-        controller: _musicController,
-        aspectRatio: 16 / 9,
+    // Player nhạc YouTube: KHÔNG dùng Offstage — trên Flutter web,
+    // HtmlElementView (iframe YouTube) nằm trong Offstage không gắn
+    // được vào DOM nên widget YoutubePlayer lỗi ngay lúc build,
+    // làm CẢ THÂN màn hình trải bài trống (chỉ còn AppBar) và lệnh
+    // phát không tới được iframe (trạng thái không bao giờ thành
+    // "đang phát", nút vẫn ▶, nốt nhạc không vàng). Thay vào đó
+    // giữ player trong cây với kích thước 1×1 ở góc trên-trái
+    // (gần như vô hình) để iframe được tạo và nhạc chạy nền khi
+    // đóng panel nhạc.
+    Positioned(
+      left: 0,
+      top: 0,
+      child: SizedBox(
+        width: 1,
+        height: 1,
+        child: YoutubePlayer(
+          controller: _musicController,
+          aspectRatio: 16 / 9,
+        ),
       ),
     ),
   ],
