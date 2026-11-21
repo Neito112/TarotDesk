@@ -957,6 +957,13 @@ class AppStrings {
       AppLanguage.ko: "서버에 덱을 제출하려면 로그인하세요.",
       AppLanguage.ja: "サーバーにデッキを送信するにはログインしてください。",
     },
+    'library.myTitle': {
+      AppLanguage.vi: "Bộ bài của tôi ({count})",
+      AppLanguage.en: "My decks ({count})",
+      AppLanguage.zh: "我的牌组 ({count})",
+      AppLanguage.ko: "내 덱 ({count})",
+      AppLanguage.ja: "自分のデッキ ({count})",
+    },
     'library.retry': {
       AppLanguage.vi: "Thử lại",
       AppLanguage.en: "Retry",
@@ -1342,13 +1349,6 @@ class AppStrings {
       AppLanguage.ko: "완드",
       AppLanguage.ja: "ワンド",
     },
-    'reading.tableNote': {
-      AppLanguage.vi: "Áp dụng trên điện thoại / máy tính bảng. Bản PC dùng tranh bàn gỗ trống.",
-      AppLanguage.en: "Applies on phone / tablet. The PC version uses the bare wooden table painting.",
-      AppLanguage.zh: "适用于手机 / 平板。PC 版使用原木桌面画作。",
-      AppLanguage.ko: "휴대전화 / 태블릿에 적용됩니다. PC 버전은 빈 나무 테이블 그림을 사용합니다.",
-      AppLanguage.ja: "スマートフォン／タブレットに適用されます。PC版は素木のテーブル画を使用します。",
-    },
     'reading.tableSurface': {
       AppLanguage.vi: "Mặt bàn",
       AppLanguage.en: "Tabletop",
@@ -1672,11 +1672,11 @@ class AppStrings {
       AppLanguage.ja: "サーバーに同期しました",
     },
     'settings.tableHint': {
-      AppLanguage.vi: "Áp dụng trên điện thoại / máy tính bảng. Bản PC dùng tranh bàn gỗ trống, chất liệu không đổi nền PC.",
-      AppLanguage.en: "Applies on phone / tablet. The PC version uses a bare wooden table painting, so the material does not change the PC background.",
-      AppLanguage.zh: "适用于手机/平板。PC 版使用空木桌插画，因此材质不会改变 PC 背景。",
-      AppLanguage.ko: "휴대전화/태블릿에 적용됩니다. PC 버전은 빈 나무 테이블 그림을 사용하므로 재질이 PC 배경을 바꾸지 않습니다.",
-      AppLanguage.ja: "スマートフォン／タブレットに適用されます。PC版は木のテーブルだけの絵を使うため、素材はPCの背景を変えません。",
+      AppLanguage.vi: "Chỉ Gỗ Sồi có tranh vẽ. Các chất liệu khác sẽ hiện khi có tranh vẽ cho chúng.",
+      AppLanguage.en: "Only Gỗ Sồi has painted art. Other materials will appear once their art exists.",
+      AppLanguage.zh: "只有橡木有手绘图。其他材质将在有手绘图后出现。",
+      AppLanguage.ko: "참나무만 그림이 있습니다. 다른 재질은 그림이 생기면 나타납니다。",
+      AppLanguage.ja: "絵があるのは樫の木だけです。他の素材は絵ができたら表示されます。",
     },
     'settings.tableMaterialLabel': {
       AppLanguage.vi: "Chất liệu mặt bàn:",
