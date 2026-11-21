@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import '../../core/localization.dart';
 import '../../core/responsive.dart';
 import '../../core/theme/app_theme.dart';
-import '../../data/datasources/gist_sync_service.dart';
-import '../../data/datasources/github_service.dart';
+import '../../data/datasources/cloud_sync_service.dart';
+import '../../data/datasources/tarotdesk_api_service.dart';
 import '../../data/models/user_preferences.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/settings_provider.dart';
@@ -153,13 +153,18 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  /// GitHub account section: the signed-in account, sync data
-  /// to GitHub, and log out. Local data is NOT deleted on logout.
+  /// Google account section: the signed-in Google account, sync data
+  /// to the cloud, and log out. Local data is NOT deleted on logout.
+  /// Guests see a generic icon and a guest label instead of an account.
   Widget _accountSection(BuildContext context, SettingsProvider settings,
       AppThemeData theme, AuthProvider auth) {
     final user = auth.user;
-    final avatarUrl = user?.avatarUrl;
-    final displayName = user?.name;
+    final isGuest = auth.isGuest || user == null;
+    final pictureUrl = isGuest ? null : user.picture;
+    final displayName = isGuest
+        ? settings.tr('settings.guestAccount')
+        : (user.name.isNotEmpty ? user.name : user.email);
+    final email = isGuest ? null : user.email;
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
       borderColor: theme.glassBorderColor,
@@ -171,10 +176,10 @@ class SettingsScreen extends StatelessWidget {
           Row(
             children: [
               CircleAvatar(
-                backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                    ? NetworkImage(avatarUrl)
+                backgroundImage: pictureUrl != null && pictureUrl.isNotEmpty
+                    ? NetworkImage(pictureUrl)
                     : null,
-                child: avatarUrl == null || avatarUrl.isEmpty
+                child: pictureUrl == null || pictureUrl.isEmpty
                     ? const Icon(Icons.account_circle)
                     : null,
               ),
@@ -189,15 +194,15 @@ class SettingsScreen extends StatelessWidget {
                           color: theme.secondaryTextColor, fontSize: 11),
                     ),
                     Text(
-                      user?.login ?? '',
+                      displayName,
                       style: TextStyle(
                           color: theme.textColor,
                           fontSize: 14,
                           fontWeight: FontWeight.bold),
                     ),
-                    if (displayName != null && displayName.isNotEmpty)
+                    if (email != null && email.isNotEmpty)
                       Text(
-                        displayName,
+                        email,
                         style: TextStyle(
                             color: theme.secondaryTextColor, fontSize: 12),
                       ),
@@ -495,7 +500,7 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-/// Sync + logout buttons inside the GitHub account section.
+/// Sync + logout buttons inside the Google account section.
 /// A separate StatefulWidget so the syncing state lives here
 /// without turning SettingsScreen into a StatefulWidget.
 class _AccountActions extends StatefulWidget {
@@ -513,15 +518,24 @@ class _AccountActionsState extends State<_AccountActions> {
 
   Future<void> _syncNow() async {
     if (_isSyncing) return;
+    final auth = context.read<AuthProvider>();
+    if (auth.sessionToken == null || auth.sessionToken!.isEmpty) {
+      // Guests cannot sync: readable error, no crash.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(widget.settings.tr('settings.loginRequired'))),
+      );
+      return;
+    }
     setState(() => _isSyncing = true);
     try {
-      await GistSyncService(context.read<AuthProvider>()).uploadFromLocal();
+      await CloudSyncService(auth).uploadFromLocal();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(widget.settings.tr('settings.syncSuccess'))),
       );
-    } on GithubException catch (e) {
+    } on TarotdeskApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
