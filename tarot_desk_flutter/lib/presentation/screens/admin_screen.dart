@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
-import '../../data/datasources/github_service.dart';
-import '../../data/datasources/server_deck_service.dart';
+import '../../data/datasources/tarotdesk_api_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 
 /// Admin / server management screen.
 ///
-/// Only reachable when the logged-in GitHub user is the admin; the
-/// caller gates navigation, but a non-admin who lands here anyway
-/// only sees a "not authorized" message, never the management UI.
+/// Only reachable when the logged-in Google account is the admin
+/// ([AuthProvider.isAdmin]); the caller gates navigation, but a
+/// non-admin who lands here anyway only sees a "not authorized"
+/// message, never the management UI.
 ///
-/// Three lists, all served by [ServerDeckService]:
-/// 1. Open deck-submission PRs (approve / reject).
-/// 1b. Files currently sitting in server/submissions/ — each can be
-///     moved into the shared library after its PR was merged.
-/// 2. The shared library itself (server/decks/) with delete.
+/// Two lists, both served by [TarotdeskApiService] against the Worker:
+/// 1. Pending deck submissions (approve / reject). Approving moves the
+///    submission into the shared library directly on the Worker —
+///    there is no separate move step.
+/// 2. The shared library itself, with delete.
 class AdminScreen extends StatefulWidget {
   const AdminScreen({Key? key}) : super(key: key);
 
@@ -26,38 +26,79 @@ class AdminScreen extends StatefulWidget {
 }
 
 class _AdminScreenState extends State<AdminScreen> {
-  late final ServerDeckService _service;
+  final TarotdeskApiService _api = TarotdeskApiService();
 
-  Future<List<OpenSubmission>>? _pendingFuture;
-  Future<List<SharedDeckInfo>>? _submissionsFuture;
-  Future<List<SharedDeckInfo>>? _sharedFuture;
-
-  // PR numbers already approved in this session (their PR disappears
-  // from the open list after refresh; the merged file then shows up
-  // in the submissions file list below).
-  final Set<int> _mergedNumbers = {};
+  Future<List<Map<String, dynamic>>>? _pendingFuture;
+  Future<List<Map<String, dynamic>>>? _sharedFuture;
 
   // Per-item busy state so one running action never disables the
-  // whole screen.
-  final Set<int> _busyPrs = {};
-  final Set<String> _busyPaths = {};
+  // whole screen. Keyed by submission / shared-deck id.
+  final Set<String> _busyIds = {};
 
   @override
   void initState() {
     super.initState();
-    _service = ServerDeckService(context.read<AuthProvider>());
     _loadAll();
+  }
+
+  String _sessionToken() {
+    final token = context.read<AuthProvider>().sessionToken;
+    if (token == null || token.isEmpty) {
+      throw TarotdeskApiException('unauthorized', 'Not logged in');
+    }
+    return token;
   }
 
   void _loadAll() {
     setState(() {
-      _pendingFuture = _service.listOpenSubmissions();
-      _submissionsFuture = _service.listSubmissions();
-      _sharedFuture = _service.listSharedDecks();
+      // A null session token (guest) never reaches this screen as an
+      // admin, but the calls below throw a readable unauthorized
+      // error instead of crashing if it ever happens.
+      _pendingFuture = _loadPending();
+      _sharedFuture = _loadShared();
     });
   }
 
+  Future<List<Map<String, dynamic>>> _loadPending() async {
+    return _api.listSubmissions(_sessionToken());
+  }
+
+  Future<List<Map<String, dynamic>>> _loadShared() async {
+    return _api.listSharedDecksAdmin(_sessionToken());
+  }
+
   void _refreshAll() => _loadAll();
+
+  /// Submission / shared-deck id as a string (the Worker ids may be
+  /// strings or numbers; both are accepted here).
+  String _entryId(Map<String, dynamic> entry) {
+    final id = entry['id'];
+    return id == null ? '' : id.toString();
+  }
+
+  /// Display title of a submission: the submitted deck's name, then
+  /// the entry's own name/title, then the id.
+  String _entryTitle(Map<String, dynamic> entry) {
+    final deck = entry['deck'];
+    if (deck is Map) {
+      final name = deck['name'];
+      if (name is String && name.isNotEmpty) return name;
+    }
+    for (final key in <String>['name', 'title', 'deckName']) {
+      final value = entry[key];
+      if (value is String && value.isNotEmpty) return value;
+    }
+    return _entryId(entry);
+  }
+
+  /// Who submitted it: author name, then email, then submitter id.
+  String _entryAuthor(Map<String, dynamic> entry) {
+    for (final key in <String>['author', 'authorName', 'email', 'submittedBy']) {
+      final value = entry[key];
+      if (value is String && value.isNotEmpty) return value;
+    }
+    return '';
+  }
 
   void _showMessage(String message) {
     if (!mounted) return;
@@ -66,28 +107,28 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  Future<void> _approve(OpenSubmission item) async {
-    if (_busyPrs.contains(item.number)) return;
+  Future<void> _approve(Map<String, dynamic> item) async {
+    final id = _entryId(item);
+    if (id.isEmpty || _busyIds.contains(id)) return;
     final settings = context.read<SettingsProvider>();
-    setState(() => _busyPrs.add(item.number));
+    setState(() => _busyIds.add(id));
     try {
-      await _service.approveSubmission(item.number);
+      await _api.approveSubmission(_sessionToken(), id);
       if (!mounted) return;
-      _mergedNumbers.add(item.number);
       _refreshAll();
       _showMessage(settings.tr('admin.approved'));
-    } on GithubException catch (e) {
+    } on TarotdeskApiException catch (e) {
       if (!mounted) return;
       _showMessage(e.message);
     } catch (e) {
       if (!mounted) return;
       _showMessage(e.toString());
     } finally {
-      if (mounted) setState(() => _busyPrs.remove(item.number));
+      if (mounted) setState(() => _busyIds.remove(id));
     }
   }
 
-  Future<void> _reject(OpenSubmission item) async {
+  Future<void> _reject(Map<String, dynamic> item) async {
     final settings = context.read<SettingsProvider>();
     final theme = settings.currentThemeData;
     final confirmed = await showDialog<bool>(
@@ -108,7 +149,7 @@ class _AdminScreenState extends State<AdminScreen> {
         content: Text(
           settings
               .tr('admin.rejectConfirm')
-              .replaceAll('{title}', item.title),
+              .replaceAll('{title}', _entryTitle(item)),
           style: const TextStyle(color: Colors.white, height: 1.6),
         ),
         actions: [
@@ -127,45 +168,26 @@ class _AdminScreenState extends State<AdminScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    if (_busyPrs.contains(item.number)) return;
-    setState(() => _busyPrs.add(item.number));
+    final id = _entryId(item);
+    if (id.isEmpty || _busyIds.contains(id)) return;
+    setState(() => _busyIds.add(id));
     try {
-      await _service.rejectSubmission(item.number);
+      await _api.rejectSubmission(_sessionToken(), id);
       if (!mounted) return;
       _refreshAll();
       _showMessage(settings.tr('admin.rejected'));
-    } on GithubException catch (e) {
+    } on TarotdeskApiException catch (e) {
       if (!mounted) return;
       _showMessage(e.message);
     } catch (e) {
       if (!mounted) return;
       _showMessage(e.toString());
     } finally {
-      if (mounted) setState(() => _busyPrs.remove(item.number));
+      if (mounted) setState(() => _busyIds.remove(id));
     }
   }
 
-  Future<void> _moveToShared(SharedDeckInfo info) async {
-    if (_busyPaths.contains(info.path)) return;
-    final settings = context.read<SettingsProvider>();
-    setState(() => _busyPaths.add(info.path));
-    try {
-      await _service.moveSubmissionToShared(info.path);
-      if (!mounted) return;
-      _refreshAll();
-      _showMessage(settings.tr('admin.moved'));
-    } on GithubException catch (e) {
-      if (!mounted) return;
-      _showMessage(e.message);
-    } catch (e) {
-      if (!mounted) return;
-      _showMessage(e.toString());
-    } finally {
-      if (mounted) setState(() => _busyPaths.remove(info.path));
-    }
-  }
-
-  Future<void> _deleteShared(SharedDeckInfo info) async {
+  Future<void> _deleteShared(Map<String, dynamic> info) async {
     final settings = context.read<SettingsProvider>();
     final theme = settings.currentThemeData;
     final confirmed = await showDialog<bool>(
@@ -186,7 +208,7 @@ class _AdminScreenState extends State<AdminScreen> {
         content: Text(
           settings
               .tr('admin.deleteConfirm')
-              .replaceAll('{name}', info.name),
+              .replaceAll('{name}', _entryTitle(info)),
           style: const TextStyle(color: Colors.white, height: 1.6),
         ),
         actions: [
@@ -205,21 +227,22 @@ class _AdminScreenState extends State<AdminScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    if (_busyPaths.contains(info.path)) return;
-    setState(() => _busyPaths.add(info.path));
+    final id = _entryId(info);
+    if (id.isEmpty || _busyIds.contains(id)) return;
+    setState(() => _busyIds.add(id));
     try {
-      await _service.deleteSharedDeck(info.path);
+      await _api.deleteSharedDeck(_sessionToken(), id);
       if (!mounted) return;
       _refreshAll();
       _showMessage(settings.tr('admin.deleted'));
-    } on GithubException catch (e) {
+    } on TarotdeskApiException catch (e) {
       if (!mounted) return;
       _showMessage(e.message);
     } catch (e) {
       if (!mounted) return;
       _showMessage(e.toString());
     } finally {
-      if (mounted) setState(() => _busyPaths.remove(info.path));
+      if (mounted) setState(() => _busyIds.remove(id));
     }
   }
 
@@ -273,8 +296,6 @@ class _AdminScreenState extends State<AdminScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildPendingSection(context, theme, settings),
-        const SizedBox(height: 16),
-        _buildSubmissionsSection(context, theme, settings),
         const SizedBox(height: 16),
         _buildSharedSection(context, theme, settings),
         const SizedBox(height: 24),
@@ -397,7 +418,7 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // --- Section 1: open submission PRs -------------------------------
+  // --- Section 1: pending deck submissions ------------------------
 
   Widget _buildPendingSection(
     BuildContext context,
@@ -408,7 +429,7 @@ class _AdminScreenState extends State<AdminScreen> {
       theme,
       settings,
       settings.tr('server.pendingTitle'),
-      FutureBuilder<List<OpenSubmission>>(
+      FutureBuilder<List<Map<String, dynamic>>>(
         future: _pendingFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -417,38 +438,13 @@ class _AdminScreenState extends State<AdminScreen> {
           if (snapshot.hasError) {
             return _errorBox(theme, settings, snapshot.error!);
           }
-          final items = snapshot.data ?? const <OpenSubmission>[];
+          final items = snapshot.data ?? const <Map<String, dynamic>>[];
           if (items.isEmpty) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _emptyText(theme, settings.tr('server.noPending')),
-                Text(
-                  settings.tr('admin.mergedNote'),
-                  style: TextStyle(
-                    color: theme.secondaryTextColor,
-                    fontSize: 12,
-                    height: 1.6,
-                  ),
-                ),
-              ],
-            );
+            return _emptyText(theme, settings.tr('server.noPending'));
           }
           return Column(
             children: [
               for (final item in items) _buildPendingRow(item, theme, settings),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  settings.tr('admin.mergedNote'),
-                  style: TextStyle(
-                    color: theme.secondaryTextColor,
-                    fontSize: 12,
-                    height: 1.6,
-                  ),
-                ),
-              ),
             ],
           );
         },
@@ -457,46 +453,41 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Widget _buildPendingRow(
-    OpenSubmission item,
+    Map<String, dynamic> item,
     dynamic theme,
     SettingsProvider settings,
   ) {
-    final busy = _busyPrs.contains(item.number);
-    final merged = _mergedNumbers.contains(item.number);
+    final id = _entryId(item);
+    final busy = _busyIds.contains(id);
+    final author = _entryAuthor(item);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            item.title,
+            _entryTitle(item),
             style: TextStyle(
               color: theme.textColor,
               fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            settings.tr('admin.byAuthor').replaceAll('{author}', item.author),
-            style: TextStyle(
-              color: theme.secondaryTextColor,
-              fontSize: 13,
+          if (author.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              settings.tr('admin.byAuthor').replaceAll('{author}', author),
+              style: TextStyle(
+                color: theme.secondaryTextColor,
+                fontSize: 13,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          SelectableText(
-            item.url,
-            style: TextStyle(
-              color: theme.secondaryTextColor,
-              fontSize: 12,
-            ),
-          ),
+          ],
           const SizedBox(height: 10),
           Row(
             children: [
               ElevatedButton(
-                onPressed: (busy || merged) ? null : () => _approve(item),
+                onPressed: (busy || id.isEmpty) ? null : () => _approve(item),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.primaryColor,
                   foregroundColor: theme.backgroundColor,
@@ -525,81 +516,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  // --- Section 1b: files waiting in server/submissions/ --------------
-
-  Widget _buildSubmissionsSection(
-    BuildContext context,
-    dynamic theme,
-    SettingsProvider settings,
-  ) {
-    return _sectionPanel(
-      theme,
-      settings,
-      settings.tr('server.submissionsTitle'),
-      FutureBuilder<List<SharedDeckInfo>>(
-        future: _submissionsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _loadingIndicator(theme);
-          }
-          if (snapshot.hasError) {
-            return _errorBox(theme, settings, snapshot.error!);
-          }
-          final items = snapshot.data ?? const <SharedDeckInfo>[];
-          if (items.isEmpty) {
-            return _emptyText(theme, settings.tr('server.noSubmissionFiles'));
-          }
-          return Column(
-            children: [
-              for (final info in items)
-                _buildSubmissionRow(info, theme, settings),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSubmissionRow(
-    SharedDeckInfo info,
-    dynamic theme,
-    SettingsProvider settings,
-  ) {
-    final busy = _busyPaths.contains(info.path);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              info.name,
-              style: TextStyle(
-                color: theme.textColor,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: busy ? null : () => _moveToShared(info),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.primaryColor,
-              foregroundColor: theme.backgroundColor,
-            ),
-            child: busy
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(settings.tr('admin.moveToShared')),
-          ),
-        ],
-      ),
-    );
-  }
-
   // --- Section 2: shared library (server/decks/) --------------------
 
   Widget _buildSharedSection(
@@ -611,7 +527,7 @@ class _AdminScreenState extends State<AdminScreen> {
       theme,
       settings,
       settings.tr('server.sharedTitle'),
-      FutureBuilder<List<SharedDeckInfo>>(
+      FutureBuilder<List<Map<String, dynamic>>>(
         future: _sharedFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -620,7 +536,7 @@ class _AdminScreenState extends State<AdminScreen> {
           if (snapshot.hasError) {
             return _errorBox(theme, settings, snapshot.error!);
           }
-          final items = snapshot.data ?? const <SharedDeckInfo>[];
+          final items = snapshot.data ?? const <Map<String, dynamic>>[];
           if (items.isEmpty) {
             return _emptyText(theme, settings.tr('server.noShared'));
           }
@@ -635,18 +551,18 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Widget _buildSharedRow(
-    SharedDeckInfo info,
+    Map<String, dynamic> info,
     dynamic theme,
     SettingsProvider settings,
   ) {
-    final busy = _busyPaths.contains(info.path);
+    final busy = _busyIds.contains(_entryId(info));
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              info.name,
+              _entryTitle(info),
               style: TextStyle(
                 color: theme.textColor,
                 fontSize: 15,

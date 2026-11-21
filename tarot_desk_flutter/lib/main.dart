@@ -60,7 +60,24 @@ class _AuthGate extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     switch (auth.state) {
       case AuthState.loading:
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                // While the app exchanges the ?code= after redirecting
+                // back from Google, say so under the spinner.
+                if (auth.isCompletingOAuthCallback) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    context.read<SettingsProvider>().tr('auth.completingLogin'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
       case AuthState.loggedOut:
         return const LoginScreen();
       case AuthState.loggedIn:

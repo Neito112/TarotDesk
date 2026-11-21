@@ -1,127 +1,65 @@
-import 'dart:convert';
-
-import 'github_service.dart';
+import 'tarotdesk_api_service.dart';
 import '../../logic/auth_provider.dart';
 import 'database_helper.dart';
 import '../models/tarot_card.dart';
 import '../models/tarot_deck.dart';
 import '../models/tarot_reading.dart';
 
-/// What [GistSyncService.syncOnLogin] did.
+/// What [CloudSyncService.syncAfterLogin] did.
 ///
-/// - [downloaded]: the cloud gist had data, this device had none, so the
-///   gist was imported into the local database.
-/// - [uploaded]: this device had user data, the gist was empty or missing,
-///   so local data was pushed to the gist.
+/// - [downloaded]: the cloud store had data, this device had none, so the
+///   cloud data was imported into the local database.
+/// - [uploaded]: this device had user data, the cloud store was empty or
+///   missing, so local data was pushed to the cloud.
 /// - [upToDate]: both sides already have data; nothing was overwritten.
 ///   The user syncs explicitly from the sync button in that case.
 /// - [noData]: neither side has user data, so there was nothing to do.
-enum GistSyncOutcome { downloaded, uploaded, upToDate, noData }
+enum CloudSyncOutcome { downloaded, uploaded, upToDate, noData }
 
-/// Syncs the user's decks, cards and readings with one private GitHub gist
-/// owned by the logged-in account.
+/// Syncs the user's decks, cards and readings with the TarotDesk cloud
+/// store (the Worker backend, one record per Google account).
 ///
-/// The local sqflite database stays the working store; the gist is only a
-/// cloud copy. Sync NEVER deletes local data: downloads only add decks,
+/// The local sqflite database stays the working store; the cloud is only
+/// a copy. Sync NEVER deletes local data: downloads only add decks,
 /// cards and readings that are not already present (matched by name and
-/// date), and a failed network/API call throws a [GithubException] for the
-/// caller to handle (the login screen ignores it silently).
-class GistSyncService {
+/// date), and a failed network/API call throws a [TarotdeskApiException]
+/// for the caller to handle (the login screen ignores it silently).
+class CloudSyncService {
   final AuthProvider auth;
 
-  /// Instance of the GitHub API client (zero-arg constructor per contract).
-  final GithubService _github = GithubService();
+  /// Instance of the Worker API client (zero-arg constructor per contract).
+  final TarotdeskApiService _api = TarotdeskApiService();
 
-  GistSyncService(this.auth);
-
-  /// The single file inside the sync gist.
-  static const String _fileName = 'tarotdesk-data.json';
+  CloudSyncService(this.auth);
 
   /// Name of the seeded deck that ships with a fresh install. It is a data
   /// identifier, not UI text.
   static const String _baseDeckName = 'Bộ bài cơ bản';
 
-  String _token() {
-    final token = auth.token;
+  String _sessionToken() {
+    final token = auth.sessionToken;
     if (token == null || token.isEmpty) {
-      throw GithubException('Not logged in');
+      throw TarotdeskApiException('unauthorized', 'Not logged in');
     }
     return token;
   }
 
-  String _login() {
-    final login = auth.user?.login;
-    if (login == null || login.isEmpty) {
-      throw GithubException('Not logged in');
-    }
-    return login;
+  /// True when the stored cloud data holds no decks, cards or readings.
+  bool _isEmptyData(Map<String, dynamic> data) {
+    final decks = data['decks'];
+    final cards = data['cards'];
+    final readings = data['readings'];
+    final decksEmpty = decks is! List || decks.isEmpty;
+    final cardsEmpty = cards is! List || cards.isEmpty;
+    final readingsEmpty = readings is! List || readings.isEmpty;
+    return decksEmpty && cardsEmpty && readingsEmpty;
   }
 
-  String _descriptionFor(String login) => 'TarotDesk — dữ liệu của $login';
-
-  String _emptyPayload() => jsonEncode(<String, dynamic>{
-        'version': 1,
-        'exportedAt': DateTime.now().toIso8601String(),
-        'decks': <dynamic>[],
-        'cards': <dynamic>[],
-        'readings': <dynamic>[],
-      });
-
-  /// The `content` of the sync file inside [gist], or null when the gist or
-  /// the file is missing.
-  String? _gistFileContent(Map<String, dynamic>? gist) {
-    if (gist == null) return null;
-    final files = gist['files'];
-    if (files is! Map) return null;
-    final file = files[_fileName];
-    if (file is! Map) return null;
-    final content = file['content'];
-    return content is String ? content : null;
-  }
-
-  /// Content of the sync file in the user's gist, or null when there is
-  /// no gist, no sync file, or the file is empty. The gist LIST endpoint
-  /// does not return file contents, so this fetches the full gist with
-  /// [GithubService.getGist] first.
-  Future<String?> _syncFileContent() async {
-    final gist = await findGist();
-    if (gist == null) return null;
-    final gistId = gist['id'] as String?;
-    if (gistId == null || gistId.isEmpty) return null;
-    final full = await _github.getGist(_token(), gistId);
-    return _gistFileContent(full);
-  }
-
-  /// Finds the user's sync gist (matched by its exact description), or null
-  /// when the user has no sync gist yet.
-  Future<Map<String, dynamic>?> findGist() async {
-    final token = _token();
-    final expected = _descriptionFor(_login());
-    final gists = await _github.listGists(token);
-    for (final gist in gists) {
-      if (gist['description'] == expected) return gist;
-    }
-    return null;
-  }
-
-  /// Returns the user's sync gist, creating a private one with an empty
-  /// payload when it does not exist yet.
-  Future<Map<String, dynamic>> findOrCreateGist() async {
-    final existing = await findGist();
-    if (existing != null) return existing;
-    return await _github.createGist(
-      _token(),
-      description: _descriptionFor(_login()),
-      files: <String, String>{_fileName: _emptyPayload()},
-      isPublic: false,
-    );
-  }
-
-  /// Pushes all local decks, cards and readings to the sync gist.
+  /// Pushes all local decks, cards and readings to the cloud store.
   /// The JSON carries the LOCAL ids (deck_id / card_ids refer to local
   /// sqflite ids); the downloading device remaps them by name.
   Future<void> uploadFromLocal() async {
-    final token = _token();
+    final token = _sessionToken();
     final db = DatabaseHelper.instance;
 
     final decks = await db.getDecks();
@@ -134,51 +72,27 @@ class GistSyncService {
     }
     final readings = await db.getReadings();
 
-    final payload = jsonEncode(<String, dynamic>{
+    await _api.saveData(token, <String, dynamic>{
       'version': 1,
       'exportedAt': DateTime.now().toIso8601String(),
       'decks': decks.map((deck) => deck.toMap()).toList(),
       'cards': cards,
       'readings': readings.map((reading) => reading.toMap()).toList(),
     });
-
-    final gist = await findOrCreateGist();
-    final gistId = gist['id'] as String?;
-    if (gistId == null || gistId.isEmpty) {
-      throw GithubException('Could not find or create the sync gist');
-    }
-    await _github.patchGist(
-      token,
-      gistId,
-      files: <String, String>{_fileName: payload},
-    );
   }
 
-  /// Imports the sync gist into the local database. Does nothing when there
-  /// is no gist or no sync file. NEVER deletes local data.
+  /// Imports the cloud data into the local database. Does nothing when
+  /// the cloud store is empty. NEVER deletes local data.
   ///
-  /// ID REMAPPING (critical): the ids in the gist are the OTHER device's
-  /// local sqflite ids and must never be reused as identity here. Decks are
-  /// matched by (name, created_date), cards by (deck, name), readings by
-  /// (name, date); everything new is inserted without an id so sqflite
-  /// assigns fresh local ids, and reading card ids are resolved back to
-  /// local card ids by card NAME.
+  /// ID REMAPPING (critical): the ids in the cloud data are the OTHER
+  /// device's local sqflite ids and must never be reused as identity
+  /// here. Decks are matched by (name, created_date), cards by (deck,
+  /// name), readings by (name, date); everything new is inserted
+  /// without an id so sqflite assigns fresh local ids, and reading card
+  /// ids are resolved back to local card ids by card NAME.
   Future<void> downloadToLocal() async {
-    final content = await _syncFileContent();
-    if (content == null || content.trim().isEmpty) return;
-
-    final Map<String, dynamic> data;
-    try {
-      final decoded = jsonDecode(content);
-      if (decoded is! Map<String, dynamic>) {
-        throw GithubException('Sync data is not a valid TarotDesk backup');
-      }
-      data = decoded;
-    } on GithubException {
-      rethrow;
-    } catch (_) {
-      throw GithubException('Sync data is not valid JSON');
-    }
+    final data = await _api.getData(_sessionToken());
+    if (_isEmptyData(data)) return;
 
     final incomingDecks = _asMapList(data['decks'], 'decks');
     final incomingCards = _asMapList(data['cards'], 'cards');
@@ -336,39 +250,37 @@ class GistSyncService {
     }
   }
 
-  /// The login policy. Throws [GithubException] on any network/API failure;
-  /// the caller (login screen) catches and ignores it silently.
-  Future<GistSyncOutcome> syncOnLogin() async {
+  /// The login policy. Throws [TarotdeskApiException] on any network/API
+  /// failure; the caller (login screen) catches and ignores it silently.
+  Future<CloudSyncOutcome> syncAfterLogin() async {
     final decks = await DatabaseHelper.instance.getDecks();
     final readings = await DatabaseHelper.instance.getReadings();
     final hasUserData = decks.any((deck) => deck.name != _baseDeckName) ||
         readings.isNotEmpty;
 
-    // The gist LIST response has no file contents; fetch the full gist
-    // to see whether the sync file actually holds data.
-    final content = await _syncFileContent();
-    if (content == null || content.trim().isEmpty) {
+    final data = await _api.getData(_sessionToken());
+    if (_isEmptyData(data)) {
       if (hasUserData) {
         await uploadFromLocal();
-        return GistSyncOutcome.uploaded;
+        return CloudSyncOutcome.uploaded;
       }
-      return GistSyncOutcome.noData;
+      return CloudSyncOutcome.noData;
     }
 
     if (!hasUserData) {
       await downloadToLocal();
-      return GistSyncOutcome.downloaded;
+      return CloudSyncOutcome.downloaded;
     }
 
     // Both sides have data: never auto-overwrite in either direction.
     // The user syncs explicitly from the sync button.
-    return GistSyncOutcome.upToDate;
+    return CloudSyncOutcome.upToDate;
   }
 
   List<Map<String, dynamic>> _asMapList(dynamic value, String field) {
     if (value == null) return const <Map<String, dynamic>>[];
     if (value is! List) {
-      throw GithubException('Sync data field "$field" is not a list');
+      throw TarotdeskApiException('server', 'Sync data field "$field" is not a list');
     }
     final result = <Map<String, dynamic>>[];
     for (final item in value) {
@@ -377,7 +289,8 @@ class GistSyncService {
       } else if (item is Map) {
         result.add(Map<String, dynamic>.from(item));
       } else {
-        throw GithubException('Sync data field "$field" has an invalid entry');
+        throw TarotdeskApiException(
+            'server', 'Sync data field "$field" has an invalid entry');
       }
     }
     return result;

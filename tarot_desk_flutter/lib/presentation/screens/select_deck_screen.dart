@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
 import '../../data/datasources/database_helper.dart';
-import '../../data/datasources/github_service.dart';
-import '../../data/datasources/server_deck_service.dart';
+import '../../data/datasources/tarotdesk_api_service.dart';
 import '../../data/models/tarot_card.dart';
 import '../../data/models/tarot_deck.dart';
 import '../../logic/auth_provider.dart';
@@ -25,7 +24,7 @@ import 'deck_detail_screen.dart';
 /// thêm/sửa lá) — khác với "Bộ bài hiện tại" ở Trang chủ (chỉ xem).
 /// Nút PC gọn: hàng thao tác cao 32, nút xóa cao 36.
 /// Phía dưới lưới bộ bài của mình là mục "Bộ bài chung" từ server
-/// GitHub (chỉ xem + sao chép về kho của mình); mỗi bộ bài của mình
+/// (chỉ xem + sao chép về kho của mình); mỗi bộ bài của mình
 /// có thêm nút gửi lên server để chờ duyệt.
 class SelectDeckScreen extends StatelessWidget {
   const SelectDeckScreen({Key? key}) : super(key: key);
@@ -415,8 +414,9 @@ class _DeckThumbnailState extends State<_DeckThumbnail> {
   }
 }
 
-/// Mục "Bộ bài chung" từ server GitHub, hiện dưới lưới bộ bài của mình.
+/// Mục "Bộ bài chung" từ server, hiện dưới lưới bộ bài của mình.
 /// Chỉ xem + sao chép về kho của mình, không sửa được bộ bài chung.
+/// Khách (chưa đăng nhập) vẫn xem được; chỉ gửi bài mới cần đăng nhập.
 class _SharedDecksSection extends StatefulWidget {
   const _SharedDecksSection();
 
@@ -425,7 +425,10 @@ class _SharedDecksSection extends StatefulWidget {
 }
 
 class _SharedDecksSectionState extends State<_SharedDecksSection> {
-  List<SharedDeckInfo>? _decks;
+  // One Worker entry: {"id","name","deck":{...},"cards":[...]}.
+  // Guests (null session token) can still browse: the Worker allows
+  // public reads of the shared library.
+  List<Map<String, dynamic>>? _decks;
   String? _error;
   bool _isLoading = true;
 
@@ -441,14 +444,15 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
       _error = null;
     });
     try {
-      final decks =
-          await ServerDeckService(context.read<AuthProvider>()).listSharedDecks();
+      final auth = context.read<AuthProvider>();
+      final decks = await TarotdeskApiService()
+          .listSharedDecks(auth.sessionToken);
       if (!mounted) return;
       setState(() {
         _decks = decks;
         _isLoading = false;
       });
-    } on GithubException catch (e) {
+    } on TarotdeskApiException catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.message;
@@ -457,28 +461,74 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
     }
   }
 
-  Future<void> _openSharedDeck(SharedDeckInfo info) async {
+  Future<void> _openSharedDeck(Map<String, dynamic> entry) async {
     final settings = context.read<SettingsProvider>();
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
     try {
-      final result = await ServerDeckService(context.read<AuthProvider>())
-          .fetchSharedDeck(info.path);
+      final deck = _parseSharedDeck(entry);
+      final cards = _parseSharedCards(entry);
       if (!mounted) return;
-      Navigator.pop(context);
-      await _showSharedDeckDialog(result.deck, result.cards);
-    } on GithubException catch (e) {
+      await _showSharedDeckDialog(deck, cards);
+    } on TarotdeskApiException catch (e) {
       if (!mounted) return;
-      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${settings.tr('library.loadFailed')} ${e.message}'),
         ),
       );
     }
+  }
+
+  /// Deck name shown in the shared list: the nested deck's name,
+  /// falling back to the entry's own name.
+  String _sharedDeckName(Map<String, dynamic> entry) {
+    final deck = entry['deck'];
+    if (deck is Map) {
+      final name = deck['name'];
+      if (name is String && name.isNotEmpty) return name;
+    }
+    final name = entry['name'];
+    return name is String ? name : '';
+  }
+
+  int _sharedCardCount(Map<String, dynamic> entry) {
+    final cards = entry['cards'];
+    return cards is List ? cards.length : 0;
+  }
+
+  TarotDeckModel _parseSharedDeck(Map<String, dynamic> entry) {
+    final deckRaw = entry['deck'];
+    if (deckRaw is! Map) {
+      throw TarotdeskApiException('server', 'Shared deck has the wrong shape');
+    }
+    try {
+      return TarotDeckModel.fromMap(Map<String, dynamic>.from(deckRaw));
+    } catch (_) {
+      throw TarotdeskApiException('server', 'Shared deck has an invalid deck');
+    }
+  }
+
+  List<TarotCardModel> _parseSharedCards(Map<String, dynamic> entry) {
+    final cardsRaw = entry['cards'];
+    if (cardsRaw is! List) {
+      throw TarotdeskApiException('server', 'Shared deck has the wrong shape');
+    }
+    final cards = <TarotCardModel>[];
+    for (final rawCard in cardsRaw) {
+      if (rawCard is! Map) {
+        throw TarotdeskApiException('server', 'Shared deck has an invalid card');
+      }
+      final cardMap = Map<String, dynamic>.from(rawCard);
+      // Shared decks must not carry local ids; the caller re-assigns
+      // deck_id on insert, so it is 0 here by definition.
+      cardMap.remove('id');
+      cardMap['deck_id'] = 0;
+      try {
+        cards.add(TarotCardModel.fromMap(cardMap));
+      } catch (_) {
+        throw TarotdeskApiException('server', 'Shared deck has an invalid card');
+      }
+    }
+    return cards;
   }
 
   Future<void> _showSharedDeckDialog(
@@ -562,7 +612,7 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(settings.tr('library.copySuccess'))),
       );
-    } on GithubException catch (e) {
+    } on TarotdeskApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -630,20 +680,19 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
             itemCount: _decks!.length,
             itemBuilder: (context, index) {
               final info = _decks![index];
+              final cardCount = _sharedCardCount(info);
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(
-                  info.name,
+                  _sharedDeckName(info),
                   style: TextStyle(color: theme.textColor),
                 ),
-                subtitle: info.cardCount != null
-                    ? Text(
-                        settings
-                            .tr('library.cardCount')
-                            .replaceAll('{count}', '${info.cardCount}'),
-                        style: TextStyle(color: theme.secondaryTextColor),
-                      )
-                    : null,
+                subtitle: Text(
+                  settings
+                      .tr('library.cardCount')
+                      .replaceAll('{count}', '$cardCount'),
+                  style: TextStyle(color: theme.secondaryTextColor),
+                ),
                 trailing: TextButton(
                   onPressed: () => _openSharedDeck(info),
                   child: Text(settings.tr('library.view')),
@@ -656,7 +705,7 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
   }
 }
 
-/// Nút gửi một bộ bài của mình lên server GitHub (chờ admin duyệt).
+/// Nút gửi một bộ bài của mình lên server (chờ admin duyệt).
 /// Trạng thái đang gửi: hiện spinner nhỏ, nút bị vô hiệu hoá.
 class _SubmitDeckButton extends StatefulWidget {
   final dynamic deck;
@@ -678,21 +727,37 @@ class _SubmitDeckButtonState extends State<_SubmitDeckButton> {
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
+    final settings = context.read<SettingsProvider>();
+    final auth = context.read<AuthProvider>();
+    final sessionToken = auth.sessionToken;
+    if (sessionToken == null || sessionToken.isEmpty) {
+      // Guests cannot submit: readable error, no crash.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(settings.tr('library.loginRequired'))),
+      );
+      return;
+    }
     setState(() => _isSubmitting = true);
     try {
-      final auth = context.read<AuthProvider>();
       final cards =
           await DatabaseHelper.instance.getCardsByDeckId(widget.deck.id!);
-      final prUrl =
-          await ServerDeckService(auth).submitDeck(widget.deck, cards);
+      // Shared files must not carry local ids, so `id` is stripped
+      // from the deck map and from every card map before sending.
+      final deckMap = (widget.deck as TarotDeckModel).toMap()..remove('id');
+      final cardMaps = cards
+          .map((card) => card.toMap()..remove('id'))
+          .toList();
+      final submissionId = await TarotdeskApiService().submitDeck(
+        sessionToken,
+        <String, dynamic>{'deck': deckMap, 'cards': cardMaps},
+      );
       if (!mounted) return;
-      final settings = context.read<SettingsProvider>();
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: settings.currentThemeData.backgroundColor,
           title: Text(settings.tr('library.submitSuccess')),
-          content: SelectableText(prUrl),
+          content: SelectableText(submissionId),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -701,9 +766,8 @@ class _SubmitDeckButtonState extends State<_SubmitDeckButton> {
           ],
         ),
       );
-    } on GithubException catch (e) {
+    } on TarotdeskApiException catch (e) {
       if (!mounted) return;
-      final settings = context.read<SettingsProvider>();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content:
