@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'logic/auth_provider.dart';
 import 'logic/deck_provider.dart';
 import 'logic/reading_provider.dart';
 import 'logic/settings_provider.dart';
 import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/login_screen.dart';
 import 'data/datasources/database_helper.dart';
 
 void main() async {
@@ -20,6 +22,7 @@ class TarotDeskApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()..restoreSession()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..initSettings()),
         ChangeNotifierProvider(create: (_) => DeckProvider()),
         ChangeNotifierProvider(create: (_) => ReadingProvider()),
@@ -42,10 +45,26 @@ class TarotDeskApp extends StatelessWidget {
               ),
               fontFamily: 'Roboto',
             ),
-            home: const HomeScreen(),
+            home: const _AuthGate(),
           );
         },
       ),
     );
+  }
+}
+
+class _AuthGate extends StatelessWidget {
+  const _AuthGate();
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    switch (auth.state) {
+      case AuthState.loading:
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      case AuthState.loggedOut:
+        return const LoginScreen();
+      case AuthState.loggedIn:
+        return const HomeScreen();
+    }
   }
 }
