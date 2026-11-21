@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization.dart';
 import '../core/theme/app_theme.dart';
 import '../data/datasources/preferences_service.dart';
 import '../data/models/user_preferences.dart';
@@ -26,6 +27,31 @@ class SettingsProvider extends ChangeNotifier {
     return AppThemeData.availableThemes[_userPrefs.themeId] ??
         AppThemeData.availableThemes['default_dark']!;
   }
+
+  /// Ngôn ngữ giao diện hiện tại, suy ra từ mã đã lưu
+  /// ([UserPreferencesModel.languageCode]); mã lạ -> Tiếng Việt.
+  AppLanguage get language {
+    return AppLanguage.values.firstWhere(
+      (l) => l.code == _userPrefs.languageCode,
+      orElse: () => AppLanguage.vi,
+    );
+  }
+
+  /// Đổi ngôn ngữ giao diện: chỉ nhận mã trong
+  /// [UserPreferencesModel.languageCodes], lưu xuống
+  /// SharedPreferences rồi notify để mọi màn hình (context.watch)
+  /// vẽ lại bằng ngôn ngữ mới.
+  void setLanguage(AppLanguage lang) {
+    if (UserPreferencesModel.languageCodes.contains(lang.code)) {
+      _userPrefs.languageCode = lang.code;
+      _save();
+    }
+  }
+
+  /// Dịch một chuỗi giao diện theo ngôn ngữ hiện tại.
+  /// Thiếu key -> về Tiếng Việt, thiếu hẳn -> trả chính key đó,
+  /// không bao giờ crash (xem [AppStrings.of]).
+  String tr(String key) => AppStrings.of(language, key);
 
   Future<void> initSettings() async {
     _userPrefs = await _prefsService.loadPreferences();
