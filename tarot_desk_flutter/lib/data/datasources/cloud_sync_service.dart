@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'tarotdesk_api_service.dart';
 import '../../core/translation_service.dart';
 import '../../logic/auth_provider.dart';
@@ -13,7 +15,8 @@ import '../models/tarot_reading.dart';
 /// - [uploaded]: this device had user data, the cloud store was empty or
 ///   missing, so local data was pushed to the cloud.
 /// - [upToDate]: both sides already have data; nothing was overwritten.
-///   The user syncs explicitly from the sync button in that case.
+///   The automatic login/reload sync never overwrites when both sides
+///   have data (there is no manual sync button any more).
 /// - [noData]: neither side has user data, so there was nothing to do.
 enum CloudSyncOutcome { downloaded, uploaded, upToDate, noData }
 
@@ -47,6 +50,7 @@ class CloudSyncService {
         _api,
         sessionToken: () => auth.sessionToken,
         targetLanguageCode: () => targetLanguageCode?.call() ?? 'vi',
+        userSub: () => auth.user?.sub,
       );
 
   CloudSyncService(this.auth, {this.targetLanguageCode});
@@ -216,8 +220,9 @@ class CloudSyncService {
     // system language when the user opens it. Best-effort: any
     // failure is swallowed and the deck stays usable in its
     // original language. The stored source text is NEVER
-    // rewritten — translations live only in the Worker's D1
-    // cache + the in-memory cache (see TranslationService).
+    // rewritten — translations live in the Worker's permanent
+    // `deck_translations` table + the in-memory cache
+    // (see TranslationService).
     try {
       final target = targetLanguageCode?.call() ?? 'vi';
       for (final newDeckId in deckIdMap.values.toSet()) {
@@ -235,6 +240,20 @@ class CloudSyncService {
           deckName: deck.name,
           sourceLang: detectDeckLanguage(deck.name, cards),
           targetLang: target,
+        );
+        // PERMANENT STORE (write-time, V2): store the downloaded
+        // deck's translations permanently for all four languages
+        // too — any signed-in user, owner decided server-side
+        // from the session (a deck that is later submitted is
+        // covered again server-side at submit). Best-effort and
+        // fire-and-forget — a failure changes nothing here.
+        unawaited(
+          _translationService.storeDeckTranslations(
+            cards,
+            deckId: newDeckId,
+            deckName: deck.name,
+            sourceLang: detectDeckLanguage(deck.name, cards),
+          ),
         );
       }
     } catch (_) {
@@ -322,7 +341,8 @@ class CloudSyncService {
     }
 
     // Both sides have data: never auto-overwrite in either direction.
-    // The user syncs explicitly from the sync button.
+    // (There is no manual sync button any more; the automatic
+    // login/reload sync simply leaves both sides as they are.)
     return CloudSyncOutcome.upToDate;
   }
 
