@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
+import '../../core/display_labels.dart';
 import '../../logic/settings_provider.dart';
 
 /// Một bài nhạc huyền bí có sẵn (phát qua YouTube, nhạc ambient/thiền
@@ -138,6 +139,14 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+
+    // Bài đang phát: bài preset (index >= 0) hiện tên đã dịch theo
+    // index — tiêu đề thô trong _currentTitle (do màn Trải bài truyền
+    // vào) không bao giờ hiện. Link tự nhập (index -1) hiện tiêu đề
+    // đã dịch sẵn từ 'music.youtubeTitle'.
+    final nowPlayingTitle = _currentIndex >= 0
+        ? settings.tr(trackTitleKey(_currentIndex))
+        : _currentTitle;
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.8,
@@ -221,7 +230,7 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _currentTitle,
+                    nowPlayingTitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -267,7 +276,6 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
             const SizedBox(height: 4),
             ...widget.tracks.asMap().entries.map((entry) {
               final index = entry.key;
-              final track = entry.value;
               final isCurrent = index == _currentIndex;
               return ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -276,7 +284,7 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
                   color: isCurrent ? Colors.amber : Colors.white54,
                 ),
                 title: Text(
-                  track.title,
+                  settings.tr(trackTitleKey(index)),
                   style: TextStyle(
                     color: isCurrent ? Colors.amber : Colors.white,
                     fontSize: 14,
@@ -294,7 +302,7 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
                 onTap: () {
                   setState(() {
                     _currentIndex = index;
-                    _currentTitle = track.title;
+                    _currentTitle = settings.tr(trackTitleKey(index));
                   });
                   widget.onSelectTrack(index);
                 },
