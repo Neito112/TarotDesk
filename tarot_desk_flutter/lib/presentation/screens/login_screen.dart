@@ -208,26 +208,48 @@ class _LoginScreenState extends State<LoginScreen> {
   ) {
     switch (_phase) {
       case _LoginPhase.idle:
-        return SizedBox(
-          height: 56,
-          child: ElevatedButton.icon(
-            onPressed: _startLogin,
-            icon: const Icon(Icons.login, size: 22),
-            label: Text(
-              settings.tr('auth.loginButton'),
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 56,
+              child: ElevatedButton.icon(
+                onPressed: _startLogin,
+                icon: const Icon(Icons.login, size: 22),
+                label: Text(
+                  settings.tr('auth.loginButton'),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  foregroundColor: theme.backgroundColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
               ),
             ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.primaryColor,
-              foregroundColor: theme.backgroundColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => context.read<AuthProvider>().continueAsGuest(),
+              child: Text(
+                settings.tr('auth.guestButton'),
+                style: TextStyle(color: theme.primaryColor, fontSize: 14),
               ),
             ),
-          ),
+            Text(
+              settings.tr('auth.guestNote'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: theme.secondaryTextColor,
+                fontSize: 12,
+                height: 1.5,
+              ),
+            ),
+          ],
         );
       case _LoginPhase.starting:
         return Center(
