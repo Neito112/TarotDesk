@@ -107,9 +107,135 @@ class AboutScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                _donateSection(context, theme),
                 const SizedBox(height: 24),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Mục mời cà phê: mã QR VietQR (BIDV) + lời mời. Chạm vào mã
+  /// để xem phóng to cho dễ quét. Đây là một liên kết/dạng chạm
+  /// được, không chỉ là ảnh tĩnh.
+  Widget _donateSection(BuildContext context, dynamic theme) {
+    return GlassPanel(
+      backgroundColor: theme.cardBackgroundColor,
+      borderColor: theme.glassBorderColor,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              'Mời mình một tách cà phê',
+              style: TextStyle(
+                color: theme.primaryColor,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Nếu thấy hữu ích hãy mời mình một tách cafe <3',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: theme.textColor,
+                fontSize: 14,
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => _showDonateQrDialog(context, theme),
+              child: Tooltip(
+                message: 'Chạm để xem mã QR phóng to',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/images/donate_qr.png',
+                    width: 260,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Chạm vào mã QR để phóng to • Quét bằng app ngân hàng',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: theme.textColor.withOpacity(0.7),
+                fontSize: 12,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Hộp thoại phóng to mã QR để quét cho dễ, kèm thông tin tài
+  /// khoản để chuyển khoản thủ công nếu cần.
+  void _showDonateQrDialog(BuildContext context, dynamic theme) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black.withOpacity(0.94),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: theme.primaryColor, width: 1.5),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  'assets/images/donate_qr.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'TRAN VAN TIEN',
+                style: TextStyle(
+                  color: theme.primaryColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              SelectableText(
+                '21110001575517',
+                style: TextStyle(
+                  color: theme.textColor,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'BIDV - CN Hà Nội',
+                style: TextStyle(
+                  color: theme.textColor.withOpacity(0.75),
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(
+                  'Đóng',
+                  style: TextStyle(color: theme.primaryColor),
+                ),
+              ),
+            ],
           ),
         ),
       ),
