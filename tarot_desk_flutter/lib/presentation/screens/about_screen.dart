@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/responsive.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
@@ -17,6 +18,11 @@ import '../widgets/glass_panel.dart';
 ///   đó trong app trước khi quyết định mua.
 class AboutScreen extends StatelessWidget {
   const AboutScreen({Key? key}) : super(key: key);
+
+  /// Link mở bộ slide HTML hướng dẫn chi tiết (kèm ảnh chụp thực
+  /// tế của app). Bấm vào là mở ra giao diện slide đã hiển thị sẵn
+  /// trong trình duyệt, không phải file thô.
+  static const _guideUrl = 'https://neito112.github.io/TarotDesk/guide/';
 
   @override
   Widget build(BuildContext context) {
@@ -81,11 +87,78 @@ class AboutScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
+                _guideSection(context, theme, settings),
+                const SizedBox(height: 16),
                 _donateSection(context, theme, settings),
                 const SizedBox(height: 24),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Mục link mở bộ slide hướng dẫn chi tiết (kèm ảnh chụp thực
+  /// tế của app). Bấm vào là mở ra giao diện slide đã hiển thị sẵn
+  /// trong trình duyệt, không phải file thô.
+  Widget _guideSection(
+      BuildContext context, dynamic theme, SettingsProvider settings) {
+    return GlassPanel(
+      backgroundColor: theme.cardBackgroundColor,
+      borderColor: theme.glassBorderColor,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              settings.tr('about.guideLinkTitle'),
+              style: TextStyle(
+                color: theme.primaryColor,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              settings.tr('about.guideLinkBody'),
+              style: TextStyle(
+                color: theme.textColor,
+                fontSize: 14,
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () async {
+                final uri = Uri.parse(_guideUrl);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.menu_book, color: theme.primaryColor, size: 20),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      settings.tr('about.guideLinkLabel'),
+                      style: TextStyle(
+                        color: theme.primaryColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.open_in_new, color: theme.primaryColor, size: 16),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
