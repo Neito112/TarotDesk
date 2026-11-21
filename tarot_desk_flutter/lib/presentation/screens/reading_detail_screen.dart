@@ -4,8 +4,10 @@ import '../../core/responsive.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/models/tarot_card.dart';
 import '../../data/models/tarot_reading.dart';
+import '../../core/translation_service.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
+import '../widgets/localized_card_text.dart';
 import '../widgets/tarot_card_image.dart';
 
 /// Màn hình xem chi tiết lịch sử bốc bài cũ.
@@ -140,8 +142,8 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: SelectionArea(
-            child: Text(
-              card.meaning,
+            child: LocalizedCardMeaning(
+              card: card,
               style: TextStyle(
                 color: theme.textColor,
                 fontSize: meaningFontSize,
@@ -180,8 +182,8 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
                       const SizedBox(height: 12),
                       SizedBox(
                         width: cardWidth,
-                        child: Text(
-                          card.name,
+                        child: LocalizedCardName(
+                          card: card,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: theme.textColor,
@@ -200,8 +202,8 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
                 children: [
                   cardWidget,
                   const SizedBox(height: 12),
-                  Text(
-                    card.name,
+                  LocalizedCardName(
+                    card: card,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: theme.textColor,
@@ -301,16 +303,29 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         color: Colors.black87,
                         width: double.infinity,
-                        child: Text(
-                          card.name.split(' (').first,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: isSelected ? theme.primaryColor : Colors.white70,
-                            fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          ),
+                        child: FutureBuilder<LocalizedCard>(
+                          future: context
+                              .read<TranslationService>()
+                              .localizeCard(card),
+                          builder: (context, snapshot) {
+                            return Text(
+                              (snapshot.data?.name ?? card.name)
+                                  .split(' (')
+                                  .first,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? theme.primaryColor
+                                    : Colors.white70,
+                                fontSize: 11,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],

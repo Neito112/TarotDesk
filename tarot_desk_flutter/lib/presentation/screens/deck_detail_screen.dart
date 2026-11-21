@@ -9,6 +9,7 @@ import '../../logic/deck_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/tarot_card_image.dart';
+import '../widgets/localized_card_text.dart';
 import 'edit_card_screen.dart';
 
 /// Màn hình Chi tiết Bộ Bài (Hiển thị lưới lá bài xem bộ bài, Tìm kiếm bài, Học bài Ngẫu nhiên 1 lá).
@@ -211,10 +212,15 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                   const SizedBox(height: 16),
 
                   // Tên lá bài
-                  Text(
-                    card.name.isNotEmpty ? card.name : settings.tr('deckDetail.unnamedCard'),
-                    style: TextStyle(color: theme.primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  card.name.isNotEmpty
+                      ? LocalizedCardName(
+                          card: card,
+                          style: TextStyle(color: theme.primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
+                        )
+                      : Text(
+                          settings.tr('deckDetail.unnamedCard'),
+                          style: TextStyle(color: theme.primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                   const SizedBox(height: 12),
 
                   // Luận giải chi tiết (Read-only)
@@ -222,10 +228,15 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                     constraints: BoxConstraints(maxHeight: MediaQuery.of(dialogContext).size.height * 0.4),
                     child: SingleChildScrollView(
                       child: SelectionArea(
-                        child: Text(
-                          card.meaning.isNotEmpty ? card.meaning : settings.tr('deckDetail.noMeaning'),
-                          style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-                        ),
+                        child: card.meaning.isNotEmpty
+                            ? LocalizedCardMeaning(
+                                card: card,
+                                style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                              )
+                            : Text(
+                                settings.tr('deckDetail.noMeaning'),
+                                style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                              ),
                       ),
                     ),
                   ),
@@ -417,8 +428,8 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
                                             color: Colors.black87,
-                                            child: Text(
-                                              card.name,
+                                            child: LocalizedCardName(
+                                              card: card,
                                               textAlign: TextAlign.center,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -513,20 +524,30 @@ class _RandomCardStudyDialog extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Tên và toàn bộ ý nghĩa bên dưới đầy đủ chi tiết
-              Text(
-                card.name.isNotEmpty ? card.name : settings.tr('deckDetail.unnamedCard'),
-                style: TextStyle(color: theme.primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              card.name.isNotEmpty
+                  ? LocalizedCardName(
+                      card: card,
+                      style: TextStyle(color: theme.primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
+                    )
+                  : Text(
+                      settings.tr('deckDetail.unnamedCard'),
+                      style: TextStyle(color: theme.primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
               const SizedBox(height: 12),
 
               ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
                 child: SingleChildScrollView(
                   child: SelectionArea(
-                    child: Text(
-                      card.meaning.isNotEmpty ? card.meaning : settings.tr('deckDetail.noMeaning'),
-                      style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-                    ),
+                    child: card.meaning.isNotEmpty
+                        ? LocalizedCardMeaning(
+                            card: card,
+                            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                          )
+                        : Text(
+                            settings.tr('deckDetail.noMeaning'),
+                            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                          ),
                   ),
                 ),
               ),

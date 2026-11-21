@@ -12,6 +12,7 @@ import '../../logic/auth_provider.dart';
 import '../../logic/deck_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
+import '../widgets/localized_card_text.dart';
 
 /// Màn hình Tạo Bộ Bài Mới & Nhập Từng Lá Bài Đầy Đủ
 /// Bố cục: tên bộ bài một hàng full-width ở trên cùng; màn rộng
@@ -467,19 +468,33 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        '${index + 1}. ${card.name}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Text(
+                            '${index + 1}. ',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Expanded(
+                            child: LocalizedCardName(
+                              card: card,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        card.meaning,
+                      LocalizedCardMeaning(
+                        card: card,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.75),
                           fontSize: 11,

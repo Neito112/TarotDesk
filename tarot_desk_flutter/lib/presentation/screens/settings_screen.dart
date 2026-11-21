@@ -551,7 +551,7 @@ class _AccountActionsState extends State<_AccountActions> {
     }
     setState(() => _isSyncing = true);
     try {
-      await CloudSyncService(auth).uploadFromLocal();
+      await CloudSyncService(auth, targetLanguageCode: () => widget.settings.language.code).uploadFromLocal();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

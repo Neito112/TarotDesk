@@ -10,6 +10,7 @@ import '../../logic/deck_provider.dart';
 import '../../logic/reading_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
+import '../widgets/localized_card_text.dart';
 import '../widgets/mystic_music_player.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
@@ -1109,8 +1110,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              activeCard.name,
+            LocalizedCardName(
+              card: activeCard,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: theme.primaryColor,
@@ -1126,8 +1127,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 child: SingleChildScrollView(
                   controller: _meaningScrollController,
                   child: SelectionArea(
-                    child: Text(
-                      activeCard.meaning,
+                    child: LocalizedCardMeaning(
+                      card: activeCard,
                       style: const TextStyle(
                           color: Colors.white, fontSize: 14, height: 1.6),
                     ),
@@ -1677,8 +1678,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              activeCard.name,
+            LocalizedCardName(
+              card: activeCard,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: theme.primaryColor,
@@ -1690,8 +1691,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             Expanded(
               child: SingleChildScrollView(
                 child: SelectionArea(
-                  child: Text(
-                    activeCard.meaning,
+                  child: LocalizedCardMeaning(
+                    card: activeCard,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: _meaningFontSize(),

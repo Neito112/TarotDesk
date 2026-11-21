@@ -11,6 +11,7 @@ import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
+import '../widgets/localized_card_text.dart';
 import 'add_deck_screen.dart';
 import 'deck_detail_screen.dart';
 
@@ -606,8 +607,8 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
                   itemCount: cards.length,
                   itemBuilder: (context, index) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text(
-                      cards[index].name,
+                    child: LocalizedCardName(
+                      card: cards[index],
                       style: TextStyle(color: theme.textColor),
                     ),
                   ),
