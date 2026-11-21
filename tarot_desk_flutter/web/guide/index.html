@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hướng dẫn sử dụng TarotDesk</title>
+<style>
+  :root {
+    --bg: #0a0812;
+    --bg2: #14101f;
+    --panel: rgba(20, 16, 32, 0.85);
+    --gold: #d4af37;
+    --gold-dim: #a8852a;
+    --text: #efe8d8;
+    --text-dim: #b8ad96;
+    --border: rgba(212, 175, 55, 0.35);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    overflow: hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 45% at 50% 0%, rgba(212, 175, 55, 0.10), transparent 70%),
+      radial-gradient(ellipse 45% 35% at 50% 110%, rgba(88, 60, 140, 0.18), transparent 70%);
+    pointer-events: none;
+  }
+  /* ---------- deck ---------- */
+  .deck { position: relative; height: 100vh; width: 100%; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 48px 24px 96px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(14px);
+    transition: opacity .45s ease, transform .45s ease;
+    overflow-y: auto;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  .slide-inner { max-width: 980px; width: 100%; text-align: center; }
+  .kicker {
+    color: var(--gold); letter-spacing: .35em; text-transform: uppercase;
+    font-size: 11px; margin-bottom: 14px;
+  }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(30px, 5vw, 52px); font-weight: 400;
+    color: var(--gold); line-height: 1.15; margin-bottom: 14px;
+  }
+  h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(24px, 3.6vw, 36px); font-weight: 400;
+    color: var(--gold); line-height: 1.2; margin-bottom: 12px;
+  }
+  .lead { color: var(--text-dim); font-size: 16px; line-height: 1.7; max-width: 640px; margin: 0 auto 22px; }
+  .shot {
+    display: block; max-width: 100%; max-height: 46vh;
+    margin: 0 auto 22px; border-radius: 14px;
+    border: 1px solid var(--border);
+    box-shadow: 0 18px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(212,175,55,.08);
+    object-fit: contain; background: #000;
+  }
+  .shot-missing {
+    display: flex; align-items: center; justify-content: center;
+    max-width: 640px; height: 220px; margin: 0 auto 22px;
+    border-radius: 14px; border: 1px dashed var(--border);
+    color: var(--text-dim); font-size: 14px; line-height: 1.6; padding: 20px;
+  }
+  .steps { text-align: left; max-width: 640px; margin: 0 auto; }
+  .step {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+  }
+  .step .num {
+    flex: 0 0 26px; height: 26px; border-radius: 50%;
+    border: 1.5px solid var(--gold); color: var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; margin-top: 1px;
+  }
+  .step p { font-size: 15px; line-height: 1.65; }
+  .step p b { color: var(--gold); font-weight: 600; }
+  .note {
+    max-width: 640px; margin: 14px auto 0; padding: 12px 16px;
+    border-left: 3px solid var(--gold); background: rgba(212,175,55,.07);
+    border-radius: 0 10px 10px 0; text-align: left;
+    font-size: 14px; line-height: 1.65; color: var(--text-dim);
+  }
+  .note b { color: var(--text); }
+  /* ---------- nav ---------- */
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    padding: 14px 16px 18px;
+    background: linear-gradient(transparent, rgba(10,8,18,.92) 45%);
+    z-index: 10;
+  }
+  .nav button {
+    background: transparent; border: 1px solid var(--border); color: var(--gold);
+    border-radius: 999px; padding: 9px 18px; font-size: 14px; cursor: pointer;
+    transition: background .2s, border-color .2s;
+  }
+  .nav button:hover:not(:disabled) { background: rgba(212,175,55,.12); border-color: var(--gold); }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .counter { color: var(--text-dim); font-size: 13px; letter-spacing: .08em; min-width: 64px; text-align: center; }
+  .dots { display: flex; gap: 7px; }
+  .dots span {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(212,175,55,.28); cursor: pointer; transition: background .2s, transform .2s;
+  }
+  .dots span.on { background: var(--gold); transform: scale(1.25); }
+  .home-link {
+    position: fixed; top: 16px; left: 18px; z-index: 10;
+    color: var(--gold); text-decoration: none; font-size: 14px;
+    border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px;
+    background: rgba(10,8,18,.7);
+  }
+  .home-link:hover { background: rgba(212,175,55,.12); }
+  @media (max-width: 640px) {
+    .slide { padding: 64px 16px 110px; }
+    .shot { max-height: 38vh; }
+    .dots { display: none; }
+  }
+</style>
+</head>
+<body>
+<a class="home-link" href="https://neito112.github.io/TarotDesk/">← Về TarotDesk</a>
+<div class="deck" id="deck">
+
+  <!-- 1 · Bìa -->
+  <section class="slide active">
+    <div class="slide-inner">
+      <div class="kicker">TarotDesk · Hướng dẫn sử dụng</div>
+      <h1>Hướng dẫn sử dụng<br>TarotDesk</h1>
+      <p class="lead">Nơi bạn lưu trữ, sắp xếp và tập luyện với bộ bài Tarot của mình — kèm ảnh chụp thực tế từng bước, làm theo là dùng được ngay.</p>
+      <div class="note" style="text-align:center"><b>TarotDesk không bói toán.</b> App không đọc bài thay bạn và không thay thế bộ bài vật lý — ý nghĩa của một lá bài đến từ việc bạn học, bạn cảm và bạn suy ngẫm.</div>
+    </div>
+  </section>
+
+  <!-- 2 · TarotDesk là gì -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Trước khi bắt đầu</div>
+      <h2>TarotDesk là gì?</h2>
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p><b>Công cụ, không phải thầy bói.</b> TarotDesk là nơi lưu trữ và tập luyện với bộ bài Tarot — không giải nghĩa tự động, không trải bài thay bạn.</p></div>
+        <div class="step"><div class="num">2</div><p><b>Bạn vẫn cần bộ bài vật lý.</b> Trải bài thật là khi bạn cầm lá bài trên tay, xào bài, rút bài, đặt bài lên bàn.</p></div>
+        <div class="step"><div class="num">3</div><p><b>Thử trước, mua sau.</b> Chưa có bộ bài? Vào Kho bộ bài xem trước các bộ có sẵn, tập luyện trong app rồi hãy quyết định mua bản vật lý.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · Màn hình chính -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Màn hình chính</div>
+      <h2>Màn hình chính có gì?</h2>
+      <img class="shot" src="images/home.png" alt="Màn hình chính TarotDesk" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp màn hình chính sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p><b>Lá bài ngày</b> — lá bài app chọn cho bạn mỗi ngày, chạm vào để đọc ý nghĩa.</p></div>
+        <div class="step"><div class="num">2</div><p><b>Trải bài mới</b> — nút chính để bắt đầu một lần trải bài.</p></div>
+        <div class="step"><div class="num">3</div><p><b>Lịch sử trải bài</b> — các lần trải bài đã lưu, mở lại bất cứ lúc nào.</p></div>
+        <div class="step"><div class="num">4</div><p><b>ⓘ và ⚙</b> — góc phải trên: ⓘ mở Giới thiệu &amp; Hướng dẫn, ⚙ mở Cài đặt.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Lá bài ngày -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Mỗi ngày một lá</div>
+      <h2>Lá bài ngày</h2>
+      <img class="shot" src="images/daily.png" alt="Lá bài ngày" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp lá bài ngày sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Mỗi ngày app tự chọn <b>một lá</b> cho bạn — lá này tự đổi khi sang ngày mới.</p></div>
+        <div class="step"><div class="num">2</div><p><b>Chạm vào lá</b> để mở bảng chi tiết: hình lá lớn + tên + toàn bộ ý nghĩa.</p></div>
+        <div class="step"><div class="num">3</div><p>Chạm vào lá bài ngày <b>không</b> bắt đầu một lần trải bài — nó chỉ để đọc và suy ngẫm trong ngày.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Bắt đầu trải bài -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Trải bài mới</div>
+      <h2>Bắt đầu một lần trải bài</h2>
+      <img class="shot" src="images/reading-empty.png" alt="Bàn trải bài trống" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp bàn trải bài trống sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Bấm <b>“Trải bài mới”</b> ở màn hình chính để vào bàn trải bài.</p></div>
+        <div class="step"><div class="num">2</div><p>Trên bàn chỉ có <b>khăn, phụ kiện và xấp bài</b> ở một góc — không có lá bài nào nằm sẵn trên bàn.</p></div>
+        <div class="step"><div class="num">3</div><p><b>Chạm vào xấp bài</b> để rút một lá. Lá vừa rút bay lên sân khấu cùng ý nghĩa của nó.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Lá trên sân khấu -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Sân khấu · một lá duy nhất</div>
+      <h2>Lá trên sân khấu</h2>
+      <img class="shot" src="images/reading-stage.png" alt="Lá bài trên sân khấu cùng ý nghĩa" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp lá trên sân khấu sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Sân khấu chỉ giữ <b>một lá duy nhất</b> — lá vừa rút, hoặc lá bạn chọn từ khay.</p></div>
+        <div class="step"><div class="num">2</div><p>Bên cạnh lá là <b>bảng ý nghĩa</b>: tên lá, từ khóa xuôi/ngược và ý nghĩa chi tiết. Kéo để đọc hết.</p></div>
+        <div class="step"><div class="num">3</div><p>Rút lá mới thì lá cũ tự xuống khay — sân khấu luôn chỉ có một lá.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · Thu lá xuống khay -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Khay bài</div>
+      <h2>Thu lá xuống khay</h2>
+      <img class="shot" src="images/reading-tray.png" alt="Khay chứa các lá đã rút" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp khay bài sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p><b>Chạm vào lá trên sân khấu</b> để thu lá xuống khay.</p></div>
+        <div class="step"><div class="num">2</div><p>Khay chứa <b>tất cả các lá đã rút</b> — trừ lá đang ở trên sân khấu. Một lá chỉ ở một nơi duy nhất, không trùng lặp.</p></div>
+        <div class="step"><div class="num">3</div><p><b>Chạm vào một lá trong khay</b> để đưa lá đó lên sân khấu xem lại.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · Chọn lá từ bảng -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Chọn lá chủ động</div>
+      <h2>Chọn lá từ bảng chọn</h2>
+      <img class="shot" src="images/select.png" alt="Bảng chọn lá bài" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp bảng chọn lá sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Mở bảng chọn lá để xem toàn bộ 78 lá của bộ bài đang dùng.</p></div>
+        <div class="step"><div class="num">2</div><p>Lá đã rút hiển thị mờ đi — bạn luôn biết mình đã rút lá nào rồi.</p></div>
+        <div class="step"><div class="num">3</div><p>Chạm một lá chưa rút để đưa lá đó lên sân khấu, hoặc kéo lá ra bàn để rút.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · Kho bộ bài -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Kho bộ bài</div>
+      <h2>Kho bộ bài</h2>
+      <img class="shot" src="images/library.png" alt="Kho bộ bài" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp Kho bộ bài sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Duyệt các bộ bài có sẵn trong app, kể cả bộ bài chung mọi người cùng dùng.</p></div>
+        <div class="step"><div class="num">2</div><p>Chạm vào một bộ để xem các lá bài và đọc ý nghĩa từng lá.</p></div>
+        <div class="step"><div class="num">3</div><p>Thấy bộ nào ưng thì tập luyện với nó trong app trước — rồi hãy mua bản vật lý.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · Thêm bộ bài -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Bộ bài của bạn</div>
+      <h2>Thêm bộ bài của bạn</h2>
+      <img class="shot" src="images/add-deck.png" alt="Thêm bộ bài mới" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp màn thêm bộ bài sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Khi đã có bộ bài vật lý, tạo bộ bài của riêng mình trong app: đặt tên bộ bài.</p></div>
+        <div class="step"><div class="num">2</div><p>Thêm từng lá: ảnh lá bài + ý nghĩa của lá theo cách bạn học và cảm nhận.</p></div>
+        <div class="step"><div class="num">3</div><p>Bộ bài của bạn được lưu lại để dùng cho mọi lần trải bài sau — và có thể gửi lên server để mọi người cùng dùng sau khi được duyệt.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · Lịch sử -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Xem lại</div>
+      <h2>Lịch sử trải bài</h2>
+      <img class="shot" src="images/history.png" alt="Lịch sử trải bài" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp Lịch sử trải bài sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Các lần trải bài đã lưu nằm ở đây, theo thứ tự mới nhất trước.</p></div>
+        <div class="step"><div class="num">2</div><p>Mở lại một lần trải bài để xem các lá đã rút và ý nghĩa của chúng.</p></div>
+        <div class="step"><div class="num">3</div><p>Muốn lưu một lần trải bài, hãy lưu lại trước khi thoát khỏi bàn trải bài.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · Tùy chỉnh bàn -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Không gian của bạn</div>
+      <h2>Tùy chỉnh bàn trải bài</h2>
+      <img class="shot" src="images/settings.png" alt="Cài đặt bàn trải bài" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp màn Cài đặt sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Mở <b>Cài đặt</b> (⚙ ở màn hình chính) để đổi <b>khăn trải bàn</b>: Nhung Tím, Lụa Vàng, Thảm Đen.</p></div>
+        <div class="step"><div class="num">2</div><p>Chọn <b>phụ kiện</b> đặt trên bàn (tối đa 3): Đá Thạch Anh, Quả Cầu Pha Lê, Hương Trầm, Nến — đổi ngay cả trong lúc đang trải bài.</p></div>
+        <div class="step"><div class="num">3</div><p>Đổi <b>mặt bàn</b> (Gỗ Sồi, Đá Cổ, Vũ Trụ), <b>giao diện</b> (Tối Obsidian…), bật/tắt khói trầm và hiệu ứng.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 · Nhạc -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Nhạc nền</div>
+      <h2>Nhạc huyền bí</h2>
+      <img class="shot" src="images/music.png" alt="Trình phát nhạc huyền bí" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp trình phát nhạc sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Trên bàn trải bài, bấm <b>nốt nhạc</b> trên thanh công cụ để mở trình phát nhạc.</p></div>
+        <div class="step"><div class="num">2</div><p>Chọn một trong các bản nhạc có sẵn, hoặc dán <b>link YouTube</b> của bản nhạc bạn thích để phát.</p></div>
+        <div class="step"><div class="num">3</div><p>Nhạc chạy nền trong lúc bạn trải bài — nhớ tạm dừng khi xong để khỏi phát mãi.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · Đăng nhập -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Tài khoản</div>
+      <h2>Đăng nhập &amp; đồng bộ</h2>
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Mở app là đăng nhập bằng <b>Google</b> — dữ liệu bộ bài và lịch sử của bạn tự được lưu theo tài khoản, dùng máy nào cũng thấy.</p></div>
+        <div class="step"><div class="num">2</div><p>Bộ bài chung sẽ hiện cho mọi người dùng khác cùng xem.</p></div>
+        <div class="step"><div class="num">3</div><p>Bạn cũng có thể <b>gửi bộ bài của mình lên server</b> — chủ server duyệt rồi bộ bài mới hiện cho mọi người.</p></div>
+      </div>
+      <div class="note"><b>Quản trị viên:</b> đăng nhập bằng tài khoản chủ sở hữu (Neito112) sẽ thấy giao diện quản trị server — duyệt bộ bài gửi lên và quản lý bộ bài chung.</div>
+    </div>
+  </section>
+
+  <!-- 15 · Cà phê -->
+  <section class="slide">
+    <div class="slide-inner">
+      <div class="kicker">Cảm ơn bạn</div>
+      <h2>Mời mình một tách cà phê</h2>
+      <p class="lead">Nếu thấy hữu ích hãy mời mình một tách cafe &lt;3</p>
+      <img class="shot" src="images/donate.png" alt="Mã QR mời cà phê" onerror="this.outerHTML='<div class=shot-missing>Ảnh mã QR sẽ được thêm vào đây.</div>'">
+      <div class="steps">
+        <div class="step"><div class="num">1</div><p>Quét mã QR bằng app ngân hàng, hoặc mở màn <b>ⓘ Giới thiệu</b> trong app để xem mã phóng to.</p></div>
+        <div class="step"><div class="num">2</div><p>Chủ tài khoản: <b>TRAN VAN TIEN — 21110001575517 — BIDV, CN Hà Nội</b>.</p></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="nav">
+  <button id="prevBtn">← Trước</button>
+  <div class="counter"><span id="cur">1</span> / <span id="tot">15</span></div>
+  <div class="dots" id="dots"></div>
+  <button id="nextBtn">Sau →</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsBox = document.getElementById('dots');
+  const curEl = document.getElementById('cur');
+  const totEl = document.getElementById('tot');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  let idx = 0;
+  totEl.textContent = slides.length;
+  slides.forEach((_, i) => {
+    const d = document.createElement('span');
+    d.addEventListener('click', () => go(i));
+    dotsBox.appendChild(d);
+  });
+  const dots = Array.from(dotsBox.children);
+  function go(i) {
+    idx = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, j) => s.classList.toggle('active', j === idx));
+    dots.forEach((d, j) => d.classList.toggle('on', j === idx));
+    curEl.textContent = idx + 1;
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === slides.length - 1;
+    slides[idx].scrollTop = 0;
+  }
+  prevBtn.addEventListener('click', () => go(idx - 1));
+  nextBtn.addEventListener('click', () => go(idx + 1));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') go(idx + 1);
+    if (e.key === 'ArrowLeft') go(idx - 1);
+  });
+  let touchX = null;
+  document.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) go(idx + (dx < 0 ? 1 : -1));
+    touchX = null;
+  }, { passive: true });
+  go(0);
+</script>
+</body>
+</html>
