@@ -64,6 +64,7 @@ class _AuthGate extends StatelessWidget {
       case AuthState.loggedOut:
         return const LoginScreen();
       case AuthState.loggedIn:
+      case AuthState.guest:
         return const HomeScreen();
     }
   }
