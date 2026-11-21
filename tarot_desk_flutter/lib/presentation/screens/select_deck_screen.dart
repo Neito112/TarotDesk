@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
-import '../../data/models/tarot_card.dart';
 import '../../data/datasources/database_helper.dart';
+import '../../data/datasources/github_service.dart';
+import '../../data/datasources/server_deck_service.dart';
+import '../../data/models/tarot_card.dart';
+import '../../data/models/tarot_deck.dart';
+import '../../logic/auth_provider.dart';
 import '../../logic/deck_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
@@ -20,6 +24,9 @@ import 'deck_detail_screen.dart';
 /// Bấm vào một bộ bài → mở chi tiết bộ ở CHẾ ĐỘ QUẢN LÝ (đổi tên,
 /// thêm/sửa lá) — khác với "Bộ bài hiện tại" ở Trang chủ (chỉ xem).
 /// Nút PC gọn: hàng thao tác cao 32, nút xóa cao 36.
+/// Phía dưới lưới bộ bài của mình là mục "Bộ bài chung" từ server
+/// GitHub (chỉ xem + sao chép về kho của mình); mỗi bộ bài của mình
+/// có thêm nút gửi lên server để chờ duyệt.
 class SelectDeckScreen extends StatelessWidget {
   const SelectDeckScreen({Key? key}) : super(key: key);
 
@@ -47,63 +54,79 @@ class SelectDeckScreen extends StatelessWidget {
         child: SafeArea(
           child: ResponsiveCenter(
             padding: EdgeInsets.all(isDesktop ? 12 : 16),
-            child: deckProvider.decks.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.auto_stories,
-                          color: theme.secondaryTextColor,
-                          size: isDesktop ? 44 : 56,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          settings.tr('selectDeck.emptyState'),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (deckProvider.decks.isEmpty)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.auto_stories,
                             color: theme.secondaryTextColor,
-                            fontSize: isDesktop ? 14 : 15,
+                            size: isDesktop ? 44 : 56,
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-                : GridView.builder(
-                    itemCount: deckProvider.decks.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: Responsive.gridColumns(context),
-                      crossAxisSpacing: isDesktop ? 10 : 12,
-                      mainAxisSpacing: isDesktop ? 10 : 12,
-                      childAspectRatio: isDesktop ? 0.47 : 0.44,
-                    ),
-                    itemBuilder: (context, index) {
-                      final deck = deckProvider.decks[index];
-                      final isSelected =
-                          deckProvider.selectedDeck?.id == deck.id;
-                      return _DeckCard(
-                        deck: deck,
-                        isSelected: isSelected,
-                        theme: theme,
-                        isDesktop: isDesktop,
-                        onSelect: () => deckProvider.selectDeck(deck),
-                        onDelete: () => _confirmDelete(
-                          context,
-                          deckProvider,
-                          deck.id!,
-                          deck.name,
-                        ),
-                        onOpen: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => DeckDetailScreen(deck: deck),
+                          const SizedBox(height: 16),
+                          Text(
+                            settings.tr('selectDeck.emptyState'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: theme.secondaryTextColor,
+                              fontSize: isDesktop ? 14 : 15,
                             ),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: deckProvider.decks.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: Responsive.gridColumns(context),
+                        crossAxisSpacing: isDesktop ? 10 : 12,
+                        mainAxisSpacing: isDesktop ? 10 : 12,
+                        childAspectRatio: isDesktop ? 0.47 : 0.44,
+                      ),
+                      itemBuilder: (context, index) {
+                        final deck = deckProvider.decks[index];
+                        final isSelected =
+                            deckProvider.selectedDeck?.id == deck.id;
+                        return _DeckCard(
+                          deck: deck,
+                          isSelected: isSelected,
+                          theme: theme,
+                          isDesktop: isDesktop,
+                          onSelect: () => deckProvider.selectDeck(deck),
+                          onDelete: () => _confirmDelete(
+                            context,
+                            deckProvider,
+                            deck.id!,
+                            deck.name,
+                          ),
+                          onOpen: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DeckDetailScreen(deck: deck),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  const _SharedDecksSection(),
+                  // Khoảng trống cuối để FAB không che mất mục cuối.
+                  const SizedBox(height: 80),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -302,6 +325,12 @@ class _DeckCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      _SubmitDeckButton(
+                        deck: deck,
+                        theme: theme,
+                        isDesktop: isDesktop,
+                      ),
+                      const SizedBox(width: 4),
                       SizedBox(
                         width: 56,
                         height: actionHeight,
@@ -382,6 +411,327 @@ class _DeckThumbnailState extends State<_DeckThumbnail> {
                   : Icon(Icons.auto_stories, color: widget.theme.primaryColor, size: 28),
         ),
       ),
+    );
+  }
+}
+
+/// Mục "Bộ bài chung" từ server GitHub, hiện dưới lưới bộ bài của mình.
+/// Chỉ xem + sao chép về kho của mình, không sửa được bộ bài chung.
+class _SharedDecksSection extends StatefulWidget {
+  const _SharedDecksSection();
+
+  @override
+  State<_SharedDecksSection> createState() => _SharedDecksSectionState();
+}
+
+class _SharedDecksSectionState extends State<_SharedDecksSection> {
+  List<SharedDeckInfo>? _decks;
+  String? _error;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final decks =
+          await ServerDeckService(context.read<AuthProvider>()).listSharedDecks();
+      if (!mounted) return;
+      setState(() {
+        _decks = decks;
+        _isLoading = false;
+      });
+    } on GithubException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _openSharedDeck(SharedDeckInfo info) async {
+    final settings = context.read<SettingsProvider>();
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final result = await ServerDeckService(context.read<AuthProvider>())
+          .fetchSharedDeck(info.path);
+      if (!mounted) return;
+      Navigator.pop(context);
+      await _showSharedDeckDialog(result.deck, result.cards);
+    } on GithubException catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${settings.tr('library.loadFailed')} ${e.message}'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showSharedDeckDialog(
+      TarotDeckModel deck, List<TarotCardModel> cards) async {
+    final settings = context.read<SettingsProvider>();
+    final theme = settings.currentThemeData;
+    final deckProvider = context.read<DeckProvider>();
+    final copy = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.backgroundColor,
+        title: Text(deck.name),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                settings
+                    .tr('library.cardCount')
+                    .replaceAll('{count}', '${cards.length}'),
+                style: TextStyle(color: theme.secondaryTextColor),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: cards.length,
+                  itemBuilder: (context, index) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Text(
+                      cards[index].name,
+                      style: TextStyle(color: theme.textColor),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(settings.tr('common.close')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primaryColor,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(settings.tr('library.copyDeck')),
+          ),
+        ],
+      ),
+    );
+    if (copy != true) return;
+    try {
+      // Bộ bài mới hoàn toàn: id mới, lá bài gán lại deck_id khi insert
+      // (insertFullDeckWithCards tự gán deck_id thật cho từng lá).
+      final newDeck =
+          TarotDeckModel(name: deck.name, createdDate: DateTime.now());
+      final newCards = cards
+          .map((c) => TarotCardModel(
+                deckId: 0,
+                name: c.name,
+                meaning: c.meaning,
+                imagePath: c.imagePath,
+              ))
+          .toList();
+      await DatabaseHelper.instance.insertFullDeckWithCards(newDeck, newCards);
+      await deckProvider.fetchDecks();
+      if (!mounted) return;
+      if (deckProvider.decks.isEmpty) return;
+      final created = deckProvider.decks.firstWhere(
+        (d) => d.name == deck.name,
+        orElse: () => deckProvider.decks.first,
+      );
+      deckProvider.selectDeck(created);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(settings.tr('library.copySuccess'))),
+      );
+    } on GithubException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${settings.tr('library.copyFailed')} ${e.message}'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final theme = settings.currentThemeData;
+    final isDesktop = Responsive.isDesktop(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          settings.tr('library.sharedTitle'),
+          style: TextStyle(
+            color: theme.textColor,
+            fontSize: isDesktop ? 16 : 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (_isLoading)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_error != null)
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _error!,
+                  style: TextStyle(
+                    color: theme.secondaryTextColor,
+                    fontSize: isDesktop ? 13 : 14,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: _load,
+                child: Text(settings.tr('library.retry')),
+              ),
+            ],
+          )
+        else if (_decks == null || _decks!.isEmpty)
+          Text(
+            settings.tr('library.sharedEmpty'),
+            style: TextStyle(
+              color: theme.secondaryTextColor,
+              fontSize: isDesktop ? 13 : 14,
+            ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _decks!.length,
+            itemBuilder: (context, index) {
+              final info = _decks![index];
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  info.name,
+                  style: TextStyle(color: theme.textColor),
+                ),
+                subtitle: info.cardCount != null
+                    ? Text(
+                        settings
+                            .tr('library.cardCount')
+                            .replaceAll('{count}', '${info.cardCount}'),
+                        style: TextStyle(color: theme.secondaryTextColor),
+                      )
+                    : null,
+                trailing: TextButton(
+                  onPressed: () => _openSharedDeck(info),
+                  child: Text(settings.tr('library.view')),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+/// Nút gửi một bộ bài của mình lên server GitHub (chờ admin duyệt).
+/// Trạng thái đang gửi: hiện spinner nhỏ, nút bị vô hiệu hoá.
+class _SubmitDeckButton extends StatefulWidget {
+  final dynamic deck;
+  final dynamic theme;
+  final bool isDesktop;
+
+  const _SubmitDeckButton({
+    required this.deck,
+    required this.theme,
+    required this.isDesktop,
+  });
+
+  @override
+  State<_SubmitDeckButton> createState() => _SubmitDeckButtonState();
+}
+
+class _SubmitDeckButtonState extends State<_SubmitDeckButton> {
+  bool _isSubmitting = false;
+
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      final auth = context.read<AuthProvider>();
+      final cards =
+          await DatabaseHelper.instance.getCardsByDeckId(widget.deck.id!);
+      final prUrl =
+          await ServerDeckService(auth).submitDeck(widget.deck, cards);
+      if (!mounted) return;
+      final settings = context.read<SettingsProvider>();
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: settings.currentThemeData.backgroundColor,
+          title: Text(settings.tr('library.submitSuccess')),
+          content: SelectableText(prUrl),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(settings.tr('common.close')),
+            ),
+          ],
+        ),
+      );
+    } on GithubException catch (e) {
+      if (!mounted) return;
+      final settings = context.read<SettingsProvider>();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('${settings.tr('library.submitFailed')} ${e.message}'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.read<SettingsProvider>();
+    return IconButton(
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 32),
+      iconSize: widget.isDesktop ? 20 : 22,
+      color: widget.theme.primaryColor,
+      tooltip: settings.tr('library.submitDeck'),
+      onPressed: _isSubmitting ? null : _submit,
+      icon: _isSubmitting
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.cloud_upload_outlined),
     );
   }
 }

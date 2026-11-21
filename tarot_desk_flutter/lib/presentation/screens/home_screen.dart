@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/tarot_symbols.dart';
 import '../../core/responsive.dart';
 import '../../data/models/tarot_card.dart';
+import '../../logic/auth_provider.dart';
 import '../../logic/deck_provider.dart';
 import '../../logic/reading_provider.dart';
 import '../../logic/settings_provider.dart';
@@ -18,6 +19,7 @@ import 'new_reading_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
+import 'admin_screen.dart';
 
 /// Màn hình chính TarotDesk (Giao diện Tiếng Việt Tinh gọn)
 ///
@@ -364,6 +366,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+            if (context.watch<AuthProvider>().isAdmin)
+              IconButton(
+                icon: Icon(Icons.admin_panel_settings,
+                    color: theme.primaryColor, size: 24),
+                tooltip: settings.tr('home.adminTooltip'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminScreen()),
+                  );
+                },
+              ),
             IconButton(
               icon: Icon(Icons.settings, color: theme.primaryColor, size: 24),
               tooltip: settings.tr('home.settingsTooltip'),
