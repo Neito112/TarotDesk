@@ -1675,13 +1675,6 @@ class AppStrings {
       AppLanguage.ko: "Google 계정 연결",
       AppLanguage.ja: "Google アカウントを連携",
     },
-    'settings.loginRequired': {
-      AppLanguage.vi: "Bạn cần đăng nhập để đồng bộ dữ liệu.",
-      AppLanguage.en: "Sign in to sync your data.",
-      AppLanguage.zh: "请先登录以同步数据。",
-      AppLanguage.ko: "데이터를 동기화하려면 로그인하세요.",
-      AppLanguage.ja: "データを同期するにはログインしてください。",
-    },
     'settings.logout': {
       AppLanguage.vi: "Đăng xuất",
       AppLanguage.en: "Log out",
@@ -1758,27 +1751,6 @@ class AppStrings {
       AppLanguage.zh: "烟雾缭绕效果",
       AppLanguage.ko: "안개 연기 효과",
       AppLanguage.ja: "煙霧効果",
-    },
-    'settings.syncFailed': {
-      AppLanguage.vi: "Đồng bộ thất bại",
-      AppLanguage.en: "Sync failed",
-      AppLanguage.zh: "同步失败",
-      AppLanguage.ko: "동기화 실패",
-      AppLanguage.ja: "同期に失敗しました",
-    },
-    'settings.syncNow': {
-      AppLanguage.vi: "Đồng bộ ngay",
-      AppLanguage.en: "Sync now",
-      AppLanguage.zh: "立即同步",
-      AppLanguage.ko: "지금 동기화",
-      AppLanguage.ja: "今すぐ同期",
-    },
-    'settings.syncSuccess': {
-      AppLanguage.vi: "Đã đồng bộ lên máy chủ",
-      AppLanguage.en: "Synced to the server",
-      AppLanguage.zh: "已同步到服务器",
-      AppLanguage.ko: "서버에 동기화됨",
-      AppLanguage.ja: "サーバーに同期しました",
     },
     'settings.tableHint': {
       AppLanguage.vi: "Chỉ Gỗ Sồi có tranh vẽ. Các chất liệu khác sẽ hiện khi có tranh vẽ cho chúng.",

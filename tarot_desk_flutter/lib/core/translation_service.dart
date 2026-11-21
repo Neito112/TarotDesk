@@ -27,11 +27,32 @@ import '../data/models/tarot_card.dart';
 ///    engine is available the original text is shown, marked with
 ///    its source language — the app never crashes and never shows
 ///    an empty card.
-/// 3. Two caches, so the same text is never translated twice:
-///    a shared D1 `translations` table on the Worker (one
-///    translation serves every user), and an in-memory cache here
-///    (one session). A local sqflite cache is a future step, not
-///    done here — see REPORT.md.
+/// 3. Two places hold translations, and they are NOT the same thing:
+///    (a) the shared D1 `translations` table on the Worker serves
+///    ONLY the ad-hoc `POST /translate` endpoint (one translation
+///    serves every user, keyed by content hash — a cache);
+///    (b) a deck's translations are PERMANENT per-deck / per-user
+///    data in the D1 `deck_translations` table, keyed by
+///    (deck_key, card_id, lang) with an owner — never evicted,
+///    never keyed by content hash (see [TranslationService.
+///    storeDeckTranslations]). Plus an in-memory cache here (one
+///    session). A local sqflite cache is a future step, not done
+///    here — see REPORT.md.
+/// 5. Translation is also STORED PERMANENTLY at write time (see
+///    [TranslationService.storeDeckTranslations]): when a deck is
+///    created, edited or imported, its texts are translated into
+///    ALL FOUR UI languages in the background and stored as
+///    permanent rows in the Worker's `deck_translations` table
+///    (owner: 'shared' for shared data, the author's email for
+///    personal data — decided server-side from the session).
+///    Switching language then reads the stored rows
+///    ([preloadDeckTranslations] + `GET /deck-translations`)
+///    instead of translating everything at switch time (which
+///    does not scale to hundreds of decks). The server does the
+///    same on submit; APPROVAL only moves the deck record and
+///    never re-translates. The PR #43 loading dialog stays as the
+///    fallback for anything not stored yet — nothing here removes
+///    it.
 /// 4. Translation is LAZY + WARMED, never blocking:
 ///    * display path — [localizeCard] translates only the card
 ///      being shown, and only when its source language differs
@@ -81,6 +102,64 @@ const List<String> kSupportedContentLanguages = <String>[
   'ja',
 ];
 
+/// Target languages for permanent deck translation (server-side):
+/// every UI language except the source. Vietnamese is the source
+/// language of the seeded base deck and of most user decks, so it
+/// is never a target; the Worker skips any target equal to the
+/// detected source anyway. (Kept here for documentation; the
+/// Worker owns the list.)
+const List<String> kDeckTranslationTargetLanguages = <String>[
+  'en',
+  'zh',
+  'ko',
+  'ja',
+];
+
+/// Fixed deck_key of the seeded base deck ('Bộ bài cơ bản'). Its
+/// translations are shared data (owner 'shared'), stored once by
+/// the seed script — never by a regular user (the Worker answers
+/// 403 for a non-admin storing under this key).
+const String kBaseDeckKey = 'base';
+
+/// card_id of the deck-NAME row in `deck_translations`: its `name`
+/// holds the translated deck name, `meaning` is always ''.
+const int kDeckNameCardId = -1;
+
+/// deck_key for one user's own deck: 'user-<google sub>-<local
+/// deck id>'. The google_sub makes the key globally unique (the
+/// table's primary key has no owner column, so a bare local id
+/// would collide across users); the local deck id keeps it stable
+/// on this device. Returns null when there is no signed-in user
+/// (guests have no server identity — see [TranslationService.
+/// storeDeckTranslations]) or no deck id.
+String? deckKeyForPersonalDeck({
+  required String? userSub,
+  required int? deckId,
+}) {
+  if (userSub == null || userSub.isEmpty || deckId == null) return null;
+  return 'user-$userSub-$deckId';
+}
+
+/// deck_key for a LOCAL deck, for the READ side (fetching /
+/// preloading its stored translations): the base deck uses its
+/// fixed key, every other deck uses its personal key. NOTE: this
+/// is NOT the store-side key — storing always uses the personal
+/// key (see [TranslationService.storeDeckTranslations]); only the
+/// seed script ever stores under 'base', as admin. A user deck
+/// that happens to be named exactly like the base deck reads the
+/// shared base rows — the display wiring therefore tries the
+/// personal key first and falls back to this key (see REPORT.md).
+/// (The durable fix is a persisted UUID deck_key on the local
+/// deck row; see REPORT.md.)
+String? deckKeyForLocalDeck({
+  required String? userSub,
+  required int? deckId,
+  required String deckName,
+}) {
+  if (deckName == kBaseDeckName) return kBaseDeckKey;
+  return deckKeyForPersonalDeck(userSub: userSub, deckId: deckId);
+}
+
 /// One translated string, as returned by the Worker.
 class TranslationResult {
   const TranslationResult({
@@ -103,7 +182,9 @@ class TranslationResult {
   final bool translated;
 
   /// Which engine produced it: `'workers-ai'`, `'google'`,
-  /// `'cache'`, or `'none'` (original shown).
+  /// `'cache'`, `'stored'` (a permanent `deck_translations` row
+  /// preloaded by [TranslationService.preloadDeckTranslations]),
+  /// or `'none'` (original shown).
   final String engine;
 
   /// True when the Worker served this from the D1 cache
@@ -308,12 +389,21 @@ class TranslationService {
     this._api, {
     String? Function()? sessionToken,
     required String Function() targetLanguageCode,
+    String? Function()? userSub,
   })  : _sessionToken = sessionToken,
-        _targetLanguageCode = targetLanguageCode;
+        _targetLanguageCode = targetLanguageCode,
+        _userSub = userSub;
 
   final TarotdeskApiService _api;
   final String? Function()? _sessionToken;
   final String Function() _targetLanguageCode;
+
+  /// The signed-in user's Google `sub` (stable per account), or
+  /// null for guests. Used only to derive the personal deck_key
+  /// ([deckKeyForPersonalDeck]) — the OWNER of the stored rows is
+  /// still decided server-side from the session, never from this
+  /// value. Null when the caller did not provide one.
+  final String? Function()? _userSub;
 
   /// In-memory cache: "$sourceLang|$targetLang|$text" -> result.
   /// Bounded: oldest entries are dropped past 500, so a long
@@ -519,17 +609,29 @@ class TranslationService {
         i,
         i + batchSize > texts.length ? texts.length : i + batchSize,
       );
+      // WIRING (display path): skip strings already in the in-memory
+      // cache — they were seeded by [preloadDeckTranslations] from
+      // the permanent `deck_translations` table. Without this, the
+      // bulk pass would re-translate them via POST /translate and
+      // OVERWRITE the stored rows with the ad-hoc MT result.
+      // Cached strings still count toward progress (they are done).
+      final uncached = batch
+          .where((text) =>
+              _memoryCache[_cacheKey(text, source ?? 'auto', target)] ==
+              null)
+          .toList(growable: false);
       try {
+        if (uncached.isEmpty) continue;
         final results = await _api.translateTexts(
           sessionToken: _sessionToken?.call(),
-          texts: batch,
+          texts: uncached,
           targetLang: target,
           sourceLang: source,
         );
         for (var j = 0; j < results.length; j++) {
           if (results[j].translated) translated++;
           _cachePut(
-            _cacheKey(batch[j], source ?? 'auto', target),
+            _cacheKey(uncached[j], source ?? 'auto', target),
             TranslationResult(
               text: results[j].text,
               sourceLang: results[j].sourceLang,
@@ -544,12 +646,339 @@ class TranslationService {
         // skips that batch — the remaining batches still run,
         // and the skipped cards translate on demand later.
       } finally {
-        // Progress always advances past this batch (translated
-        // or skipped) so a loading dialog reaches 100%.
+        // Progress always advances past this batch (translated,
+        // cached, or skipped) so a loading dialog reaches 100%.
         doneStrings += batch.length;
         onProgress?.call(doneStrings, texts.length);
       }
     }
     return translated;
+  }
+
+  /// Store a deck's translations PERMANENTLY at write time
+  /// ([kDeckTranslationTargetLanguages]), in the background.
+  ///
+  /// This is the write-time half of the V2 design: instead of
+  /// translating everything when the user switches language
+  /// (which does not scale to hundreds of decks), the deck's texts
+  /// are translated the moment the deck is created, edited or
+  /// imported, and stored as permanent rows in the Worker's
+  /// `deck_translations` table — keyed by (deck_key, card_id,
+  /// lang), owned by 'shared' for shared data or by the author's
+  /// email for personal data (decided server-side from the
+  /// session). The language switch later reads those stored rows
+  /// ([preloadDeckTranslations]); the PR #43 loading dialog stays
+  /// as the fallback for anything not stored yet.
+  ///
+  /// Fire-and-forget: callers wrap this in `unawaited` (it never
+  /// blocks the user) and every failure is swallowed here — a
+  /// failed store only means the deck translates on demand later.
+  /// Returns the number of cards accepted for storing (0 when
+  /// nothing was stored). Each call sends at most 100 texts /
+  /// 40,000 chars, mirroring the Worker's authed caps.
+  ///
+  /// [deckKey] overrides the derived key (used by the seed flow
+  /// for the base deck); otherwise the key is the PERSONAL key
+  /// derived from [deckId] + the signed-in user's sub
+  /// ([deckKeyForPersonalDeck]) — the app never stores under
+  /// 'base'. [deckName] is sent as the deck-name row on a
+  /// whole-deck store and feeds source-language detection.
+  /// stores ONE card only, at that 0-based position in [cards]
+  /// (a single-card edit — only the changed card is re-translated,
+  /// the rest of the deck is untouched); null stores the whole
+  /// deck, positions being the list order, plus the deck-name row.
+  ///
+  /// Guests (no session token, no google_sub) have no server
+  /// identity, so their decks cannot have server-side personal
+  /// data: this returns 0 without a network call and their decks
+  /// translate on demand, exactly as before. Any signed-in user
+  /// — admin or not — can store their own decks; the old V1
+  /// admin-only gate is gone.
+  Future<int> storeDeckTranslations(
+    List<TarotCardModel> cards, {
+    String? deckKey,
+    int? deckId,
+    String? deckName,
+    int? cardIndex,
+    String? sourceLang,
+  }) async {
+    final token = _sessionToken?.call();
+    if (token == null || token.isEmpty) return 0;
+    // STORE-side key: the explicit [deckKey], else the PERSONAL
+    // key for this local deck. The app never stores under 'base':
+    // only the seed script does (as admin). A local edit of the
+    // base deck is personal data, stored under the personal key;
+    // the read side tries the personal key first, then 'base'.
+    final key = deckKey ??
+        deckKeyForPersonalDeck(
+          userSub: _userSub?.call(),
+          deckId: deckId,
+        );
+    if (key == null || key.isEmpty) return 0;
+    final source = sourceLang ??
+        (deckName != null ? detectDeckLanguage(deckName, cards) : null);
+    // Items to store: one card (single-card edit) or the whole deck
+    // in list order. card_id is the 0-based position in the deck's
+    // card list — the same order the app stores/reads them in, so
+    // the rows line up with the cards on every device. For a
+    // single-card store the list holds just that card and
+    // [cardIndex] is its position in the full deck.
+    final items = <DeckTranslationItem>[];
+    if (cardIndex != null) {
+      if (cards.isEmpty || cardIndex < 0) return 0;
+      final card = cards.first;
+      items.add(DeckTranslationItem(
+        cardId: cardIndex,
+        name: card.name,
+        meaning: card.meaning,
+      ));
+    } else {
+      for (var i = 0; i < cards.length; i++) {
+        items.add(DeckTranslationItem(
+          cardId: i,
+          name: cards[i].name,
+          meaning: cards[i].meaning,
+        ));
+      }
+    }
+    if (items.isEmpty && (deckName == null || deckName.trim().isEmpty)) {
+      return 0;
+    }
+    // Chunk to the Worker's caps (100 texts / 40,000 chars per
+    // call; the deck name + each card's name + meaning count as
+    // one text each). A 78-card deck is 157 texts / ~74k chars,
+    // so it takes 2 calls; each call returns immediately (the
+    // translation itself runs in the Worker's waitUntil).
+    var stored = 0;
+    var i = 0;
+    var firstChunk = true;
+    // The deck-name row is sent only with a whole-deck store; a
+    // single-card edit never re-sends it (the name did not change).
+    final sendDeckName = cardIndex == null &&
+        deckName != null &&
+        deckName.trim().isNotEmpty;
+    while (i < items.length || (firstChunk && items.isEmpty)) {
+      var texts = firstChunk && sendDeckName ? 1 : 0;
+      var chars = firstChunk && sendDeckName ? deckName!.length : 0;
+      var j = i;
+      while (j < items.length &&
+          texts + 2 <= 100 &&
+          chars + items[j].name.length + items[j].meaning.length <= 40000) {
+        texts += 2;
+        chars += items[j].name.length + items[j].meaning.length;
+        j++;
+      }
+      // A single card longer than the char cap still goes out
+      // alone — the Worker answers 413 for it and the rest of
+      // the deck is unaffected.
+      if (j == i && i < items.length) j = i + 1;
+      try {
+        final result = await _api.storeDeckTranslations(
+          sessionToken: token,
+          deckKey: key,
+          deckName: firstChunk && sendDeckName ? deckName : null,
+          items: items.sublist(i, j),
+          sourceLang: source,
+        );
+        stored += result.queuedCards;
+      } catch (_) {
+        // One failed chunk only skips that chunk — the rest
+        // still store, and the skipped cards translate on
+        // demand later.
+      }
+      firstChunk = false;
+      i = j;
+      if (items.isEmpty) break;
+    }
+    return stored;
+  }
+
+  /// Fetch one deck's PERMANENT stored translations for [lang]
+  /// (defaults to the active system language) from the Worker's
+  /// `deck_translations` table — a fast D1 lookup by deck_key +
+  /// lang, no MT call, no cache involved. Exactly one of [deckKey]
+  /// (a personal/local deck, or 'base') or [sharedId] (a shared
+  /// deck's server id) must be given. Returns null on any failure
+  /// (including "not stored yet" — the caller falls back to the
+  /// PR #43 on-demand path).
+  Future<StoredDeckTranslations?> fetchDeckTranslations({
+    String? deckKey,
+    String? sharedId,
+    String? lang,
+  }) async {
+    final target = (lang ?? targetLanguageCode).toLowerCase();
+    try {
+      return await _api.fetchDeckTranslations(
+        sessionToken: _sessionToken?.call(),
+        deckKey: deckKey,
+        sharedId: sharedId,
+        lang: target,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Preload a deck's stored translations into the in-memory cache
+  /// so [localizeCard] serves them with no `POST /translate` call
+  /// at all. Call this when a deck is opened or when the language
+  /// switches, before the cards are displayed. [cards] must be the
+  /// deck's cards in stored order (positions are how rows map back
+  /// to cards). Returns the number of in-memory cache entries
+  /// seeded (0 when nothing is stored yet — the PR #43 dialog
+  /// then covers it).
+  ///
+  /// The rows are seeded under the same in-memory keys
+  /// [localizeCard] looks up: the per-card detected source (what
+  /// it uses when no [sourceLang] is passed) plus [sourceLang]
+  /// itself when given, so the preload hits whichever path the
+  /// display code takes.
+  Future<int> preloadDeckTranslations({
+    String? deckKey,
+    String? sharedId,
+    required List<TarotCardModel> cards,
+    String? deckName,
+    String? sourceLang,
+    String? lang,
+  }) async {
+    final target = (lang ?? targetLanguageCode).toLowerCase();
+    final deckSource = sourceLang ??
+        (deckName != null ? detectDeckLanguage(deckName, cards) : null);
+    if (deckSource != null && deckSource.toLowerCase() == target) {
+      return 0;
+    }
+    final stored = await fetchDeckTranslations(
+      deckKey: deckKey,
+      sharedId: sharedId,
+      lang: target,
+    );
+    if (stored == null) return 0;
+    var loaded = 0;
+    void seed(String text, String translated, String source) {
+      if (text.trim().isEmpty || translated.isEmpty) return;
+      _cachePut(
+        _cacheKey(text, source, target),
+        TranslationResult(
+          text: translated,
+          sourceLang: source,
+          translated: true,
+          engine: 'stored',
+          fromCache: true,
+        ),
+      );
+      loaded++;
+    }
+
+    void seedText(String text, String translated, String cardSource) {
+      // The key localizeCard looks up (per-card detected source),
+      // plus the explicit source when it differs.
+      seed(text, translated, cardSource);
+      if (sourceLang != null && sourceLang!.toLowerCase() != cardSource) {
+        seed(text, translated, sourceLang!.toLowerCase());
+      }
+      if (deckSource != null && deckSource.toLowerCase() != cardSource) {
+        seed(text, translated, deckSource.toLowerCase());
+      }
+    }
+
+    if (deckName != null && stored.deckName.isNotEmpty) {
+      seedText(
+        deckName,
+        stored.deckName,
+        deckSource ?? detectLanguage(deckName) ?? 'auto',
+      );
+    }
+    for (final row in stored.cards) {
+      if (row.cardId < 0 || row.cardId >= cards.length) continue;
+      final card = cards[row.cardId];
+      final cardSource =
+          deckSource ?? detectLanguage('${card.name} ${card.meaning}') ?? 'auto';
+      seedText(card.name, row.name, cardSource);
+      seedText(card.meaning, row.meaning, cardSource);
+    }
+    return loaded;
+  }
+
+  /// Preload ONE local deck's stored translations into the in-memory
+  /// cache (read side) — the display-wiring entry point. Call this
+  /// when a deck is opened or when the language switches, BEFORE
+  /// its cards are displayed, so [localizeCard] serves the stored
+  /// rows with no `/translate` call. Returns the number of entries
+  /// seeded (0 when nothing is stored yet — the PR #43 dialog then
+  /// covers it). Never throws. Bounded by a short timeout so a slow
+  /// or unreachable Worker never blocks the screen; on timeout the
+  /// caller falls back to the on-demand path.
+  ///
+  /// Key order (REPORT.md §6): the BASE deck reads its fixed key
+  /// ([kBaseDeckKey]) only — never a personal key. Any other deck
+  /// tries the PERSONAL key first (the signed-in user's own rows),
+  /// then the read-side key ([deckKeyForLocalDeck]). A guest (no
+  /// signed-in user, [_userSub] null) has no personal key: a
+  /// personal deck preloads nothing (its translations live only in
+  /// the local cache / on demand), while the base deck still loads
+  /// — its rows are public shared data, readable without a session.
+  /// [cards] must be the deck's cards in stored order.
+  Future<int> preloadLocalDeck({
+    required int? deckId,
+    required String deckName,
+    required List<TarotCardModel> cards,
+    String? lang,
+  }) async {
+    try {
+      return await _preloadLocalDeckInner(
+        deckId: deckId,
+        deckName: deckName,
+        cards: cards,
+        lang: lang,
+      ).timeout(
+        const Duration(seconds: 8),
+        onTimeout: () => 0,
+      );
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<int> _preloadLocalDeckInner({
+    required int? deckId,
+    required String deckName,
+    required List<TarotCardModel> cards,
+    String? lang,
+  }) async {
+    // Base deck: rows live under the fixed 'base' key (shared).
+    if (deckName == kBaseDeckName) {
+      return preloadDeckTranslations(
+        deckKey: kBaseDeckKey,
+        cards: cards,
+        deckName: deckName,
+        lang: lang,
+      );
+    }
+    final userSub = _userSub?.call();
+    final personalKey =
+        deckKeyForPersonalDeck(userSub: userSub, deckId: deckId);
+    if (personalKey != null) {
+      final loaded = await preloadDeckTranslations(
+        deckKey: personalKey,
+        cards: cards,
+        deckName: deckName,
+        lang: lang,
+      );
+      if (loaded > 0) return loaded;
+    }
+    final readKey = deckKeyForLocalDeck(
+      userSub: userSub,
+      deckId: deckId,
+      deckName: deckName,
+    );
+    if (readKey != null && readKey != personalKey) {
+      return preloadDeckTranslations(
+        deckKey: readKey,
+        cards: cards,
+        deckName: deckName,
+        lang: lang,
+      );
+    }
+    return 0;
   }
 }
