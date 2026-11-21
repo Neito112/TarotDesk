@@ -26,7 +26,7 @@ class UserPreferencesModel {
     'Nến Đen',
     'Lá Khô'
   ];
-  static const int maxDecorItems = 3;
+  static const int maxDecorItems = 4;
 
   /// Phải khớp AppThemeData.availableThemes. Không import theme vào
   /// model để tầng data không phụ thuộc tầng UI.
@@ -122,7 +122,7 @@ class UserPreferencesModel {
 
   /// Đọc danh sách decor: key thiếu/null -> mặc định 3 món;
   /// chuỗi rỗng -> người dùng đã bỏ chọn hết, giữ rỗng;
-  /// chỉ giữ món trong [decorOptions], bỏ trùng, tối đa 3 món.
+  /// chỉ giữ món trong [decorOptions], bỏ trùng, tối đa 4 món.
   static List<String> _decorFrom(dynamic value) {
     if (value == null) return List<String>.from(defaultDecorItems);
     final raw = value as String?;
