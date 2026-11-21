@@ -397,7 +397,10 @@ class _HomeScreenState extends State<HomeScreen> {
             fontSize: nameFontSize,
             fontWeight: FontWeight.bold,
           ),
-          maxLines: 1,
+          // Tên lá dài (VD "XII. Người Treo Ngược (The Hanged Man)")
+          // cho xuống 2 dòng thay vì cắt "..." — trước đây maxLines 1
+          // nên tên bị cắt ngay cả ở màn hình rộng, càng tệ trên điện thoại.
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
         if (dailyCard != null && dailyCard.keywordsUp.isNotEmpty) ...[
