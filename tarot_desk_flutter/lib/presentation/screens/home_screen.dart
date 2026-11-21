@@ -17,6 +17,7 @@ import 'deck_detail_screen.dart';
 import 'new_reading_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
+import 'about_screen.dart';
 
 /// Màn hình chính TarotDesk (Giao diện Tiếng Việt Tinh gọn)
 ///
@@ -345,15 +346,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
           ],
         ),
-        IconButton(
-          icon: Icon(Icons.settings, color: theme.primaryColor, size: 24),
-          tooltip: 'Cài đặt giao diện',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            );
-          },
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(Icons.info_outline,
+                  color: theme.primaryColor, size: 24),
+              tooltip: 'Giới thiệu & Hướng dẫn sử dụng',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AboutScreen()),
+                );
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.settings, color: theme.primaryColor, size: 24),
+              tooltip: 'Cài đặt giao diện',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            ),
+          ],
         ),
       ],
     );
