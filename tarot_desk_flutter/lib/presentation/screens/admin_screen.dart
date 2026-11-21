@@ -5,6 +5,7 @@ import '../../data/datasources/tarotdesk_api_service.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
+import '../widgets/localized_content_text.dart';
 
 /// Admin / server management screen.
 ///
@@ -146,11 +147,18 @@ class _AdminScreenState extends State<AdminScreen> {
           settings.tr('admin.rejectTitle'),
           style: TextStyle(color: theme.primaryColor),
         ),
-        content: Text(
-          settings
-              .tr('admin.rejectConfirm')
-              .replaceAll('{title}', _entryTitle(item)),
-          style: const TextStyle(color: Colors.white, height: 1.6),
+        content: Text.rich(
+          TextSpan(
+            children: templateWithLocalizedName(
+              template: settings.tr('admin.rejectConfirm'),
+              placeholder: '{title}',
+              nameWidget: LocalizedDeckName.fromName(
+                name: _entryTitle(item),
+                style: const TextStyle(color: Colors.white, height: 1.6),
+              ),
+              style: const TextStyle(color: Colors.white, height: 1.6),
+            ),
+          ),
         ),
         actions: [
           TextButton(
@@ -205,11 +213,18 @@ class _AdminScreenState extends State<AdminScreen> {
           settings.tr('admin.deleteTitle'),
           style: TextStyle(color: theme.primaryColor),
         ),
-        content: Text(
-          settings
-              .tr('admin.deleteConfirm')
-              .replaceAll('{name}', _entryTitle(info)),
-          style: const TextStyle(color: Colors.white, height: 1.6),
+        content: Text.rich(
+          TextSpan(
+            children: templateWithLocalizedName(
+              template: settings.tr('admin.deleteConfirm'),
+              placeholder: '{name}',
+              nameWidget: LocalizedDeckName.fromName(
+                name: _entryTitle(info),
+                style: const TextStyle(color: Colors.white, height: 1.6),
+              ),
+              style: const TextStyle(color: Colors.white, height: 1.6),
+            ),
+          ),
         ),
         actions: [
           TextButton(
@@ -465,8 +480,8 @@ class _AdminScreenState extends State<AdminScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _entryTitle(item),
+          LocalizedDeckName.fromName(
+            name: _entryTitle(item),
             style: TextStyle(
               color: theme.textColor,
               fontSize: 15,
@@ -561,8 +576,8 @@ class _AdminScreenState extends State<AdminScreen> {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              _entryTitle(info),
+            child: LocalizedDeckName.fromName(
+              name: _entryTitle(info),
               style: TextStyle(
                 color: theme.textColor,
                 fontSize: 15,

@@ -8,6 +8,7 @@ import '../../logic/reading_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/smoke_particle_effect.dart';
+import '../widgets/localized_content_text.dart';
 import '../widgets/tarot_card_image.dart';
 import 'reading_detail_screen.dart';
 
@@ -112,8 +113,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      reading.name,
+                    LocalizedReadingName(
+                      name: reading.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

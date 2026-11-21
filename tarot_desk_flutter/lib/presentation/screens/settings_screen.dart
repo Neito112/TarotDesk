@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/display_labels.dart';
 import '../../core/localization.dart';
 import '../../core/responsive.dart';
 import '../../core/theme/app_theme.dart';
@@ -77,11 +78,15 @@ class SettingsScreen extends StatelessWidget {
 
   /// Chip chọn một giá trị (bàn / khăn): gọn, quét nhanh, cùng
   /// ngôn ngữ với chip decor và chip theme.
+  /// [labelFor] maps the stored option id to its DISPLAY label
+  /// (already translated) — selection and callbacks still use the
+  /// raw stored id, which never changes.
   Widget _optionChips({
     required AppThemeData theme,
     required List<String> options,
     required String selected,
     required ValueChanged<String> onSelected,
+    required String Function(String) labelFor,
   }) {
     return Wrap(
       spacing: 6,
@@ -89,7 +94,7 @@ class SettingsScreen extends StatelessWidget {
       children: options.map((opt) {
         final isSelected = opt == selected;
         return ChoiceChip(
-          label: Text(opt,
+          label: Text(labelFor(opt),
               style: TextStyle(
                   color: isSelected ? Colors.black : theme.textColor,
                   fontSize: 12,
@@ -236,7 +241,7 @@ class SettingsScreen extends StatelessWidget {
             children: AppThemeData.availableThemes.values.map((t) {
               final isSelected = settings.userPrefs.themeId == t.id;
               return ChoiceChip(
-                label: Text(t.nameVi,
+                label: Text(settings.tr(themeDisplayKey(t.id)),
                     style: TextStyle(
                         color: isSelected
                             ? Colors.black
@@ -333,6 +338,7 @@ class SettingsScreen extends StatelessWidget {
               .toList(),
           selected: effectiveTableStyle,
           onSelected: (val) => settings.setTableStyle(val),
+          labelFor: (opt) => settings.tr(tableStyleDisplayKey(opt)),
         ),
         const SizedBox(height: 4),
         _hintText(theme, settings.tr('settings.tableHint')),
@@ -344,6 +350,7 @@ class SettingsScreen extends StatelessWidget {
           options: UserPreferencesModel.clothStyles,
           selected: settings.userPrefs.clothStyle,
           onSelected: (val) => settings.setClothStyle(val),
+          labelFor: (opt) => settings.tr(clothDisplayKey(opt)),
         ),
         const SizedBox(height: 4),
         _hintText(theme, settings.tr('settings.clothHint')),
@@ -373,7 +380,7 @@ class SettingsScreen extends StatelessWidget {
             return FilterChip(
               selectedColor: theme.primaryColor.withOpacity(0.3),
               checkmarkColor: theme.primaryColor,
-              label: Text(item,
+              label: Text(settings.tr(decorDisplayKey(item)),
                   style: TextStyle(
                       color: isSelected
                           ? theme.primaryColor

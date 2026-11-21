@@ -8,6 +8,7 @@ import '../../core/translation_service.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/localized_card_text.dart';
+import '../widgets/localized_content_text.dart';
 import '../widgets/tarot_card_image.dart';
 
 /// Màn hình xem chi tiết lịch sử bốc bài cũ.
@@ -72,8 +73,8 @@ class _ReadingDetailScreenState extends State<ReadingDetailScreen> {
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         toolbarHeight: isDesktop ? 44 : null,
-        title: Text(
-          widget.reading.name,
+        title: LocalizedReadingName(
+          name: widget.reading.name,
           style: TextStyle(fontSize: isDesktop ? 15 : 18),
         ),
         backgroundColor: Colors.transparent,

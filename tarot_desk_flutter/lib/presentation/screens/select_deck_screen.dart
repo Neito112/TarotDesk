@@ -12,6 +12,7 @@ import '../widgets/glass_panel.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
 import '../widgets/localized_card_text.dart';
+import '../widgets/localized_content_text.dart';
 import 'add_deck_screen.dart';
 import 'deck_detail_screen.dart';
 
@@ -183,7 +184,15 @@ class SelectDeckScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: theme.backgroundColor,
         title: Text(settings.tr('selectDeck.deleteTitle')),
-        content: Text(settings.tr('selectDeck.deleteConfirm').replaceAll('{name}', deckName)),
+        content: Text.rich(
+          TextSpan(
+            children: templateWithLocalizedName(
+              template: settings.tr('selectDeck.deleteConfirm'),
+              placeholder: '{name}',
+              nameWidget: LocalizedDeckName.fromName(name: deckName),
+            ),
+          ),
+        ),
         actions: [
           TextButton(
             style: TextButton.styleFrom(minimumSize: Size(88, buttonHeight)),
@@ -309,8 +318,8 @@ class _DeckCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  deck.name,
+                LocalizedDeckName(
+                  deck: deck,
                   style: TextStyle(
                     color: theme.textColor,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
@@ -587,7 +596,7 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: theme.backgroundColor,
-        title: Text(deck.name),
+        title: LocalizedDeckName(deck: deck),
         content: SizedBox(
           width: double.maxFinite,
           child: Column(
@@ -730,8 +739,8 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
               final cardCount = _sharedCardCount(info);
               return ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(
-                  _sharedDeckName(info),
+                title: LocalizedDeckName.fromName(
+                  name: _sharedDeckName(info),
                   style: TextStyle(color: theme.textColor),
                 ),
                 subtitle: Text(
