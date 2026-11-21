@@ -106,9 +106,25 @@ class GithubService {
   static const String _apiHost = 'api.github.com';
   static const String _owner = 'Neito112';
   static const String _repo = 'TarotDesk';
-  static const String _deviceCodeUrl = 'https://github.com/login/device/code';
-  static const String _accessTokenUrl =
-      'https://github.com/login/oauth/access_token';
+
+  /// Base URL of the TarotDesk OAuth proxy (Cloudflare Worker).
+  ///
+  /// GitHub's OAuth endpoints (login/device/code and
+  /// login/oauth/access_token) return NO CORS headers, so a browser
+  /// app cannot call them directly — the browser blocks the response
+  /// and the app reports a "network" error. The Worker relays those
+  /// two calls server-to-server and answers with CORS headers for
+  /// neito112.github.io. All api.github.com calls stay direct (that
+  /// host DOES support CORS). Worker: tarotdesk-oauth, deployed
+  /// 2026-11-21, version b5ab38fd.
+  static const String _oauthProxyBaseUrl =
+      'https://tarotdesk-oauth.thewolverineking.workers.dev';
+
+  /// Device Flow: ask GitHub for a user code (via the OAuth proxy).
+  static const String _deviceCodeUrl = '$_oauthProxyBaseUrl/device-code';
+
+  /// Device Flow: exchange a device code for a token (via the proxy).
+  static const String _accessTokenUrl = '$_oauthProxyBaseUrl/access-token';
   static const Duration _requestTimeout = Duration(seconds: 30);
 
   /// Release the underlying HTTP client. Only call this when the
