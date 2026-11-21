@@ -570,25 +570,41 @@ class _AccountActionsState extends State<_AccountActions> {
     );
     if (confirmed == true && mounted) {
       await context.read<AuthProvider>().logout();
+      if (!mounted) return;
+      // Settings was pushed on top of Home; after logout the gate
+      // rebuilds to the login screen, but this pushed route would
+      // still cover it. Pop back to the first route so the login
+      // screen is actually visible.
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isGuest = context.watch<AuthProvider>().isGuest;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ElevatedButton.icon(
-          icon: _isSyncing
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.cloud_upload, size: 18),
-          label: Text(widget.settings.tr('settings.syncNow')),
-          onPressed: _isSyncing ? null : _syncNow,
-        ),
+        if (isGuest)
+          ElevatedButton.icon(
+            icon: const Icon(Icons.link, size: 18),
+            label:
+                Text(widget.settings.tr('settings.linkGoogleAccount')),
+            onPressed: () =>
+                context.read<AuthProvider>().startGoogleLogin(),
+          ),
+        if (!isGuest)
+          ElevatedButton.icon(
+            icon: _isSyncing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.cloud_upload, size: 18),
+            label: Text(widget.settings.tr('settings.syncNow')),
+            onPressed: _isSyncing ? null : _syncNow,
+          ),
         const SizedBox(height: 8),
         TextButton(
           onPressed: _confirmLogout,
