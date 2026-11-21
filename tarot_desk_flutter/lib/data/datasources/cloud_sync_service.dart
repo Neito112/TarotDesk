@@ -1,4 +1,5 @@
 import 'tarotdesk_api_service.dart';
+import '../../core/translation_service.dart';
 import '../../logic/auth_provider.dart';
 import 'database_helper.dart';
 import '../models/tarot_card.dart';
@@ -30,7 +31,25 @@ class CloudSyncService {
   /// Instance of the Worker API client (zero-arg constructor per contract).
   final TarotdeskApiService _api = TarotdeskApiService();
 
-  CloudSyncService(this.auth);
+  /// Resolves the active system language code ('vi' / 'en' / 'zh' /
+  /// 'ko' / 'ja') — normally `() => settings.language.code`,
+  /// wired by the caller (see `main.dart` providers). When unset
+  /// the normaliser assumes Vietnamese, which makes warming a
+  /// no-op for the seeded base deck and harmless otherwise.
+  final String Function()? targetLanguageCode;
+
+  /// Lazily built normaliser: shares this service's API client
+  /// and reads the session token fresh from [auth] on every
+  /// call, so it never stores a token.
+  TranslationService? _translator;
+  TranslationService get _translationService => _translator ??=
+      TranslationService(
+        _api,
+        sessionToken: () => auth.sessionToken,
+        targetLanguageCode: () => targetLanguageCode?.call() ?? 'vi',
+      );
+
+  CloudSyncService(this.auth, {this.targetLanguageCode});
 
   /// Name of the seeded deck that ships with a fresh install. It is a data
   /// identifier, not UI text.
@@ -190,6 +209,36 @@ class CloudSyncService {
           TarotDeckModel(id: newId, name: deck.name, createdDate: deck.createdDate),
         );
       }
+    }
+
+    // NORMALISATION (i18n): warm the translation cache for
+    // every deck just downloaded, so it displays in the active
+    // system language when the user opens it. Best-effort: any
+    // failure is swallowed and the deck stays usable in its
+    // original language. The stored source text is NEVER
+    // rewritten — translations live only in the Worker's D1
+    // cache + the in-memory cache (see TranslationService).
+    try {
+      final target = targetLanguageCode?.call() ?? 'vi';
+      for (final newDeckId in deckIdMap.values.toSet()) {
+        final deck = localDecks.firstWhere(
+          (d) => d.id == newDeckId,
+          orElse: () => TarotDeckModel(
+            name: '',
+            createdDate: DateTime.now(),
+          ),
+        );
+        final cards = await db.getCardsByDeckId(newDeckId);
+        if (cards.isEmpty) continue;
+        await _translationService.warmCache(
+          cards,
+          deckName: deck.name,
+          sourceLang: detectDeckLanguage(deck.name, cards),
+          targetLang: target,
+        );
+      }
+    } catch (_) {
+      // Warm-up must never fail a sync.
     }
 
     // Re-read local cards per deck (now including everything just

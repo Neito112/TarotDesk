@@ -310,6 +310,16 @@ class SettingsScreen extends StatelessWidget {
     final isWide = Responsive.isTablet(context) ||
         Responsive.isDesktop(context);
 
+    // Chỉ kiểu bàn có tranh vẽ mới là lựa chọn thật (hiện chỉ 'Gỗ Sồi';
+    // 'Đá Cổ' / 'Vũ Trụ' chưa có tranh bàn vẽ nên không hiện — cùng
+    // cách lọc như dialog đổi bàn trong new_reading_screen.dart).
+    // Nếu kiểu đã lưu không có tranh vẽ, hiển thị 'Gỗ Sồi' là đã chọn
+    // (đó mới là mặt bàn thật đang vẽ).
+    final effectiveTableStyle =
+        settings.userPrefs.tableStyle == 'Gỗ Sồi'
+            ? settings.userPrefs.tableStyle
+            : 'Gỗ Sồi';
+
     final tableAndCloth = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -318,8 +328,10 @@ class SettingsScreen extends StatelessWidget {
         const SizedBox(height: 6),
         _optionChips(
           theme: theme,
-          options: UserPreferencesModel.tableStyles,
-          selected: settings.userPrefs.tableStyle,
+          options: UserPreferencesModel.tableStyles
+              .where((s) => s == 'Gỗ Sồi')
+              .toList(),
+          selected: effectiveTableStyle,
           onSelected: (val) => settings.setTableStyle(val),
         ),
         const SizedBox(height: 4),
@@ -350,7 +362,12 @@ class SettingsScreen extends StatelessWidget {
         Wrap(
           spacing: 6,
           runSpacing: 6,
-          children: UserPreferencesModel.decorOptions.map((item) {
+          // Chỉ món có ảnh cắt vẽ thật mới hiện làm lựa chọn
+          // ('Lá Khô' chưa có ảnh cắt nên không có ở đây — cùng
+          // cách lọc như dialog đổi bàn trong new_reading_screen.dart).
+          children: UserPreferencesModel.decorOptions
+              .where((item) => item != 'Lá Khô')
+              .map((item) {
             final isSelected =
                 settings.userPrefs.decorItems.contains(item);
             return FilterChip(
@@ -365,8 +382,13 @@ class SettingsScreen extends StatelessWidget {
               selected: isSelected,
               visualDensity: VisualDensity.compact,
               onSelected: (selected) {
-                final current =
-                    List<String>.from(settings.userPrefs.decorItems);
+                // Bỏ món không có ảnh vẽ ra khỏi danh sách đã lưu
+                // TRƯỚC khi đếm: 'Lá Khô' đã chọn từ bản cũ không
+                // hiện trong Cài đặt và không vẽ trên bàn, nhưng vẫn
+                // chiếm 1 trong 3 suất nếu còn sót trong decorItems.
+                final current = settings.userPrefs.decorItems
+                    .where((i) => i != 'Lá Khô')
+                    .toList();
                 if (selected) {
                   if (current.length <
                       UserPreferencesModel.maxDecorItems) {
