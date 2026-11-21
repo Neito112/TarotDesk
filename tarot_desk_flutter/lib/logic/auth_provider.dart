@@ -13,6 +13,16 @@ enum AuthState {
 
   /// A token is saved and the GitHub user was fetched successfully.
   loggedIn,
+
+  /// Using the app offline without a GitHub account (hotfix).
+  ///
+  /// The GitHub Device Flow cannot run directly from a browser
+  /// (github.com/login/* returns no CORS headers), so until the
+  /// OAuth proxy is live the app must not hard-require login.
+  /// A guest keeps full local use (sqflite decks / readings);
+  /// Gist sync, shared-deck submit and the admin UI need a login
+  /// and fail with a readable error instead of crashing.
+  guest,
 }
 
 /// GitHub login state (OAuth Device Flow) for TarotDesk.
@@ -54,7 +64,11 @@ class AuthProvider extends ChangeNotifier {
   GithubUser? get user => _user;
   bool get isLoggedIn => _state == AuthState.loggedIn;
 
+  /// True while using the app offline without a GitHub account.
+  bool get isGuest => _state == AuthState.guest;
+
   /// True when the logged-in GitHub username is the admin account.
+  /// Guests are never admins.
   bool get isAdmin => _user?.login == adminLogin;
 
   /// The saved GitHub access token.
@@ -137,6 +151,19 @@ class AuthProvider extends ChangeNotifier {
     _state = AuthState.loggedIn;
     notifyListeners();
     return true;
+  }
+
+  /// Continue without a GitHub account (offline guest mode).
+  ///
+  /// Clears any token/user, sets the state to [AuthState.guest] and
+  /// notifies listeners, so the app gate shows HomeScreen. Local
+  /// sqflite data is untouched. A guest can log in later from the
+  /// login screen (via logout, which returns to loggedOut).
+  void continueAsGuest() {
+    _token = null;
+    _user = null;
+    _state = AuthState.guest;
+    notifyListeners();
   }
 
   /// Log out: clear the saved token and reset the session.
