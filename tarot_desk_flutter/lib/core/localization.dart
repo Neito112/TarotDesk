@@ -10,8 +10,12 @@
 /// chính key đó.
 ///
 /// Nội dung lá bài / bộ bài (tên lá, giải nghĩa) KHÔNG nằm ở đây —
-/// đó là dữ liệu của người dùng, hiển thị nguyên văn tiếng Việt.
-/// Tên giá trị đã lưu của bàn/khăn/decor/theme cũng không nằm ở đây.
+/// đó là dữ liệu của người dùng, hiển thị qua dịch máy ở lớp hiển thị
+/// (bản gốc tiếng Việt chỉ hiện khi chưa dịch được).
+/// Tên giá trị đã lưu của bàn/khăn/decor/theme/nhạc chỉ nằm ở đây
+/// dưới dạng key HIỂN THỊ (`theme.*`, `table.*`, `cloth.*`,
+/// `decor.*`, `music.track*`, `deck.baseName`) — giá trị đã lưu
+/// không đổi, key chỉ cho biết hiển thị tên đó bằng ngôn ngữ nào.
 enum AppLanguage {
   vi('vi', 'Tiếng Việt'),
   en('en', 'English'),
@@ -355,6 +359,13 @@ class AppStrings {
       AppLanguage.ko: "추가된 카드가 없습니다.",
       AppLanguage.ja: "まだカードが追加されていません。",
     },
+    'addDeck.noMeaningDefault': {
+      AppLanguage.vi: "Chưa có giải nghĩa.",
+      AppLanguage.en: "No meaning yet.",
+      AppLanguage.zh: "暂无释义。",
+      AppLanguage.ko: "아직 해석이 없습니다.",
+      AppLanguage.ja: "まだ解釈がありません。",
+    },
     'addDeck.saveEntireDeck': {
       AppLanguage.vi: "LƯU TOÀN BỘ BỘ BÀI ({n} LÁ)",
       AppLanguage.en: "SAVE THE ENTIRE DECK ({n} CARDS)",
@@ -474,6 +485,13 @@ class AppStrings {
       AppLanguage.ko: "서버 관리",
       AppLanguage.ja: "サーバー管理",
     },
+    'app.title': {
+      AppLanguage.vi: "TarotDesk - Không Gian Giải Nghĩa Bài Tarot",
+      AppLanguage.en: "TarotDesk - Tarot Reading Space",
+      AppLanguage.zh: "TarotDesk - 塔罗占卜空间",
+      AppLanguage.ko: "TarotDesk - 타로 리딩 공간",
+      AppLanguage.ja: "TarotDesk - タロットリーディングの空間",
+    },
     'auth.completingLogin': {
       AppLanguage.vi: "Đang hoàn tất đăng nhập…",
       AppLanguage.en: "Completing sign-in…",
@@ -565,6 +583,27 @@ class AppStrings {
       AppLanguage.ko: "Google에서 확인한 뒤 앱으로 바로 돌아옵니다.",
       AppLanguage.ja: "Googleで確認した後、アプリに自動で戻ります。",
     },
+    'cloth.blackCarpet': {
+      AppLanguage.vi: "Thảm Đen",
+      AppLanguage.en: "Black Carpet",
+      AppLanguage.zh: "黑色地毯",
+      AppLanguage.ko: "블랙 카펫",
+      AppLanguage.ja: "ブラックカーペット",
+    },
+    'cloth.goldSilk': {
+      AppLanguage.vi: "Lụa Vàng",
+      AppLanguage.en: "Gold Silk",
+      AppLanguage.zh: "金色丝绸",
+      AppLanguage.ko: "골드 실크",
+      AppLanguage.ja: "ゴールドシルク",
+    },
+    'cloth.purpleVelvet': {
+      AppLanguage.vi: "Nhung Tím",
+      AppLanguage.en: "Purple Velvet",
+      AppLanguage.zh: "紫色天鹅绒",
+      AppLanguage.ko: "퍼플 벨벳",
+      AppLanguage.ja: "パープルベルベット",
+    },
     'common.cancel': {
       AppLanguage.vi: "Hủy",
       AppLanguage.en: "Cancel",
@@ -606,6 +645,13 @@ class AppStrings {
       AppLanguage.zh: "保存",
       AppLanguage.ko: "저장",
       AppLanguage.ja: "保存",
+    },
+    'deck.baseName': {
+      AppLanguage.vi: "Bộ bài cơ bản",
+      AppLanguage.en: "Basic Deck",
+      AppLanguage.zh: "基础牌组",
+      AppLanguage.ko: "기본 덱",
+      AppLanguage.ja: "基本デッキ",
     },
     'deckDetail.addNewCard': {
       AppLanguage.vi: "Thêm lá bài mới",
@@ -697,6 +743,34 @@ class AppStrings {
       AppLanguage.zh: "未命名的牌",
       AppLanguage.ko: "이름 없는 카드",
       AppLanguage.ja: "名前のないカード",
+    },
+    'decor.blackCandle': {
+      AppLanguage.vi: "Nến Đen",
+      AppLanguage.en: "Black Candle",
+      AppLanguage.zh: "黑色蜡烛",
+      AppLanguage.ko: "블랙 캔들",
+      AppLanguage.ja: "黒いキャンドル",
+    },
+    'decor.crystal': {
+      AppLanguage.vi: "Đá Thạch Anh",
+      AppLanguage.en: "Quartz Crystal",
+      AppLanguage.zh: "石英水晶",
+      AppLanguage.ko: "수정",
+      AppLanguage.ja: "水晶",
+    },
+    'decor.crystalBall': {
+      AppLanguage.vi: "Quả Cầu",
+      AppLanguage.en: "Crystal Ball",
+      AppLanguage.zh: "水晶球",
+      AppLanguage.ko: "크리스털 볼",
+      AppLanguage.ja: "クリスタルボール",
+    },
+    'decor.incense': {
+      AppLanguage.vi: "Hương Trầm",
+      AppLanguage.en: "Incense",
+      AppLanguage.zh: "沉香",
+      AppLanguage.ko: "인센스",
+      AppLanguage.ja: "お香",
     },
     'editCard.addButton': {
       AppLanguage.vi: "Thêm Lá Bài",
@@ -1089,6 +1163,41 @@ class AppStrings {
       AppLanguage.zh: "神秘音乐",
       AppLanguage.ko: "신비로운 음악",
       AppLanguage.ja: "神秘的な音楽",
+    },
+    'music.track1': {
+      AppLanguage.vi: "Thiền The Fool — 432Hz (30 phút)",
+      AppLanguage.en: "The Fool Meditation — 432Hz (30 min)",
+      AppLanguage.zh: "愚者冥想 — 432Hz（30分钟）",
+      AppLanguage.ko: "더 풀 명상 — 432Hz (30분)",
+      AppLanguage.ja: "フール瞑想 — 432Hz（30分）",
+    },
+    'music.track2': {
+      AppLanguage.vi: "Vòng Lặp Vô Tận — nhạc Tarot",
+      AppLanguage.en: "Endless Loop — Tarot Music",
+      AppLanguage.zh: "无尽循环 — 塔罗音乐",
+      AppLanguage.ko: "끝없는 반복 — 타로 음악",
+      AppLanguage.ja: "エンドレスループ — タロット音楽",
+    },
+    'music.track3': {
+      AppLanguage.vi: "Bùa Chú Bóng Đêm — Dark Ambient",
+      AppLanguage.en: "Midnight Spell — Dark Ambient",
+      AppLanguage.zh: "午夜咒语 — 暗黑氛围音乐",
+      AppLanguage.ko: "한밤의 주문 — 다크 앰비언트",
+      AppLanguage.ja: "真夜中の呪文 — ダークアンビエント",
+    },
+    'music.track4': {
+      AppLanguage.vi: "Trống Hang & Sáo — nhạc huyền bí",
+      AppLanguage.en: "Cave Drums & Flute — Mystic Music",
+      AppLanguage.zh: "洞穴鼓与笛 — 神秘音乐",
+      AppLanguage.ko: "동굴 북과 피리 — 신비로운 음악",
+      AppLanguage.ja: "洞窟の太鼓と笛 — 神秘的な音楽",
+    },
+    'music.track5': {
+      AppLanguage.vi: "Nghỉ Ngơi — Ethereal Ambient (8 giờ)",
+      AppLanguage.en: "Rest — Ethereal Ambient (8 hours)",
+      AppLanguage.zh: "休憩 — 空灵氛围音乐（8小时）",
+      AppLanguage.ko: "휴식 — 에테리얼 앰비언트 (8시간)",
+      AppLanguage.ja: "休息 — エーテリアル・アンビエント（8時間）",
     },
     'music.youtubeTitle': {
       AppLanguage.vi: "Nhạc YouTube: {id}",
@@ -1719,6 +1828,41 @@ class AppStrings {
       AppLanguage.zh: "标题闪烁文字",
       AppLanguage.ko: "반짝이는 제목 텍스트",
       AppLanguage.ja: "きらめくタイトル文字",
+    },
+    'table.oak': {
+      AppLanguage.vi: "Gỗ Sồi",
+      AppLanguage.en: "Oak Wood",
+      AppLanguage.zh: "橡木",
+      AppLanguage.ko: "오크 목재",
+      AppLanguage.ja: "オーク材",
+    },
+    'theme.goldenSun': {
+      AppLanguage.vi: "Hoàng Kim Nắng Ấm",
+      AppLanguage.en: "Golden Warm Sunlight",
+      AppLanguage.zh: "金色暖阳",
+      AppLanguage.ko: "황금빛 따스한 햇살",
+      AppLanguage.ja: "黄金の暖かな陽光",
+    },
+    'theme.gothicNight': {
+      AppLanguage.vi: "Đêm Gothic Tinh Tế",
+      AppLanguage.en: "Elegant Gothic Night",
+      AppLanguage.zh: "优雅哥特之夜",
+      AppLanguage.ko: "우아한 고딕 나이트",
+      AppLanguage.ja: "エレガントなゴシックナイト",
+    },
+    'theme.mysticPurple': {
+      AppLanguage.vi: "Tím Huyền Bí",
+      AppLanguage.en: "Mystic Purple",
+      AppLanguage.zh: "神秘紫",
+      AppLanguage.ko: "미스틱 퍼플",
+      AppLanguage.ja: "ミスティックパープル",
+    },
+    'theme.obsidian': {
+      AppLanguage.vi: "Tối Obsidian (Mặc định)",
+      AppLanguage.en: "Obsidian Dark (Default)",
+      AppLanguage.zh: "黑曜石暗色（默认）",
+      AppLanguage.ko: "옵시디언 다크 (기본)",
+      AppLanguage.ja: "オブシディアン・ダーク（デフォルト）",
     },
   };
 
