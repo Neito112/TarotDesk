@@ -67,10 +67,11 @@ class _SmokeParticleEffectState extends State<SmokeParticleEffect>
       age: initialAge,
       // Vòng đời 7–14 giây: khói bay chậm, thong thả như trầm.
       lifetime: 7 + _random.nextDouble() * 7,
-      // Bán kính theo tỉ lệ hộp chứa: sinh nhỏ (1.5–3.5%),
-      // nở to gấp ~3 lần khi tan (5–11%).
-      startRadiusFrac: 0.015 + _random.nextDouble() * 0.02,
-      endRadiusFrac: 0.05 + _random.nextDouble() * 0.06,
+      // Bán kính theo tỉ lệ hộp chứa: sinh nhỏ (1.2–3.2%),
+      // nở to gấp ~2.5 lần khi tan (4–8%) — đủ nhỏ để là dải
+      // khói mảnh, không thành đám mây tròn lớn.
+      startRadiusFrac: 0.012 + _random.nextDouble() * 0.02,
+      endRadiusFrac: 0.04 + _random.nextDouble() * 0.04,
       maxOpacity: 0.05 + _random.nextDouble() * 0.10,
       // Uốn lượn ngang: biên độ 1–4% chiều rộng, tần số 0.5–1.5
       // vòng trong một đời khói, pha ngẫu nhiên.
@@ -174,20 +175,40 @@ class _SmokePainter extends CustomPainter {
       if (opacity <= 0.001) continue;
       final radius = p.radiusFrac() * base;
       final center = Offset(p.x * size.width, p.y * size.height);
-      // Gradient xuyên tâm: đậm ở giữa, mờ dần ra mép — cụm khói
-      // mềm và wispy như khói thật (không phải đĩa tròn mờ đều).
-      // Màu khói hơi xanh-oải hương nhạt cho hợp không khí huyền bí.
-      final paint = Paint()
-        ..shader = RadialGradient(
-          colors: [
-            Color.fromRGBO(228, 232, 248, opacity),
-            Color.fromRGBO(228, 232, 248, opacity * 0.45),
-            Color.fromRGBO(228, 232, 248, 0),
-          ],
-          stops: const [0.0, 0.55, 1.0],
-        ).createShader(Rect.fromCircle(center: center, radius: radius));
-      canvas.drawCircle(center, radius, paint);
+      // Cụm khói chính: dải DỌC (cao gấp ~1.8 lần rộng) — sợi khói
+      // bay lên trông như dải mỏng uốn lượn, không phải đĩa tròn.
+      _drawWisp(canvas, center, radius, opacity, 1.8);
+      // Vệ tinh nhỏ lệch sang một bên để cụm khói không tròn đều.
+      _drawWisp(
+        canvas,
+        Offset(center.dx + radius * 0.45, center.dy - radius * 0.35),
+        radius * 0.55,
+        opacity * 0.7,
+        1.6,
+      );
     }
+  }
+
+  /// Vẽ một dải khói: gradient xuyên tâm (đậm ở giữa, mờ dần ra
+  /// mép) rồi kéo dài theo chiều dọc thành sợi mỏng. Shader được
+  /// tạo SAU khi translate/scale nên gradient căng theo đúng hình
+  /// oval (không bị lệch tâm).
+  void _drawWisp(
+      Canvas canvas, Offset center, double radius, double opacity, double stretchY) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.scale(1.0, stretchY);
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Color.fromRGBO(228, 232, 248, opacity),
+          Color.fromRGBO(228, 232, 248, opacity * 0.45),
+          Color.fromRGBO(228, 232, 248, 0),
+        ],
+        stops: const [0.0, 0.55, 1.0],
+      ).createShader(Rect.fromCircle(center: Offset.zero, radius: radius));
+    canvas.drawCircle(Offset.zero, radius, paint);
+    canvas.restore();
   }
 
   @override
