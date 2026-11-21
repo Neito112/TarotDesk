@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+
+import '../../logic/settings_provider.dart';
 
 /// Một bài nhạc huyền bí có sẵn (phát qua YouTube, nhạc ambient/thiền
 /// hợp với không khí trải bài Tarot).
@@ -112,17 +115,18 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
   }
 
   void _playCustomLink() {
+    final settings = context.read<SettingsProvider>();
     final videoId = extractYoutubeVideoId(widget.linkController.text);
     if (videoId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Link YouTube không hợp lệ — hãy dán link video YouTube (hoặc mã video 11 ký tự).'),
+        SnackBar(
+          content: Text(settings.tr('music.invalidLink')),
         ),
       );
       return;
     }
-    final title = 'Nhạc YouTube: $videoId';
+    final title =
+        settings.tr('music.youtubeTitle').replaceAll('{id}', videoId);
     setState(() {
       _currentIndex = -1;
       _currentTitle = title;
@@ -133,6 +137,7 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.8,
@@ -163,10 +168,10 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
               children: [
                 const Icon(Icons.music_note, color: Colors.amber, size: 22),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Nhạc Huyền Bí',
-                    style: TextStyle(
+                    settings.tr('music.title'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -175,7 +180,7 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.white70),
-                  tooltip: 'Đóng (nhạc vẫn phát nền)',
+                  tooltip: settings.tr('music.closeTooltip'),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -197,7 +202,9 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
                         size: 40,
                         color: Colors.amber,
                       ),
-                      tooltip: playing ? 'Dừng nhạc' : 'Phát nhạc',
+                      tooltip: playing
+                          ? settings.tr('music.pause')
+                          : settings.tr('music.play'),
                       // API youtube_player_iframe 6.x: playVideo() /
                       // pauseVideo() (không có play()/pause()); giá trị
                       // YoutubePlayerValue cũng không có isReady nên
@@ -249,9 +256,9 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
               ],
             ),
             const Divider(color: Colors.white12),
-            const Text(
-              'Bài có sẵn',
-              style: TextStyle(
+            Text(
+              settings.tr('music.presetTracks'),
+              style: const TextStyle(
                 color: Colors.amber,
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -278,9 +285,10 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
                   ),
                 ),
                 trailing: isCurrent
-                    ? const Text(
-                        'Đang phát',
-                        style: TextStyle(color: Colors.amber, fontSize: 12),
+                    ? Text(
+                        settings.tr('music.nowPlaying'),
+                        style: const TextStyle(
+                            color: Colors.amber, fontSize: 12),
                       )
                     : null,
                 onTap: () {
@@ -293,9 +301,9 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
               );
             }),
             const Divider(color: Colors.white12),
-            const Text(
-              'Phát nhạc từ YouTube',
-              style: TextStyle(
+            Text(
+              settings.tr('music.fromYoutube'),
+              style: const TextStyle(
                 color: Colors.amber,
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -310,7 +318,7 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
                     style:
                         const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
-                      hintText: 'Dán link YouTube vào đây…',
+                      hintText: settings.tr('music.linkHint'),
                       hintStyle: const TextStyle(color: Colors.white38),
                       filled: true,
                       fillColor: Colors.white10,
@@ -333,15 +341,15 @@ class _MysticMusicSheetState extends State<MysticMusicSheet> {
                         horizontal: 16, vertical: 12),
                   ),
                   onPressed: _playCustomLink,
-                  child: const Text('Phát',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(settings.tr('music.playButton'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Đóng panel nhạc vẫn phát nền — chạm nốt nhạc trên thanh trên cùng để mở lại.',
-              style: TextStyle(color: Colors.white38, fontSize: 12),
+            Text(
+              settings.tr('music.closeHint'),
+              style: const TextStyle(color: Colors.white38, fontSize: 12),
             ),
           ],
         ),
