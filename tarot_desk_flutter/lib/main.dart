@@ -4,9 +4,11 @@ import 'logic/auth_provider.dart';
 import 'logic/deck_provider.dart';
 import 'logic/reading_provider.dart';
 import 'logic/settings_provider.dart';
+import 'core/translation_service.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/login_screen.dart';
 import 'data/datasources/database_helper.dart';
+import 'data/datasources/tarotdesk_api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +28,13 @@ class TarotDeskApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SettingsProvider()..initSettings()),
         ChangeNotifierProvider(create: (_) => DeckProvider()),
         ChangeNotifierProvider(create: (_) => ReadingProvider()),
+        ProxyProvider2<AuthProvider, SettingsProvider, TranslationService>(
+          update: (_, auth, settings, previous) => previous ?? TranslationService(
+            TarotdeskApiService(),
+            sessionToken: () => auth.sessionToken,
+            targetLanguageCode: () => settings.language.code,
+          ),
+        ),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {

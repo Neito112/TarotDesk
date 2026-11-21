@@ -12,6 +12,7 @@ import '../../logic/deck_provider.dart';
 import '../../logic/reading_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
+import '../widgets/localized_card_text.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
 import '../widgets/twinkling_title.dart';
@@ -189,8 +190,8 @@ class _HomeScreenState extends State<HomeScreen> {
             side: BorderSide(
                 color: theme.primaryColor.withOpacity(0.5), width: 1),
           ),
-          title: Text(
-            card.name,
+          title: LocalizedCardName(
+            card: card,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: theme.primaryColor,
@@ -217,8 +218,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 12),
                 SelectionArea(
-                  child: Text(
-                    card.meaning,
+                  child: LocalizedCardMeaning(
+                    card: card,
                     style: const TextStyle(
                         color: Colors.white, fontSize: 14, height: 1.6),
                   ),
@@ -596,20 +597,32 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          dailyCard?.name ?? settings.tr('home.noDeckSelected'),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: theme.textColor,
-            fontSize: nameFontSize,
-            fontWeight: FontWeight.bold,
-          ),
-          // Tên lá dài (VD "XII. Người Treo Ngược (The Hanged Man)")
-          // cho xuống 2 dòng thay vì cắt "..." — trước đây maxLines 1
-          // nên tên bị cắt ngay cả ở màn hình rộng, càng tệ trên điện thoại.
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+        // Tên lá dài (VD "XII. Người Treo Ngược (The Hanged Man)")
+        // cho xuống 2 dòng thay vì cắt "..." — trước đây maxLines 1
+        // nên tên bị cắt ngay cả ở màn hình rộng, càng tệ trên điện thoại.
+        dailyCard == null
+            ? Text(
+                settings.tr('home.noDeckSelected'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: theme.textColor,
+                  fontSize: nameFontSize,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              )
+            : LocalizedCardName(
+                card: dailyCard,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: theme.textColor,
+                  fontSize: nameFontSize,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
         if (dailyCard != null && dailyCard.keywordsUp.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(
