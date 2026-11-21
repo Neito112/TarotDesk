@@ -19,7 +19,8 @@ import '../widgets/localized_card_text.dart';
 /// (iPad/PC) thì form thêm lá (trái) + danh sách lá nháp (phải)
 /// cạnh nhau để vừa nhập vừa thấy; điện thoại xếp dọc một cột.
 /// Chọn ảnh gọn (thumbnail 5:8 + nút chọn, không còn hộp trống
-/// lớn). Logic, provider và text tiếng Việt giữ nguyên.
+/// lớn). Logic, provider và dữ liệu nguồn giữ nguyên; text hiển thị
+/// được dịch theo ngôn ngữ đang dùng.
 class AddDeckScreen extends StatefulWidget {
   const AddDeckScreen({Key? key}) : super(key: key);
 
@@ -76,7 +77,7 @@ class _AddDeckScreenState extends State<AddDeckScreen> {
       _draftCards.add(TarotCardModel(
         deckId: 0,
         name: name,
-        meaning: meaning.isEmpty ? 'Chưa có giải nghĩa.' : meaning,
+        meaning: meaning.isEmpty ? settings.tr('addDeck.noMeaningDefault') : meaning,
         imagePath: _selectedImagePath ?? 'assets/images/default_card.png',
       ));
       _cardNameController.clear();

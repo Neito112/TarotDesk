@@ -10,6 +10,7 @@ import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/tarot_card_image.dart';
 import '../widgets/localized_card_text.dart';
+import '../widgets/localized_content_text.dart';
 import 'edit_card_screen.dart';
 
 /// Màn hình Chi tiết Bộ Bài (Hiển thị lưới lá bài xem bộ bài, Tìm kiếm bài, Học bài Ngẫu nhiên 1 lá).
@@ -309,8 +310,8 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
         // Chế độ xem (bộ bài hiện tại): tên chỉ để xem, không bấm
         // đổi được. Chế độ quản lý (kho bộ bài): bấm tên để đổi tên.
         title: widget.readOnly
-            ? Text(
-                _currentDeckName,
+            ? LocalizedDeckName.fromName(
+                name: _currentDeckName,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: isDesktop ? 16 : 20),
               )
@@ -320,8 +321,8 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Flexible(
-                child: Text(
-                  _currentDeckName,
+                child: LocalizedDeckName.fromName(
+                  name: _currentDeckName,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: isDesktop ? 16 : 20),
                 ),

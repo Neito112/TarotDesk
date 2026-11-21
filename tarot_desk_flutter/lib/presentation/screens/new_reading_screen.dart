@@ -3,6 +3,7 @@ import 'dart:ui'; // Cần thiết cho PointerDeviceKind và kéo thả bằng c
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import '../../core/display_labels.dart';
 import '../../core/responsive.dart';
 import '../../data/models/tarot_card.dart';
 import '../../data/models/user_preferences.dart';
@@ -11,6 +12,7 @@ import '../../logic/reading_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/localized_card_text.dart';
+import '../widgets/localized_content_text.dart';
 import '../widgets/mystic_music_player.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
@@ -304,8 +306,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Flexible(
-                child: Text(
-                  readingProvider.currentReadingTitle,
+                child: LocalizedReadingName(
+                  name: readingProvider.currentReadingTitle,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: theme.primaryColor,
@@ -1207,6 +1209,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// chọn chúng cũng không đổi được gì trên bàn, nên không hiện
   /// làm lựa chọn. Danh sách gốc trong UserPreferencesModel giữ
   /// nguyên (không đổi tên giá trị đã lưu).
+/// Chip labels for the table / cloth / decor option ids shown in
+/// the in-reading table dialog use the shared mapping in
+/// `core/display_labels.dart` (Worker A) — see `optionLabel` below.
+/// The option ids themselves ('Gỗ Sồi', 'Nhung Tím', …) are STORED
+/// values and are never changed; only the chip LABEL is localized.
+/// Selection, callbacks and stored values compare against the raw
+/// id, never the label.
+
   void _showTableSettingsDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -1223,6 +1233,21 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 13));
 
+            // Localized chip label for a table/cloth/decor option id,
+            // via the shared mapping in `core/display_labels.dart`
+            // (same keys as the old local map: table.oak, cloth.*,
+            // decor.*). Each helper returns the id unchanged when it
+            // does not know it, so the three are tried in turn; an
+            // unknown id (e.g. 'Đá Cổ' / 'Vũ Trụ' / 'Lá Khô', which
+            // are filtered out of the chip lists today) falls back to
+            // the raw id, exactly as before.
+            String optionLabel(String opt) {
+              var key = tableStyleDisplayKey(opt);
+              if (key == opt) key = clothDisplayKey(opt);
+              if (key == opt) key = decorDisplayKey(opt);
+              return key == opt ? opt : settings.tr(key);
+            }
+
             Widget optionChips({
               required List<String> options,
               required String selected,
@@ -1234,7 +1259,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 children: options.map((opt) {
                   final isSelected = opt == selected;
                   return ChoiceChip(
-                    label: Text(opt,
+                    label: Text(optionLabel(opt),
                         style: TextStyle(
                             color: isSelected
                                 ? Colors.black
@@ -1271,7 +1296,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   return FilterChip(
                     selectedColor: theme.primaryColor.withOpacity(0.3),
                     checkmarkColor: theme.primaryColor,
-                    label: Text(item,
+                    label: Text(optionLabel(item),
                         style: TextStyle(
                             color: selected
                                 ? theme.primaryColor

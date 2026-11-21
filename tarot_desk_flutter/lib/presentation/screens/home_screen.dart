@@ -13,6 +13,7 @@ import '../../logic/reading_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/localized_card_text.dart';
+import '../widgets/localized_content_text.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
 import '../widgets/twinkling_title.dart';
@@ -768,17 +769,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    deckProvider.selectedDeck?.name ??
-                        settings.tr('home.noDeckSelected'),
-                    style: TextStyle(
-                      color: theme.textColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  deckProvider.selectedDeck == null
+                      ? Text(
+                          settings.tr('home.noDeckSelected'),
+                          style: TextStyle(
+                            color: theme.textColor,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : LocalizedDeckName(
+                          deck: deckProvider.selectedDeck!,
+                          style: TextStyle(
+                            color: theme.textColor,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                   if (cardCount > 0) ...[
                     const SizedBox(height: 2),
                     Text(
@@ -839,15 +850,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      settings
-                          .tr('home.historyFooter')
-                          .replaceAll('{count}', '$count')
-                          .replaceAll('{name}',
-                              readingProvider.readingsHistory.first.name),
-                      style: TextStyle(
-                        color: theme.secondaryTextColor,
-                        fontSize: 12,
+                    child: Text.rich(
+                      TextSpan(
+                        children: templateWithLocalizedName(
+                          template: settings
+                              .tr('home.historyFooter')
+                              .replaceAll('{count}', '$count'),
+                          placeholder: '{name}',
+                          nameWidget: LocalizedReadingName(
+                            name: readingProvider
+                                .readingsHistory.first.name,
+                            style: TextStyle(
+                              color: theme.secondaryTextColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                          style: TextStyle(
+                            color: theme.secondaryTextColor,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
