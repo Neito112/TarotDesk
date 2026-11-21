@@ -422,4 +422,98 @@ class TarotdeskApiService {
     );
     return _asMapList(decoded, 'decks');
   }
+
+  // ------------------------------------------------------------------
+  // Content translation (POST /translate) — see
+  // lib/core/translation_service.dart and i18n/worker/.
+  //
+  // The app never calls a translation vendor directly and holds
+  // no translation API key: the Worker owns the engines
+  // (Workers AI m2m100 first, Google Cloud Translation as an
+  // optional fallback behind a Worker secret) and the shared D1
+  // translation cache. [sessionToken] is optional — guests are
+  // served under the Worker's anonymous cap; pass null for them.
+  // Throws [TarotdeskApiException] like every other call here;
+  // TranslationService catches it and shows the original text.
+  // ------------------------------------------------------------------
+
+  /// `POST /translate` with
+  /// `{texts: [...], target_lang, source_lang?}`.
+  ///
+  /// Returns one [WorkerTranslation] per input text, in order.
+  /// A result with `translated == false` carries the original
+  /// text — the caller displays it as-is (see
+  /// [TranslationService]).
+  Future<List<WorkerTranslation>> translateTexts({
+    String? sessionToken,
+    required List<String> texts,
+    required String targetLang,
+    String? sourceLang,
+  }) async {
+    if (texts.isEmpty) return const <WorkerTranslation>[];
+    final decoded = await _call(
+      'POST',
+      '/translate',
+      sessionToken: sessionToken,
+      body: <String, dynamic>{
+        'texts': texts,
+        'target_lang': targetLang,
+        if (sourceLang != null && sourceLang.isNotEmpty)
+          'source_lang': sourceLang,
+      },
+    );
+    final map = _asMap(decoded);
+    final list = _asMapList(map['translations'], 'translations');
+    if (list.length != texts.length) {
+      throw const TarotdeskApiException(
+        'server',
+        'The translation service returned the wrong number of results.',
+      );
+    }
+    return <WorkerTranslation>[
+      for (var i = 0; i < texts.length; i++)
+        WorkerTranslation.fromJson(list[i], fallbackText: texts[i]),
+    ];
+  }
 }
+
+/// One string as translated by the Worker (`POST /translate`).
+class WorkerTranslation {
+  const WorkerTranslation({
+    required this.text,
+    required this.sourceLang,
+    required this.translated,
+    required this.engine,
+    required this.fromCache,
+  });
+
+  factory WorkerTranslation.fromJson(
+    Map<String, dynamic> json, {
+    required String fallbackText,
+  }) {
+    final text = json['text'] as String?;
+    return WorkerTranslation(
+      text: (text == null || text.isEmpty) ? fallbackText : text,
+      sourceLang: (json['source_lang'] as String?) ?? '',
+      translated: (json['translated'] as bool?) ?? false,
+      engine: (json['engine'] as String?) ?? 'none',
+      fromCache: (json['cached'] as bool?) ?? false,
+    );
+  }
+
+  /// Translated text, or the original when `translated` is false.
+  final String text;
+
+  /// Source language the Worker detected or was given ('' if unknown).
+  final String sourceLang;
+
+  /// False when [text] is the untranslated original.
+  final bool translated;
+
+  /// `'workers-ai'`, `'google'`, `'cache'` or `'none'`.
+  final String engine;
+
+  /// True when served from the Worker's D1 translation cache.
+  final bool fromCache;
+}
+
