@@ -221,9 +221,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   /// Chọn một lá để đọc: lá hiện trên màn hình (lá lớn + panel
   /// giải nghĩa ngay bên cạnh). Dùng chung cho chạm vào lá trong
-  /// khay và (phone) chạm vào lá đang xem. Lá đang trên sân khấu
-  /// BAY về đúng vị trí của nó trong khay (liền mạch, không ngắt
-  /// cảnh) rồi lá được chọn mới lên sân.
+  /// khay và (phone) chạm vào lá đang xem. BẢO TOÀN SỐ LƯỢNG LÁ:
+  /// lá được chọn RỜI KHAY lên sân khấu, lá đang trên sân khấu
+  /// (nếu có) THU XUỐNG KHAY — một lá chỉ ở đúng một nơi tại một
+  /// thời điểm, không bao giờ hiện cả hai chỗ cùng lúc.
   void _selectCard(int index) {
     final drawnCards = context.read<ReadingProvider>().drawnCards;
     if (index < 0 || index >= drawnCards.length) return;
@@ -239,11 +240,23 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     });
   }
 
-  /// Rút một lá từ bộ bài: lá hiện lên màn hình (lá đang đọc)
-  /// và đồng thời hiện trong khay (khay chứa toàn bộ các lá đã
-  /// rút). Lá đang trên sân khấu (nếu có) BAY về đúng vị trí của
-  /// nó trong khay rồi lá mới bay từ xấp bài vào sân. Trả về
-  /// false nếu lá đã rút rồi.
+  /// Thu lá đang trên sân khấu xuống khay: ấn vào hình ảnh lá bài
+  /// đang hiện giữa màn hình thì lá đó thu xuống khay, sân khấu
+  /// trống (không còn lá nào đang đọc). Lá đó sau đó hiện trong
+  /// khay — ấn vào nó trong khay thì nó lại lên sân khấu.
+  /// Không làm gì nếu sân khấu đang trống.
+  void _collectStageCard() {
+    if (_currentStageCard() == null) return;
+    setState(() {
+      _selectedCardIndex = -1;
+      _lastDrawnId = null;
+    });
+  }
+
+  /// Rút một lá từ bộ bài: lá hiện lên sân khấu (lá đang đọc) và
+  /// KHÔNG hiện trong khay (bảo toàn số lượng lá — một lá chỉ ở
+  /// đúng một nơi). Lá đang trên sân khấu (nếu có) THU XUỐNG KHAY
+  /// rồi lá mới bay từ xấp bài vào sân. Trả về false nếu lá đã rút rồi.
   bool _drawCardModel(TarotCardModel card) {
     final readingProvider = context.read<ReadingProvider>();
     if (readingProvider.drawnCards.any((dc) => dc.id == card.id)) {
@@ -574,6 +587,13 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           Positioned.fill(
             child: _buildDesktopEmptyHint(theme),
           ),
+        // Đã rút lá nhưng sân khấu đang trống (đã thu hết lá xuống
+        // khay): gợi ý chạm vào lá trong khay để xem lại, hoặc
+        // chạm xấp bài để rút thêm — bàn không trống trơn khó hiểu.
+        if (activeCard == null && drawnCards.isNotEmpty)
+          Positioned.fill(
+            child: _buildDesktopEmptyHint(theme, hasDrawnCards: true),
+          ),
         // Phụ kiện: ảnh CẮT TRONG SUỐT (chỉ giữ vật thể, nền
         // đã tách) đặt theo tọa độ phân số cố định trong code
         // (xem _buildDesktopDecorCutouts), cùng Stack với lớp
@@ -618,16 +638,18 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         ),
         // Lá đang đọc HIỆN TRÊN MÀN HÌNH: lá lớn 170 rộng ở
         // giữa-phía trước, panel giải nghĩa ngay BÊN CẠNH nó.
-        // Đổi lá: lá MỚI lên sân từ dưới, lá CŨ BAY VỀ KHAY (về
-        // đúng vị trí của nó trong khay, liền mạch, không ngắt
-        // cảnh — xem _trayFlight; switcher không vẽ lá cũ nữa
-        // để không hiện hai bản). Sân chỉ giữ một lá tại một
-        // thời điểm. Lá vừa rút thì bay từ xấp bài (tween riêng),
-        // không trượt thêm (hai chuyển động cùng lúc trên cùng
-        // một lá = giật). Vào 250ms / ra 150ms (ra ngắn hơn ~40%).
-        // Nếu đo rect để bay về khay không được (lá trong khay bị
-        // cuộn ra ngoài) thì giữ hiệu ứng cũ: lá cũ trượt xuống +
-        // mờ dần.
+        // Đổi lá: lá MỚI lên sân từ dưới, lá CŨ THU XUỐNG KHAY
+        // (trượt xuống + nhỏ dần + mờ dần, liền mạch — xem
+        // _trayFlight; switcher không vẽ lá cũ nữa để không hiện
+        // hai bản). Sân chỉ giữ một lá tại một thời điểm, và lá
+        // trên sân KHÔNG hiện trong khay (bảo toàn số lượng lá).
+        // Ấn vào lá trên sân: thu lá xuống khay (xem
+        // _collectStageCard). Lá vừa rút thì bay từ xấp bài
+        // (tween riêng), không trượt thêm (hai chuyển động cùng
+        // lúc trên cùng một lá = giật). Vào 250ms / ra 150ms
+        // (ra ngắn hơn ~40%). Nếu đo rect để bay về khay không
+        // được (lá trong khay bị cuộn ra ngoài) thì giữ hiệu ứng
+        // cũ: lá cũ trượt xuống + mờ dần.
         if (activeCard != null)
           Positioned.fill(
             child: LayoutBuilder(
@@ -667,7 +689,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                         // 1→0): CÙNG tween đó chạy ngược nên trượt
                         // XUỐNG (0 → 0.25) + mờ dần. Lá vừa rút
                         // (bay từ xấp bài bằng tween riêng) thì
-                        // không trượt thêm, chỉ mờ.
+                        // không trượt thêm, chỉ mờ. Lá ra còn NHỎ
+                        // DẦN (1.0 → 0.55) để đọc rõ là "thu xuống
+                        // khay" chứ không phải biến mất; lá vào giữ
+                        // nguyên cỡ.
                         final isJustDrawn = isIncoming &&
                             activeCard.id == _lastDrawnId;
                         final slide = isJustDrawn
@@ -676,11 +701,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                             : Tween<Offset>(
                                 begin: const Offset(0, 0.25),
                                 end: Offset.zero);
+                        final scale = isIncoming
+                            ? Tween<double>(begin: 1.0, end: 1.0)
+                            : Tween<double>(begin: 0.55, end: 1.0);
                         return FadeTransition(
                           opacity: animation,
                           child: SlideTransition(
                             position: slide.animate(animation),
-                            child: child,
+                            child: ScaleTransition(
+                              scale: scale.animate(animation),
+                              child: child,
+                            ),
                           ),
                         );
                       },
@@ -700,7 +731,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// thoải mái, hiện nhiều chữ cùng lúc), căn giữa phía trước bàn. Đây là lá HIỂN THỊ để
   /// đọc (phần tử màn hình), KHÔNG phải vật nằm trên mặt bàn — nên
   /// lá đứng thẳng facing màn hình, không nghiêng theo điểm tụ của
-  /// bàn. Trên bàn không còn lá nào.
+  /// bàn. Trên bàn không còn lá nào. Ấn vào lá: thu lá xuống khay
+  /// (bảo toàn số lượng lá — lá trên sân không hiện trong khay).
   Widget _buildDesktopStage(TarotCardModel activeCard, dynamic theme) {
     const stageCardWidth = 190.0;
     final stageCardHeight = stageCardWidth * 8 / 5;
@@ -748,21 +780,35 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         child: _cardFrame(activeCard, theme, width),
       ),
     );
-    if (!isNew) return tile;
-    // Hoạt ảnh rút bài: MỘT tween — bay từ hướng xấp bài vào vị
-    // trí đọc, nhỏ->lớn dần, đáp mềm bằng easeOutCubic.
-    return TweenAnimationBuilder<double>(
-      key: ValueKey('draw-${activeCard.id}'),
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOutCubic,
-      builder: (context, v, child) {
-        return Transform.translate(
-          offset: Offset(-360 * (1 - v), -240 * (1 - v)),
-          child: Transform.scale(scale: 0.6 + 0.4 * v, child: child),
-        );
-      },
-      child: tile,
+    final Widget animated;
+    if (!isNew) {
+      animated = tile;
+    } else {
+      // Hoạt ảnh rút bài: MỘT tween — bay từ hướng xấp bài vào vị
+      // trí đọc, nhỏ->lớn dần, đáp mềm bằng easeOutCubic.
+      animated = TweenAnimationBuilder<double>(
+        key: ValueKey('draw-${activeCard.id}'),
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutCubic,
+        builder: (context, v, child) {
+          return Transform.translate(
+            offset: Offset(-360 * (1 - v), -240 * (1 - v)),
+            child: Transform.scale(scale: 0.6 + 0.4 * v, child: child),
+          );
+        },
+        child: tile,
+      );
+    }
+    // Ấn vào lá trên sân khấu: thu lá xuống khay (bảo toàn số
+    // lượng lá — một lá chỉ ở đúng một nơi). Tooltip hiện khi
+    // rê chuột qua lá.
+    return Tooltip(
+      message: 'Chạm để thu lá xuống khay',
+      child: GestureDetector(
+        onTap: _collectStageCard,
+        child: animated,
+      ),
     );
   }
 
@@ -1036,7 +1082,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     }
   }
 
-  Widget _buildDesktopEmptyHint(dynamic theme) {
+  Widget _buildDesktopEmptyHint(dynamic theme, {bool hasDrawnCards = false}) {
     return Center(
       child: GlassPanel(
         backgroundColor: Colors.black.withOpacity(0.55),
@@ -1070,7 +1116,9 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Chạm vào xấp bài góc trên-trái để bắt đầu chọn.',
+                hasDrawnCards
+                    ? 'Đã thu lá xuống khay — chạm vào lá trong khay để xem lại,\nhoặc chạm xấp bài để rút thêm.'
+                    : 'Chạm vào xấp bài góc trên-trái để bắt đầu chọn.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: Colors.white, fontSize: 13, height: 1.5),
@@ -1512,11 +1560,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Lá bài đang chọn (phone/tablet): vào bằng animation bay lên.
-  /// Lá vẫn nằm trong lượt trải (cả trong khay) — chạm vào lá
-  /// trong khay là đổi lá đang xem. Không còn "thu lá" nữa.
+  /// Ấn vào lá: thu lá xuống khay (bảo toàn số lượng lá — lá trên
+  /// sân không hiện trong khay). Ấn vào lá trong khay: lá đó lên sân.
   Widget _buildActiveCard(TarotCardModel activeCard, dynamic theme, double cardWidth) {
     final cardHeight = cardWidth * 8 / 5;
-    return TweenAnimationBuilder<double>(
+    // Ấn vào lá trên sân khấu: thu lá xuống khay (bảo toàn số
+    // lượng lá — một lá chỉ ở đúng một nơi).
+    return Tooltip(
+      message: 'Chạm để thu lá xuống khay',
+      child: GestureDetector(
+        onTap: _collectStageCard,
+        child: TweenAnimationBuilder<double>(
       key: ValueKey(activeCard.id),
       tween: Tween<double>(begin: 0.0, end: 1.0),
       duration: const Duration(milliseconds: 450),
@@ -1535,6 +1589,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           width: cardWidth,
           height: cardHeight,
           child: _cardFrame(activeCard, theme, cardWidth),
+        ),
+      ),
         ),
       ),
     );
@@ -1573,8 +1629,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Panel giải nghĩa: tên lá bài + nội dung cuộn được. Lá đang
-  /// chọn vẫn nằm trong khung của nó (trên bàn / trong khay) — panel
-  /// chỉ hiện nội dung của lá đó.
+  /// đọc hiện trên sân khấu (không nằm trong khay — bảo toàn số
+  /// lượng lá) — panel chỉ hiện nội dung của lá đó.
   /// PC: chữ 14pt, tên 17pt. Phone giữ 15pt / 20pt như cũ.
   Widget _buildMeaningPanel(TarotCardModel activeCard, dynamic theme) {
     return GlassPanel(
@@ -1876,6 +1932,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// (cùng thứ tự rút); chạm vào một lá trong khay là chọn nó
   /// để đọc trên màn hình. Kéo thả một lá từ khay chọn bài
   /// xuống đây là rút lá đó.
+  /// Khay bài đã rút — BẢO TOÀN SỐ LƯỢNG LÁ: lá đang trên sân khấu
+  /// KHÔNG hiện trong khay (một lá chỉ ở đúng một nơi tại một thời
+  /// điểm). Khay chỉ hiện các lá đã rút mà không đang trên sân khấu.
+  /// Ấn vào lá trong khay: lá đó lên sân khấu (rời khay), lá đang
+  /// trên sân khấu (nếu có) thu xuống khay. Ấn vào lá trên sân khấu:
+  /// lá đó thu xuống khay (xem _collectStageCard).
   Widget _buildBottomTray(List<TarotCardModel> drawnCards, ReadingProvider readingProvider, dynamic theme) {
     // Cao cố định — không đổi theo số lá (xem doc ở trên).
     final trayHeight = _isDesktop ? 176.0 : (_isPhone ? 124.0 : 104.0);
@@ -1897,6 +1959,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       );
     }
 
+    // Chỉ các lá KHÔNG trên sân khấu mới hiện trong khay.
+    final trayIndices = <int>[];
+    for (var i = 0; i < drawnCards.length; i++) {
+      if (i != _selectedCardIndex) trayIndices.add(i);
+    }
+
     return Container(
       height: trayHeight,
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1908,7 +1976,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         onWillAccept: (data) => data != null,
         onAccept: (data) {
           // Kéo thả 1 lá bài mới từ khay chọn bài xuống: rút lá đó
-          // (hiện trên màn hình và trong khay).
+          // (lên sân khấu — không hiện trong khay khi đang đọc).
           _drawCardModel(data);
         },
         builder: (context, candidateData, rejectedData) {
@@ -1920,14 +1988,13 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: drawnCards.length,
+                itemCount: trayIndices.length,
                 itemBuilder: (context, index) {
-                  final card = drawnCards[index];
-                  final isSelected = _selectedCardIndex == index;
+                  final card = drawnCards[trayIndices[index]];
 
                   return GestureDetector(
-                    onTap: () => _selectCard(index),
-                    child: _buildBottomTrayItem(card, isSelected, theme, trayThumbWidth),
+                    onTap: () => _selectCard(trayIndices[index]),
+                    child: _buildBottomTrayItem(card, theme, trayThumbWidth),
                   );
                 },
               ),
@@ -1943,9 +2010,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// (contain, nền đen) — ảnh gốc 7:12, cover cắt mất tên lá.
   /// Mỗi ô có key riêng (theo id lá) để đo rect làm điểm đến của
   /// flight về khay; ô đang bay về thì ẩn đi, hiện lại đúng lúc
-  /// lá đáp xuống (cùng rect nên không thấy ngắt cảnh).
+  /// lá đáp xuống (cùng rect nên không thấy ngắt cảnh). Khay KHÔNG
+  /// có lá nào được chọn (lá trên sân khấu không nằm trong khay) nên
+  /// mọi ô đều dùng viền thường, không viền vàng.
   Widget _buildBottomTrayItem(
-      TarotCardModel card, bool isSelected, dynamic theme, double width) {
+      TarotCardModel card, dynamic theme, double width) {
     // Mỗi lá trong khay có display list riêng: đổi lá chọn /
     // cuộn khay không vẽ lại các lá còn lại.
     final isFlyingToTray = _trayFlight?.card.id == card.id;
@@ -1962,12 +2031,9 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           color: Colors.black,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? theme.primaryColor : theme.glassBorderColor,
-            width: isSelected ? 2 : 1,
+            color: theme.glassBorderColor,
+            width: 1,
           ),
-          boxShadow: isSelected
-              ? [BoxShadow(color: theme.primaryColor.withOpacity(0.3), blurRadius: 6, spreadRadius: 1)]
-              : [],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(6),
