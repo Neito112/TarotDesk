@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import '../../core/localization.dart';
 import '../../core/responsive.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/datasources/gist_sync_service.dart';
+import '../../data/datasources/github_service.dart';
 import '../../data/models/user_preferences.dart';
+import '../../logic/auth_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
 
@@ -145,6 +148,66 @@ class SettingsScreen extends StatelessWidget {
               );
             }).toList(),
           ),
+        ],
+      ),
+    );
+  }
+
+  /// GitHub account section: the signed-in account, sync data
+  /// to GitHub, and log out. Local data is NOT deleted on logout.
+  Widget _accountSection(BuildContext context, SettingsProvider settings,
+      AppThemeData theme, AuthProvider auth) {
+    final user = auth.user;
+    final avatarUrl = user?.avatarUrl;
+    final displayName = user?.name;
+    return GlassPanel(
+      backgroundColor: theme.cardBackgroundColor,
+      borderColor: theme.glassBorderColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(theme, settings.tr('settings.accountTitle')),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                    ? NetworkImage(avatarUrl)
+                    : null,
+                child: avatarUrl == null || avatarUrl.isEmpty
+                    ? const Icon(Icons.account_circle)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      settings.tr('settings.accountLabel'),
+                      style: TextStyle(
+                          color: theme.secondaryTextColor, fontSize: 11),
+                    ),
+                    Text(
+                      user?.login ?? '',
+                      style: TextStyle(
+                          color: theme.textColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    if (displayName != null && displayName.isNotEmpty)
+                      Text(
+                        displayName,
+                        style: TextStyle(
+                            color: theme.secondaryTextColor, fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _AccountActions(settings: settings, theme: theme),
         ],
       ),
     );
@@ -379,6 +442,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final auth = context.watch<AuthProvider>();
     final theme = settings.currentThemeData;
     final isWide = Responsive.isTablet(context) ||
         Responsive.isDesktop(context);
@@ -403,6 +467,8 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 _languageSection(context, settings, theme),
                 const SizedBox(height: _sectionGap),
+                _accountSection(context, settings, theme, auth),
+                const SizedBox(height: _sectionGap),
                 if (isWide)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,6 +491,99 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Sync + logout buttons inside the GitHub account section.
+/// A separate StatefulWidget so the syncing state lives here
+/// without turning SettingsScreen into a StatefulWidget.
+class _AccountActions extends StatefulWidget {
+  const _AccountActions({required this.settings, required this.theme});
+
+  final SettingsProvider settings;
+  final AppThemeData theme;
+
+  @override
+  State<_AccountActions> createState() => _AccountActionsState();
+}
+
+class _AccountActionsState extends State<_AccountActions> {
+  bool _isSyncing = false;
+
+  Future<void> _syncNow() async {
+    if (_isSyncing) return;
+    setState(() => _isSyncing = true);
+    try {
+      await GistSyncService(context.read<AuthProvider>()).uploadFromLocal();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(widget.settings.tr('settings.syncSuccess'))),
+      );
+    } on GithubException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                '${widget.settings.tr('settings.syncFailed')} ${e.message}')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
+  }
+
+  Future<void> _confirmLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(widget.settings.tr('settings.logoutTitle')),
+        content: Text(widget.settings.tr('settings.logoutBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(widget.settings.tr('common.cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              widget.settings.tr('settings.logout'),
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await context.read<AuthProvider>().logout();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ElevatedButton.icon(
+          icon: _isSyncing
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.cloud_upload, size: 18),
+          label: Text(widget.settings.tr('settings.syncNow')),
+          onPressed: _isSyncing ? null : _syncNow,
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: _confirmLogout,
+          child: Text(
+            widget.settings.tr('settings.logout'),
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
     );
   }
 }
