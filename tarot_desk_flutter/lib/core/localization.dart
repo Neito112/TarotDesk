@@ -1538,6 +1538,13 @@ class AppStrings {
       AppLanguage.ko: "테이블에 표시할 레이어:",
       AppLanguage.ja: "テーブルに表示するレイヤー：",
     },
+    'settings.linkGoogleAccount': {
+      AppLanguage.vi: "Liên kết tài khoản Google",
+      AppLanguage.en: "Link Google account",
+      AppLanguage.zh: "关联 Google 账号",
+      AppLanguage.ko: "Google 계정 연결",
+      AppLanguage.ja: "Google アカウントを連携",
+    },
     'settings.loginRequired': {
       AppLanguage.vi: "Bạn cần đăng nhập để đồng bộ dữ liệu.",
       AppLanguage.en: "Sign in to sync your data.",
