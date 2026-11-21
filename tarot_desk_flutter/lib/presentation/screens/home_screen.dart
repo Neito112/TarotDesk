@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/tarot_symbols.dart';
@@ -36,20 +38,40 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Lá ngày đổi theo ngày: nếu app mở xuyên đêm qua 0h thì lá phải
+  // đổi theo ngày mới mà không cần tải lại trang — hẹn giờ kiểm tra
+  // mỗi phút, ngày đổi thì build lại (tính lại _dailyCard).
+  Timer? _dayRolloverTimer;
+  int _dailyCardDay = -1;
+
+  static int _dayIndex(DateTime d) =>
+      d.difference(DateTime(d.year, 1, 1)).inDays;
+
   @override
   void initState() {
     super.initState();
+    _dailyCardDay = _dayIndex(DateTime.now());
+    _dayRolloverTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      final today = _dayIndex(DateTime.now());
+      if (today != _dailyCardDay && mounted) {
+        setState(() => _dailyCardDay = today);
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DeckProvider>().fetchDecks();
       context.read<ReadingProvider>().fetchReadingsHistory();
     });
   }
 
+  @override
+  void dispose() {
+    _dayRolloverTimer?.cancel();
+    super.dispose();
+  }
+
   TarotCardModel? _dailyCard(List<TarotCardModel> cards) {
     if (cards.isEmpty) return null;
-    final now = DateTime.now();
-    final dayOfYear =
-        now.difference(DateTime(now.year, 1, 1)).inDays;
+    final dayOfYear = _dayIndex(DateTime.now());
     return cards[dayOfYear % cards.length];
   }
 
@@ -68,6 +90,70 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const NewReadingScreen()),
+    );
+  }
+
+  /// Nội dung lá bài hôm nay: ảnh lớn + tên + toàn bộ ý nghĩa
+  /// (cuộn được). Mở bằng hộp thoại — bấm ngoài hoặc nút Đóng để
+  /// tắt, không vào trải bài, không đổi lá ngày.
+  void _showDailyCardDetail(
+      BuildContext context, TarotCardModel card, dynamic theme) {
+    final width = Responsive.isPhone(context) ? 180.0 : 200.0;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.black.withOpacity(0.94),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+                color: theme.primaryColor.withOpacity(0.5), width: 1),
+          ),
+          title: Text(
+            card.name,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: theme.primaryColor,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: width,
+                  height: width * 8 / 5,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: theme.primaryColor, width: 2),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: TarotCardImage(card: card, fit: BoxFit.contain),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SelectionArea(
+                  child: Text(
+                    card.meaning,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 14, height: 1.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Đóng'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -349,7 +435,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 12),
         GestureDetector(
-          onTap: () => _startNewReading(context),
+          // Ấn vào lá ngày: hiện NỘI DUNG lá (ảnh + tên + ý nghĩa),
+          // KHÔNG vào trải bài. Muốn trải bài thì bấm nút
+          // "Trải bài mới" (CTA chính) — nút đó mới bắt đầu lượt trải.
+          onTap: dailyCard == null
+              ? null
+              : () => _showDailyCardDetail(context, dailyCard, theme),
           child: Container(
             width: width,
             height: height,
