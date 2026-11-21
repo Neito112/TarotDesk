@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'logic/auth_provider.dart';
@@ -7,6 +9,7 @@ import 'logic/settings_provider.dart';
 import 'core/translation_service.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/login_screen.dart';
+import 'data/datasources/cloud_sync_service.dart';
 import 'data/datasources/database_helper.dart';
 import 'data/datasources/tarotdesk_api_service.dart';
 
@@ -24,8 +27,38 @@ class TarotDeskApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()..restoreSession()),
+        // Settings first: AuthProvider's create reads it (via the
+        // create context) to wire the automatic login/reload sync
+        // with the active language for the sync's translation
+        // warm-up.
         ChangeNotifierProvider(create: (_) => SettingsProvider()..initSettings()),
+        ChangeNotifierProvider(create: (context) {
+          final settings = context.read<SettingsProvider>();
+          final auth = AuthProvider();
+          // AUTOMATIC SYNC (no manual button): after a successful
+          // Google login AND after a saved session is validated on
+          // app start (page reload), sync the cloud data in the
+          // background via the two-way login policy
+          // (CloudSyncService.syncAfterLogin — download when the
+          // cloud has data this device lacks, upload when this
+          // device has user data the cloud lacks, never overwrite
+          // when both sides have data). Best-effort: a failure
+          // never breaks the login or the Home screen; the next
+          // login / reload retries. Guests never trigger it
+          // (AuthProvider only fires the hook on loggedIn).
+          auth.onLoggedIn = () async {
+            try {
+              await CloudSyncService(
+                auth,
+                targetLanguageCode: () => settings.language.code,
+              ).syncAfterLogin();
+            } catch (_) {
+              // Best-effort: a failed auto-sync never breaks login.
+            }
+          };
+          unawaited(auth.restoreSession());
+          return auth;
+        }),
         ChangeNotifierProvider(create: (_) => DeckProvider()),
         ChangeNotifierProvider(create: (_) => ReadingProvider()),
         ProxyProvider2<AuthProvider, SettingsProvider, TranslationService>(
@@ -33,6 +66,12 @@ class TarotDeskApp extends StatelessWidget {
             TarotdeskApiService(),
             sessionToken: () => auth.sessionToken,
             targetLanguageCode: () => settings.language.code,
+            // WIRING (V2 display path): the signed-in user's Google
+            // `sub`, or null for guests. The service needs it to
+            // derive a personal deck_key for preloading a deck's
+            // stored translations ([preloadLocalDeck]). It is a
+            // closure, so it tracks logins/logouts live.
+            userSub: () => auth.user?.sub,
           ),
         ),
       ],
