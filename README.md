@@ -30,7 +30,7 @@ Hướng dẫn sử dụng chi tiết (15 slide, có ảnh thật từng bước
 - **Lịch sử trải bài** — các lần trải bài đã lưu, mở lại bất cứ lúc nào.
 - **Đăng nhập Google + đồng bộ** — dữ liệu bộ bài và lịch sử của bạn được lưu theo tài khoản, dùng máy nào cũng thấy; làm việc offline vẫn bình thường. Bộ bài bạn chia sẻ sẽ hiện cho mọi người dùng; tài khoản quản trị duyệt các bộ bài được gửi lên.
 - **Nhạc huyền bí** — 5 bản nhạc có sẵn, hoặc dán link YouTube để phát nhạc của riêng bạn trong lúc trải bài.
-- **Ngôn ngữ** — giao diện dùng được bằng tiếng Việt, English, 中文, 한국어, 日本語 (đổi trong Cài đặt). Ý nghĩa các lá bài giữ nguyên tiếng Việt.
+- **Ngôn ngữ** — giao diện dùng được bằng tiếng Việt, English, 中文, 한국어, 日本語 (đổi trong Cài đặt). Tên và ý nghĩa các lá bài cũng được dịch sang ngôn ngữ đang dùng (dịch tự động phía máy chủ, có bộ nhớ đệm; bản gốc không bị thay đổi).
 - **Giới thiệu & Hướng dẫn** — giải thích TarotDesk là gì, 6 bước sử dụng, và link tới bộ slide hướng dẫn chi tiết.
 
 ## Cách dùng
