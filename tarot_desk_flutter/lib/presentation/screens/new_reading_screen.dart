@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui'; // Cần thiết cho PointerDeviceKind và kéo thả bằng chuột
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../../core/display_labels.dart';
 import '../../core/responsive.dart';
+import '../../core/translation_service.dart';
 import '../../data/models/tarot_card.dart';
 import '../../data/models/user_preferences.dart';
 import '../../logic/deck_provider.dart';
@@ -92,6 +94,9 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   TarotSuit _selectedSuit = TarotSuit.major; // Nhóm bài được chọn mặc định ban đầu là Ẩn Chính
   int? _lastDrawnId; // Lá vừa rút: bay từ xấp bài vào vị trí đọc trên màn hình (desktop) / bay lên (phone)
   bool _tableArtPrecached = false; // Tranh bàn (gỗ/khăn/decor) đã nạp trước chưa.
+  // WIRING (V2 display path): id bộ bài đã nạp bản dịch vĩnh viễn
+  // (để không nạp lại mỗi lần didChangeDependencies chạy).
+  int? _preloadedDeckId;
   // Thanh cuộn của panel giải nghĩa (luôn hiện để thấy còn nội dung).
   final ScrollController _meaningScrollController = ScrollController();
 
@@ -208,6 +213,29 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       ]) {
         precacheImage(AssetImage(asset), context);
       }
+    }
+    // WIRING (V2 display path): nạp bản dịch vĩnh viễn đã lưu của
+    // bộ bài đang trải (ngôn ngữ hiện tại) để các lá vẽ từ bản đã
+    // lưu thay vì dịch theo yêu cầu từng lá. Chỉ nạp một lần cho
+    // mỗi bộ bài; nếu lá chưa tải xong (danh sách rỗng) thì để lần
+    // didChangeDependencies sau (khi DeckProvider báo lá đã tải)
+    // nạp lại. Nạp nền, không chặn màn hình — bàn phải hiện ngay;
+    // bản đã lưu sẽ kịp cho các lá rút/chọn sau đó và cho lần mở
+    // sau. (Khác deck_detail — ở đó chờ trước khi hiện lưới vì
+    // lưới là toàn bộ nội dung màn hình.) Khách chưa đăng nhập
+    // vẫn nạp được bộ bài cơ bản (dữ liệu chung, công khai).
+    final deckProvider = context.read<DeckProvider>();
+    final deck = deckProvider.selectedDeck;
+    final deckCards = deckProvider.currentDeckCards;
+    if (deck?.id != null &&
+        deckCards.isNotEmpty &&
+        _preloadedDeckId != deck!.id) {
+      _preloadedDeckId = deck.id;
+      unawaited(context.read<TranslationService>().preloadLocalDeck(
+            deckId: deck.id,
+            deckName: deck.name,
+            cards: deckCards,
+          ));
     }
   }
 

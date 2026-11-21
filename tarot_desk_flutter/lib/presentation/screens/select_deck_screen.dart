@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
+import '../../core/translation_service.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/datasources/tarotdesk_api_service.dart';
 import '../../data/models/tarot_card.dart';
@@ -522,6 +523,23 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
     try {
       final deck = _parseSharedDeck(entry);
       final cards = _parseSharedCards(entry);
+      if (!mounted) return;
+      // WIRING (V2 display path): nạp bản dịch vĩnh viễn đã lưu
+      // của bộ bài chung này (ngôn ngữ hiện tại) TRƯỚC khi hiện
+      // hộp xem trước, để các lá trong hộp vẽ từ bản đã lưu thay
+      // vì dịch theo yêu cầu từng lá. Dùng id máy chủ của bộ bài
+      // (entry['id']) — Worker tự đổi ra deck_key. Chờ có giới
+      // hạn (timeout ngắn trong service); bộ chưa có bản dịch lưu
+      // sẵn hoặc Worker chậm thì các lá dịch theo yêu cầu như
+      // trước. Công khai nên khách chưa đăng nhập cũng nạp được.
+      final sharedId = entry['id']?.toString();
+      if (sharedId != null && sharedId.isNotEmpty) {
+        await context.read<TranslationService>().preloadDeckTranslations(
+              sharedId: sharedId,
+              cards: cards,
+              deckName: deck.name,
+            );
+      }
       if (!mounted) return;
       await _showSharedDeckDialog(deck, cards);
     } on TarotdeskApiException catch (e) {

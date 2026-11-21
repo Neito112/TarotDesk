@@ -331,8 +331,29 @@ class TarotdeskApiService {
   ///
   /// [deckJson] is `{"deck": {...}, "cards": [...]}` (the shared-deck
   /// JSON shape); it is sent as the request body. Returns the
-  /// submission id.
+  /// submission id. The Worker assigns the deck its permanent
+  /// `deck_key` at submit time (the submission id itself) and
+  /// stores its translations permanently under it — see
+  /// [submitDeckDetailed] when the caller also needs the key.
   Future<String> submitDeck(
+    String sessionToken,
+    Map<String, dynamic> deckJson,
+  ) async {
+    final detailed = await submitDeckDetailed(sessionToken, deckJson);
+    final id = detailed['id'];
+    if (id is String && id.isNotEmpty) return id;
+    throw const TarotdeskApiException(
+      'server',
+      'The server did not return a submission id.',
+    );
+  }
+
+  /// `POST /submit-deck`, returning the full response
+  /// `{'id': ..., 'deck_key': ...}`. The `deck_key` is the deck's
+  /// permanent identity from here on: it is carried unchanged
+  /// through approval into the shared library, and the deck's
+  /// stored translations are keyed by it.
+  Future<Map<String, dynamic>> submitDeckDetailed(
     String sessionToken,
     Map<String, dynamic> deckJson,
   ) async {
@@ -350,10 +371,13 @@ class TarotdeskApiService {
     );
     final map = _asMap(decoded);
     final id = map['id'] ?? map['submission_id'];
-    if (id is String && id.isNotEmpty) return id;
+    if (id is String && id.isNotEmpty) return map;
     final submission = map['submission'];
     if (submission is Map && submission['id'] is String) {
-      return submission['id'] as String;
+      return <String, dynamic>{
+        'id': submission['id'],
+        'deck_key': submission['deck_key'] ?? submission['id'],
+      };
     }
     throw const TarotdeskApiException(
       'server',
@@ -378,7 +402,10 @@ class TarotdeskApiService {
   }
 
   /// `POST /admin/approve` with `{id}` — approve a submission
-  /// (admin only). The deck moves into the shared library.
+  /// (admin only). The deck moves into the shared library. This is
+  /// a PURE MOVE: the deck's translations were already stored
+  /// permanently at submit time under its deck_key, so approval
+  /// re-translates nothing and touches no translation rows.
   Future<void> approveSubmission(String sessionToken, String id) async {
     await _call(
       'POST',
@@ -435,6 +462,11 @@ class TarotdeskApiService {
   // served under the Worker's anonymous cap; pass null for them.
   // Throws [TarotdeskApiException] like every other call here;
   // TranslationService catches it and shows the original text.
+  //
+  // NOTE: this endpoint is for AD-HOC text only. A deck's
+  // translations live permanently in the Worker's
+  // `deck_translations` table instead — see
+  // [storeDeckTranslations] / [fetchDeckTranslations] above.
   // ------------------------------------------------------------------
 
   /// `POST /translate` with
@@ -475,6 +507,219 @@ class TarotdeskApiService {
         WorkerTranslation.fromJson(list[i], fallbackText: texts[i]),
     ];
   }
+
+  // ------------------------------------------------------------------
+  // Permanent deck translations (POST /deck/pretranslate +
+  // GET /deck-translations) — see
+  // lib/core/translation_service.dart (storeDeckTranslations).
+  //
+  // A deck's translations are PERMANENT per-deck / per-user data in
+  // the Worker's `deck_translations` table — keyed by
+  // (deck_key, card_id, lang), owned by 'shared' or by the author's
+  // email — NOT entries in the `translations` content cache (that
+  // table serves only the ad-hoc POST /translate below). Any
+  // signed-in user can store their own decks: the Worker decides
+  // the owner from the session, never from the client. The old V1
+  // admin-only POST /admin/pretranslate endpoint is REMOVED.
+  // The Worker queues the work in ctx.waitUntil() and returns
+  // immediately, so these calls only ever wait for the quick 200
+  // — the 20s timeout above is never the bottleneck.
+  // Throws [TarotdeskApiException] like every other call here.
+  // ------------------------------------------------------------------
+
+  /// `POST /deck/pretranslate` with
+  /// `{deck_key?, deck_id?, deck_name?, cards:
+  /// [{card_id?, name, meaning}], source_lang?}`.
+  ///
+  /// Translates the given cards into all four UI languages
+  /// (en / zh / ko / ja) in the background and stores them
+  /// PERMANENTLY under [deckKey] (or the key derived from the
+  /// caller's session + [deckId]). `card_id` is the card's 0-based
+  /// position in the deck's card list — pass it explicitly for a
+  /// single-card edit, omit it (array index) for a whole deck.
+  /// [deckName] (when given) is stored as the deck-name row.
+  /// Caps mirror the authed `/translate` limits: max 100 texts /
+  /// 40,000 chars per call — callers chunk.
+  Future<StoreDeckTranslationsResult> storeDeckTranslations({
+    required String sessionToken,
+    required String deckKey,
+    String? deckName,
+    required List<DeckTranslationItem> items,
+    String? sourceLang,
+  }) async {
+    if (items.isEmpty &&
+        (deckName == null || deckName.trim().isEmpty)) {
+      return const StoreDeckTranslationsResult(
+        deckKey: '',
+        queuedCards: 0,
+        languages: <String>[],
+      );
+    }
+    final decoded = await _call(
+      'POST',
+      '/deck/pretranslate',
+      sessionToken: sessionToken,
+      body: <String, dynamic>{
+        'deck_key': deckKey,
+        if (deckName != null && deckName.trim().isNotEmpty)
+          'deck_name': deckName,
+        'cards': <Map<String, dynamic>>[
+          for (final item in items)
+            <String, dynamic>{
+              'card_id': item.cardId,
+              'name': item.name,
+              'meaning': item.meaning,
+            },
+        ],
+        if (sourceLang != null && sourceLang.isNotEmpty)
+          'source_lang': sourceLang,
+      },
+    );
+    final map = _asMap(decoded);
+    final queued = map['queued_cards'];
+    final langs = map['languages'];
+    return StoreDeckTranslationsResult(
+      deckKey: (map['deck_key'] as String?) ?? deckKey,
+      queuedCards: queued is int ? queued : items.length,
+      languages: langs is List
+          ? langs.whereType<String>().toList(growable: false)
+          : const <String>['en', 'zh', 'ko', 'ja'],
+    );
+  }
+
+  /// `GET /deck-translations?deck_key=...&lang=...` (or
+  /// `shared_id=...` for a shared deck) — the deck's PERMANENT
+  /// stored translations for one language, as
+  /// `{deck_key, lang, deck_name, cards: [{card_id, name,
+  /// meaning}]}`. A fast D1 lookup: no MT call, no cache read.
+  /// [sessionToken] is optional — shared decks and the base deck
+  /// are public, so guests can read them without logging in;
+  /// pass the token for personal decks (the Worker checks the
+  /// caller owns them). Throws [TarotdeskApiException] on
+  /// failure (unknown deck, not the owner, Worker down, ...).
+  Future<StoredDeckTranslations> fetchDeckTranslations({
+    String? sessionToken,
+    String? deckKey,
+    String? sharedId,
+    required String lang,
+  }) async {
+    assert(
+      (deckKey != null && deckKey.isNotEmpty) ||
+          (sharedId != null && sharedId.isNotEmpty),
+      'fetchDeckTranslations needs a deckKey or a sharedId',
+    );
+    final query = deckKey != null && deckKey.isNotEmpty
+        ? 'deck_key=${Uri.encodeQueryComponent(deckKey)}'
+        : 'shared_id=${Uri.encodeQueryComponent(sharedId!)}';
+    final decoded = await _call(
+      'GET',
+      '/deck-translations?$query&lang=${Uri.encodeQueryComponent(lang)}',
+      sessionToken: sessionToken,
+    );
+    final map = _asMap(decoded);
+    final list = _asMapList(map['cards'], 'cards');
+    return StoredDeckTranslations(
+      deckKey: (map['deck_key'] as String?) ?? (deckKey ?? ''),
+      lang: (map['lang'] as String?) ?? lang,
+      deckName: (map['deck_name'] as String?) ?? '',
+      cards: <StoredDeckTranslation>[
+        for (final row in list)
+          StoredDeckTranslation(
+            cardId: (row['card_id'] as int?) ?? -1,
+            name: (row['name'] as String?) ?? '',
+            meaning: (row['meaning'] as String?) ?? '',
+          ),
+      ],
+    );
+  }
+}
+
+/// One card to store permanently: its 0-based position in the
+/// deck's card list ([cardId]), its source name and its source
+/// meaning. Positions are the identity — the same order the app
+/// stores/reads the cards in, so rows map back to cards on any
+/// device. The deck name travels separately (`deck_name`).
+class DeckTranslationItem {
+  const DeckTranslationItem({
+    required this.cardId,
+    required this.name,
+    required this.meaning,
+  });
+
+  /// 0-based position in the deck's card list.
+  final int cardId;
+
+  /// Source-language card name.
+  final String name;
+
+  /// Source-language card meaning.
+  final String meaning;
+}
+
+/// What `POST /deck/pretranslate` queued: the deck_key the rows
+/// were stored under, the number of cards accepted, and the target
+/// languages (always en / zh / ko / ja). The translations
+/// themselves are not returned — they land in the Worker's
+/// `deck_translations` table and are read back later through
+/// `GET /deck-translations`.
+class StoreDeckTranslationsResult {
+  const StoreDeckTranslationsResult({
+    required this.deckKey,
+    required this.queuedCards,
+    required this.languages,
+  });
+
+  /// deck_key the rows were stored under.
+  final String deckKey;
+
+  /// Cards accepted for background translation + permanent store.
+  final int queuedCards;
+
+  /// Target languages the Worker queued (en / zh / ko / ja).
+  final List<String> languages;
+}
+
+/// One deck's permanent stored translations for one language, as
+/// returned by `GET /deck-translations`.
+class StoredDeckTranslations {
+  const StoredDeckTranslations({
+    required this.deckKey,
+    required this.lang,
+    required this.deckName,
+    required this.cards,
+  });
+
+  /// deck_key the rows belong to.
+  final String deckKey;
+
+  /// Language of the stored rows ('en' / 'zh' / 'ko' / 'ja').
+  final String lang;
+
+  /// Translated deck name ('' when not stored yet).
+  final String deckName;
+
+  /// Translated cards, in card_id (position) order. The deck-name
+  /// row (card_id -1) is NOT in here — it is [deckName].
+  final List<StoredDeckTranslation> cards;
+}
+
+/// One stored card translation: the card's position in its deck
+/// plus its translated name + meaning.
+class StoredDeckTranslation {
+  const StoredDeckTranslation({
+    required this.cardId,
+    required this.name,
+    required this.meaning,
+  });
+
+  /// 0-based position in the deck's card list.
+  final int cardId;
+
+  /// Translated card name.
+  final String name;
+
+  /// Translated card meaning.
+  final String meaning;
 }
 
 /// One string as translated by the Worker (`POST /translate`).

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -103,6 +104,36 @@ class AuthProvider extends ChangeNotifier {
   /// exposed the session as `token`).
   String? get token => _sessionToken;
 
+  /// Called (fire-and-forget) whenever this provider reaches
+  /// [AuthState.loggedIn] — both after a Google login (the OAuth
+  /// callback exchange in [handleOAuthCallback]) and after a saved
+  /// session is validated on app start (page reload) in
+  /// [restoreSession]. Wired by `main.dart` to run the automatic
+  /// cloud sync ([CloudSyncService.syncAfterLogin] — the two-way
+  /// login policy: download when the cloud has data this device
+  /// lacks, upload when this device has user data the cloud lacks,
+  /// never overwrite when both sides have data).
+  ///
+  /// This is a plain callback because AuthProvider cannot import
+  /// the sync service (that would be a circular import — the sync
+  /// service imports this provider). It is never awaited by this
+  /// provider; a failure inside the hook must never break the
+  /// login or the app start, so [_triggerLoginSync] swallows it.
+  Future<void> Function()? onLoggedIn;
+
+  /// Fire-and-forget the [onLoggedIn] hook. Never throws: a missing
+  /// hook is a no-op and any error from the hook is swallowed, so
+  /// the login / session restore always completes.
+  void _triggerLoginSync() {
+    final hook = onLoggedIn;
+    if (hook == null) return;
+    try {
+      unawaited(hook().catchError((_) {}));
+    } catch (_) {
+      // A synchronously-throwing hook must never break the login.
+    }
+  }
+
   /// True while the app is exchanging the `?code=` from a Google
   /// redirect back to the app. The app gate shows a "completing
   /// sign-in" message instead of the login screen during this time.
@@ -156,6 +187,11 @@ class AuthProvider extends ChangeNotifier {
         _user = null;
         _state = AuthState.loggedOut;
       }
+      // RELOAD trigger: a saved session validated on app start
+      // (page reload) counts as a login for sync — run the
+      // automatic two-way sync in the background. Guests and
+      // logged-out states never reach here.
+      if (_state == AuthState.loggedIn) _triggerLoginSync();
     } catch (_) {
       // SharedPreferences or anything else failed: fail logged-out,
       // never crash the app start.
@@ -240,6 +276,10 @@ class AuthProvider extends ChangeNotifier {
       _isCompletingOAuthCallback = false;
       _cleanCallbackUrl();
       notifyListeners();
+      // LOGIN trigger: the Google OAuth callback exchanged
+      // successfully — run the automatic two-way sync in the
+      // background. Only fires when the login actually succeeded.
+      if (_state == AuthState.loggedIn) _triggerLoginSync();
       return true;
     } catch (_) {
       // Anything unexpected (e.g. storage failure): fail logged-out
