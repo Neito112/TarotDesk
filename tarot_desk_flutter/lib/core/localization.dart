@@ -54,6 +54,27 @@ class AppStrings {
       AppLanguage.ko: "커피 한 잔 사 주세요",
       AppLanguage.ja: "コーヒーを一杯おごってください",
     },
+    'about.guideLinkBody': {
+      AppLanguage.vi: "Bộ slide hướng dẫn từng bước kèm ảnh chụp thực tế của app: trải bài, lá bài ngày, kho bộ bài, tùy chỉnh bàn, nhạc huyền bí…",
+      AppLanguage.en: "A step-by-step slide deck with real screenshots of the app: readings, daily card, deck library, table customisation, mystical music…",
+      AppLanguage.zh: "配有应用真实截图的分步幻灯片指南：占卜、每日牌、牌组库、牌桌自定义、神秘音乐……",
+      AppLanguage.ko: "앱 실제 스크린샷과 함께하는 단계별 슬라이드 가이드: 리딩, 오늘의 카드, 덱 보관함, 테이블 꾸미기, 신비한 음악……",
+      AppLanguage.ja: "アプリの実際のスクリーンショット付きステップバイステップのスライドガイド：リーディング、今日のカード、デッキライブラリ、テーブルカスタマイズ、神秘的な音楽……",
+    },
+    'about.guideLinkLabel': {
+      AppLanguage.vi: "Mở bộ slide hướng dẫn chi tiết",
+      AppLanguage.en: "Open the detailed guide slides",
+      AppLanguage.zh: "打开详细指南幻灯片",
+      AppLanguage.ko: "상세 가이드 슬라이드 열기",
+      AppLanguage.ja: "詳しいガイドスライドを開く",
+    },
+    'about.guideLinkTitle': {
+      AppLanguage.vi: "Hướng dẫn chi tiết",
+      AppLanguage.en: "Detailed Guide",
+      AppLanguage.zh: "详细指南",
+      AppLanguage.ko: "상세 가이드",
+      AppLanguage.ja: "詳しいガイド",
+    },
     'about.guideTitle': {
       AppLanguage.vi: "Hướng dẫn sử dụng",
       AppLanguage.en: "User Guide",
