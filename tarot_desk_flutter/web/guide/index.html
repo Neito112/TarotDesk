@@ -68,6 +68,11 @@
     box-shadow: 0 18px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(212,175,55,.08);
     object-fit: contain; background: #000;
   }
+  .shot-cap {
+    color: var(--text-dim); font-size: 13px; line-height: 1.6;
+    max-width: 640px; margin: -10px auto 22px;
+  }
+  .shot-cap a { color: var(--gold); }
   .shot-missing {
     display: flex; align-items: center; justify-content: center;
     max-width: 640px; height: 220px; margin: 0 auto 22px;
@@ -164,7 +169,8 @@
     <div class="slide-inner">
       <div class="kicker">Màn hình chính</div>
       <h2>Màn hình chính có gì?</h2>
-      <img class="shot" src="images/home.png" alt="Màn hình chính TarotDesk" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp màn hình chính sẽ được thêm vào đây.</div>'">
+      <img class="shot" src="images/home-crop.png" alt="Màn hình chính TarotDesk, đã cắt sát dải giao diện phía trên và đánh số 1–4" onerror="this.outerHTML='<div class=shot-missing><b>CHƯA CÓ ẢNH — cần chụp lại.</b><br>Cần chụp: màn hình chính, chỉ lấy dải giao diện phía trên (xem CAPTURE_SPEC.md). Ảnh gốc đầy đủ vẫn ở images/home.png.</div>'">
+      <p class="shot-cap">Ảnh đã cắt sát dải giao diện phía trên và đánh số 1–4 khớp với các bước bên dưới — <a href="images/home.png">xem ảnh gốc đầy đủ</a>.</p>
       <div class="steps">
         <div class="step"><div class="num">1</div><p><b>Lá bài ngày</b> — lá bài app chọn cho bạn mỗi ngày, chạm vào để đọc ý nghĩa.</p></div>
         <div class="step"><div class="num">2</div><p><b>Trải bài mới</b> — nút chính để bắt đầu một lần trải bài.</p></div>
@@ -294,7 +300,7 @@
       <img class="shot" src="images/settings.png" alt="Cài đặt bàn trải bài" onerror="this.outerHTML='<div class=shot-missing>Ảnh chụp màn Cài đặt sẽ được thêm vào đây.</div>'">
       <div class="steps">
         <div class="step"><div class="num">1</div><p>Mở <b>Cài đặt</b> (⚙ ở màn hình chính) để đổi <b>khăn trải bàn</b>: Nhung Tím, Lụa Vàng, Thảm Đen.</p></div>
-        <div class="step"><div class="num">2</div><p>Chọn <b>phụ kiện</b> đặt trên bàn (tối đa 3): Đá Thạch Anh, Quả Cầu Pha Lê, Hương Trầm, Nến — đổi ngay cả trong lúc đang trải bài.</p></div>
+        <div class="step"><div class="num">2</div><p>Chọn <b>phụ kiện</b> đặt trên bàn (tối đa 4): Đá Thạch Anh, Quả Cầu Pha Lê, Hương Trầm, Nến — đổi ngay cả trong lúc đang trải bài.</p></div>
         <div class="step"><div class="num">3</div><p>Đổi <b>mặt bàn</b> (Gỗ Sồi, Đá Cổ, Vũ Trụ), <b>giao diện</b> (Tối Obsidian…), bật/tắt khói trầm và hiệu ứng.</p></div>
       </div>
     </div>
