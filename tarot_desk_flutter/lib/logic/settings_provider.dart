@@ -115,6 +115,9 @@ class SettingsProvider extends ChangeNotifier {
   /// bỏ trùng, tối đa [UserPreferencesModel.maxDecorItems] món.
   /// Đây là điểm chặn duy nhất — UI (Cài đặt / dialog đổi bàn) chỉ
   /// cần gọi setter này, không tự lọc ở từng nơi nữa.
+  /// Đồng thời đồng bộ nút "Hiện đồ decor" với danh sách: còn món
+  /// nào được chọn thì bật, bỏ chọn hết thì tắt — để nút luôn phản
+  /// ánh đúng có decor hay không, ở cả hai màn hình.
   void setDecorItems(List<String> items) {
     final seen = <String>{};
     final clean = <String>[];
@@ -126,6 +129,10 @@ class SettingsProvider extends ChangeNotifier {
       if (clean.length == UserPreferencesModel.maxDecorItems) break;
     }
     _userPrefs.decorItems = clean;
+    // Đồng bộ "Hiện đồ decor": chọn món nào -> bật; bỏ chọn hết
+    // (danh sách rỗng) -> tắt. Nút vẫn bật/tắt tay được qua
+    // toggleDecor, nhưng mỗi lần đổi danh sách decor là đồng bộ lại.
+    _userPrefs.showDecor = clean.isNotEmpty;
     _save();
   }
 
