@@ -1,5 +1,7 @@
 # TarotDesk
 
+> **Dành cho agent / For agents:** `AGENT_LOG.md` (repo root) is the source of truth for project status, decisions, and how to take over and operate this project. Read it first — Section 0 is the takeover guide — and keep it updated after every merge.
+
 TarotDesk là nơi bạn lưu trữ, sắp xếp và tập luyện với bộ bài Tarot của mình.
 
 **TarotDesk không bói toán.** App không đọc bài thay bạn và không thay thế bộ bài vật lý — ý nghĩa của một lá bài đến từ việc bạn học, bạn cảm và bạn suy ngẫm. Trải bài thật là khi bạn cầm lá bài trên tay, xào bài, rút bài, đặt bài lên bàn.
