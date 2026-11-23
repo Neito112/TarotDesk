@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../core/guide_url.dart';
+import '../../core/guide_dialog.dart';
 import '../../core/responsive.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
@@ -20,9 +19,9 @@ import '../widgets/glass_panel.dart';
 class AboutScreen extends StatelessWidget {
   const AboutScreen({Key? key}) : super(key: key);
 
-  /// Link mở bộ hướng dẫn HTML chi tiết dùng chung [kGuideUrl]
-  /// (xem lib/core/guide_url.dart) — cùng URL với pop-up hướng
-  /// dẫn ở HomeScreen, để hai nơi không lệch nhau.
+  /// Mục hướng dẫn trong màn này mở bảng hướng dẫn NGAY TRONG
+  /// APP (cùng dialog với pop-up khi vào app và nút ⓘ trên màn
+  /// Home) — không nhảy sang link ngoài.
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
@@ -98,9 +97,9 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  /// Mục link mở bộ slide hướng dẫn chi tiết (kèm ảnh chụp thực
-  /// tế của app). Bấm vào là mở ra giao diện slide đã hiển thị sẵn
-  /// trong trình duyệt, không phải file thô.
+  /// Mục mở bảng hướng dẫn 15 chương (kèm ảnh chụp thực tế của
+  /// app) NGAY TRONG APP qua [showGuideDialog] — không nhảy sang
+  /// link ngoài, không mở tab trình duyệt mới.
   Widget _guideSection(
       BuildContext context, dynamic theme, SettingsProvider settings) {
     return GlassPanel(
@@ -130,12 +129,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             InkWell(
-              onTap: () async {
-                final uri = Uri.parse(kGuideUrl);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
+              onTap: () => showGuideDialog(context),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -153,7 +147,7 @@ class AboutScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.open_in_new, color: theme.primaryColor, size: 16),
+                  Icon(Icons.chevron_right, color: theme.primaryColor, size: 16),
                 ],
               ),
             ),

@@ -15,6 +15,7 @@ import '../../logic/auth_provider.dart';
 import '../../logic/deck_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
+import 'about_screen.dart';
 
 /// Màn hình Cài đặt giao diện, Theme, Bàn bói bài & Đồ trang trí.
 /// Bố cục: mobile-first Android (1 cột), iPad/PC (Theme + Hiệu ứng
@@ -468,7 +469,7 @@ class SettingsScreen extends StatelessWidget {
   /// Mục bật/tắt pop-up hướng dẫn khi vào app: hiện lại bảng
   /// hướng dẫn mỗi khi đăng nhập hoặc tải lại app. Bật ở đây để
   /// hiện lại pop-up sau khi đã tick "Không hiện nữa" trong dialog
-  /// (xem HomeScreen._showGuidePopup).
+  /// (xem showGuideDialog trong lib/core/guide_dialog.dart).
   Widget _guideSection(SettingsProvider settings, AppThemeData theme) {
     return GlassPanel(
       backgroundColor: theme.cardBackgroundColor,
@@ -486,6 +487,38 @@ class SettingsScreen extends StatelessWidget {
             onChanged: (val) => settings.setShowGuidePopup(val),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Mục mở màn Giới thiệu (AboutScreen): TarotDesk là gì, các
+  /// bước sử dụng và bảng hướng dẫn. Màn Giới thiệu không còn mở
+  /// bằng nút ⓘ trên màn Home nữa (nút ⓘ mở thẳng bảng hướng
+  /// dẫn) nên vào từ đây.
+  Widget _aboutSection(
+      BuildContext context, SettingsProvider settings, AppThemeData theme) {
+    return GlassPanel(
+      backgroundColor: theme.cardBackgroundColor,
+      borderColor: theme.glassBorderColor,
+      child: ListTile(
+        leading: Icon(Icons.info_outline, color: theme.primaryColor),
+        title: Text(
+          settings.tr('settings.aboutTitle'),
+          style: TextStyle(color: theme.textColor, fontSize: 15),
+        ),
+        subtitle: Text(
+          settings.tr('settings.aboutSubtitle'),
+          style:
+              TextStyle(color: theme.secondaryTextColor, fontSize: 12),
+        ),
+        trailing:
+            Icon(Icons.chevron_right, color: theme.primaryColor, size: 20),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AboutScreen()),
+          );
+        },
       ),
     );
   }
@@ -707,6 +740,8 @@ class SettingsScreen extends StatelessWidget {
                 ],
                 const SizedBox(height: _sectionGap),
                 _guideSection(settings, theme),
+                const SizedBox(height: _sectionGap),
+                _aboutSection(context, settings, theme),
                 const SizedBox(height: _sectionGap),
                 _tableSection(context, settings, theme),
               ],
