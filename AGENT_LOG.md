@@ -1223,3 +1223,14 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Added `tarot_desk_flutter/web/guide/assets/` (gsap.min.js + 12 screenshots: qr-card, home-top, add-deck, daily, history, library, music, reading-empty, reading-stage, select, settings). `reading-tray.png` was NOT uploaded: its granted file ID was rejected by the upload tool, so the scene that references it may show a broken image until it is re-uploaded.
 - Deleted the stale `tarot_desk_flutter/web/guide/images/` folder (home.png, home-crop.png, phone-home.png).
 - Committed directly to main, no branch/PR, per the user's instruction: `b94f108` (index.html), `2e74f27` (assets), `a869c53` / `fc24a91` / `2a543c1` (image deletions). The flutter-web-preview run and live guide check followed the push; results were reported back to the user.
+
+## 13. Pop-up hướng dẫn khi đăng nhập/tải lại (2026-11-23)
+
+- Hiển thị hướng dẫn dạng pop-up (Dialog) ngay khi HomeScreen mount lần đầu sau khi đăng nhập hoặc tải lại trang, cho cả người dùng đăng nhập Google và khách (guest).
+- Thêm cài đặt showGuidePopup (mặc định true) vào UserPreferences, lưu cùng các cài đặt khác qua SettingsProvider.
+- Dialog nhúng guide HTML (tarot_desk_flutter/web/guide/) bằng iframe trên web (guide_view_web.dart, qua guide_view.dart / guide_view_stub.dart); trên native mở liên kết ngoài.
+- Chân dialog có checkbox "don't show again": tích và đóng là lưu ngay (showGuidePopup = false), tải lại app không hiện pop-up nữa.
+- Màn hình Settings có công tắc bật lại hướng dẫn; bật rồi tải lại thì pop-up hiện lại.
+- Màn hình About: liên kết "Hướng dẫn chi tiết" dùng chung hằng số URL trong guide_url.dart.
+- Files changed: lib/data/models/user_preferences.dart, lib/logic/settings_provider.dart, lib/core/localization.dart, lib/core/guide_url.dart (mới), lib/core/guide_view.dart (mới), lib/core/guide_view_web.dart (mới), lib/core/guide_view_stub.dart (mới), lib/presentation/screens/home_screen.dart, lib/presentation/screens/settings_screen.dart, lib/presentation/screens/about_screen.dart, tarot_desk_flutter/pubspec.yaml.
+- Committed directly to main, no branch/PR: 17256d7, e07fe0f, 0efa1da, 7ca35cc, f46da68 (các file trên) + commit này (AGENT_LOG.md §13).
