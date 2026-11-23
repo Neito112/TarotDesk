@@ -1045,6 +1045,13 @@ class AppStrings {
       AppLanguage.ko: "서버에 덱을 제출하려면 로그인하세요.",
       AppLanguage.ja: "サーバーにデッキを送信するにはログインしてください。",
     },
+    'library.myEmpty': {
+      AppLanguage.vi: "Bạn chưa có bộ bài nào.",
+      AppLanguage.en: "You don't have any decks yet.",
+      AppLanguage.zh: "你还没有牌组。",
+      AppLanguage.ko: "아직 내 덱이 없습니다.",
+      AppLanguage.ja: "自分のデッキはまだありません。",
+    },
     'library.myTitle': {
       AppLanguage.vi: "Bộ bài của tôi ({count})",
       AppLanguage.en: "My decks ({count})",
