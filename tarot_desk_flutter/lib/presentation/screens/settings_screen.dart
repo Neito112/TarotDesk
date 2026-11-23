@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/display_labels.dart';
 import '../../core/localization.dart';
 import '../../core/responsive.dart';
+import '../../core/tarot_router_api.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/translation_service.dart';
 import '../../data/datasources/database_helper.dart';
@@ -513,7 +514,7 @@ class SettingsScreen extends StatelessWidget {
         trailing:
             Icon(Icons.chevron_right, color: theme.primaryColor, size: 20),
         onTap: () {
-          Navigator.pushNamed(context, '/settings/about');
+          tarotPush(context, '/settings/about');
         },
       ),
     );
