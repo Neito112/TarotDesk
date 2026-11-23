@@ -8,6 +8,7 @@ import '../../core/constants/tarot_symbols.dart';
 import '../../core/guide_dialog.dart';
 import '../../core/guide_view.dart';
 import '../../core/responsive.dart';
+import '../../core/tarot_router_api.dart';
 import '../../data/datasources/preferences_service.dart';
 import '../../data/models/tarot_card.dart';
 import '../../logic/auth_provider.dart';
@@ -170,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     readingProvider.startManualReading(settings.tr('home.newReadingSession'));
-    Navigator.pushNamed(context, '/reading/new');
+    tarotPush(context, '/reading/new');
   }
 
   /// Nội dung lá bài hôm nay: ảnh lớn + tên + toàn bộ ý nghĩa
@@ -477,14 +478,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: theme.primaryColor, size: 24),
                 tooltip: settings.tr('home.adminTooltip'),
                 onPressed: () {
-                  Navigator.pushNamed(context, '/admin');
+                  tarotPush(context, '/admin');
                 },
               ),
             IconButton(
               icon: Icon(Icons.settings, color: theme.primaryColor, size: 24),
               tooltip: settings.tr('home.settingsTooltip'),
               onPressed: () {
-                Navigator.pushNamed(context, '/settings');
+                tarotPush(context, '/settings');
               },
             ),
           ],
@@ -702,7 +703,7 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icons.auto_stories,
       color: theme.accentColor,
       onTap: () {
-        Navigator.pushNamed(context, '/library');
+        tarotPush(context, '/library');
       },
     );
     final traiBaiCu = _buildMenuCard(
@@ -711,7 +712,7 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icons.history_edu,
       color: theme.primaryColor,
       onTap: () {
-        Navigator.pushNamed(context, '/history');
+        tarotPush(context, '/history');
       },
     );
     if (horizontal) {
@@ -746,10 +747,10 @@ class _HomeScreenState extends State<HomeScreen> {
         // nào thì mở kho để chọn.
         final deck = deckProvider.selectedDeck;
         if (deck == null) {
-          Navigator.pushNamed(context, '/library');
+          tarotPush(context, '/library');
           return;
         }
-        Navigator.pushNamed(context, '/deck/detail/${deck.id}/view');
+        tarotPush(context, '/deck/detail/${deck.id}/view');
       },
       child: GlassPanel(
         blurAmount: settings.userPrefs.enableGlassmorphism ? 12 : 0,
@@ -831,7 +832,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final count = readingProvider.readingsHistory.length;
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, '/history');
+        tarotPush(context, '/history');
       },
       child: GlassPanel(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
