@@ -660,9 +660,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           ),
         // Xấp bài ở MỘT góc bàn: góc trên-trái, luôn hiện diện.
         // Neo vào góc trên-trái CỦA TRANH (phân số tranh 0.25,
-        // 0.22), qua phép cover — bám đúng mặt gỗ khi co kéo
+        // 0.30), qua phép cover — bám đúng mặt gỗ khi co kéo
         // màn hình, thay vì neo cứng vào góc màn hình (rơi ra
-        // vùng tối ngoài bàn).
+        // vùng tối ngoài bàn). Neo ở 0.22 (sát mép trên của bàn)
+        // làm đỉnh xấp bị CẮT ở màn hình thấp/toàn màn hình
+        // (mép bàn nằm sát mép trên màn hình nên xấp cao 155px
+        // chìa ra ngoài, bị Stack cắt); hạ xuống 0.30 thì cả xấp
+        // luôn hiện đủ, vẫn trên mặt gỗ, không chạm thạch anh
+        // (xấp x=480–564, thạch anh từ x=586).
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -672,7 +677,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 children: [
                   Positioned(
                     left: 0.25 * 1920 * t.scale + t.dx,
-                    top: 0.22 * 1280 * t.scale + t.dy,
+                    top: 0.30 * 1280 * t.scale + t.dy,
                     child: CardStackWidget(
                       onTap: () {
                         setState(() {
@@ -2257,13 +2262,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         'assets/images/table_bare_wood.png';
 
     // PC: không build icon decor ở đây — phụ kiện là ảnh cắt trong
-    // suốt, đặt theo tọa độ cố định trên mép xa của bàn (xem
+    // suốt, đặt theo phân số tranh trên mép xa của bàn (xem
     // _buildDesktopDecorCutouts trong _buildDesktopTable).
-    // Phone/tablet: hàng decor ở trên cùng, dùng ảnh CẮT VẼ
-    // (cut_*.png, trong suốt) như PC — không còn sprite cũ.
-    final decorWidgets = isDesktop
-        ? const <Widget>[]
-        : _buildDynamicDecorWidgets(prefs.decorItems, 40.0);
+    // Phone/tablet: decor đặt TRÊN BÀN (lớp 4 bên dưới, dùng phép
+    // cover để tìm mép trên của bàn) — không còn hàng sprite 40px
+    // ở sát mép trên màn hình (bé tí, bay trong vùng tối trên bàn).
 
     return Container(
       width: double.infinity,
@@ -2331,22 +2334,50 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           // LỚP 3: Nội dung của ứng dụng
           child,
 
-          // LỚP 4: Đồ trang trí — chỉ phone/tablet: hàng ảnh cắt vẽ
-          // ở trên cùng, luôn IgnorePointer. PC: không có gì ở đây,
-          // phụ kiện là ảnh cắt đặt đúng vị trí trên mép xa của bàn
-          // (xem _buildDesktopDecorCutouts trong _buildDesktopTable).
+          // LỚP 4: Đồ trang trí — chỉ phone/tablet. Trước đây là
+          // hàng sprite 40px ở sát mép trên màn hình (top: 0) nên
+          // đồ bé tí và bay trong vùng tối PHÍA TRÊN bàn (mép trên
+          // của bàn nằm sâu hơn, khoảng y=0.218 của tranh). Giờ đặt
+          // đồ TRÊN BÀN: dùng đúng phép cover để tìm mép trên của
+          // bàn, đặt đáy hàng decor ngay dưới mép đó (trên mặt gỗ),
+          // mỗi món rộng ~18% chiều rộng màn hình (to gấp rưỡi
+          // trước) và trải đều. Vẫn IgnorePointer.
+          // PC: không có gì ở đây, phụ kiện là ảnh cắt đặt theo
+          // phân số tranh trên mép xa của bàn (xem
+          // _buildDesktopDecorCutouts trong _buildDesktopTable).
           if (prefs.showDecor && !isDesktop)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
+            Positioned.fill(
               child: IgnorePointer(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: decorWidgets,
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final t = _paintingCoverTransform(
+                        constraints.maxWidth, constraints.maxHeight);
+                    // Mép trên của bàn trong tranh (0.218) đổi sang
+                    // tọa độ widget; đáy hàng decor đặt ngay dưới
+                    // mép đó 10px, trên mặt gỗ.
+                    final tableTopY = 0.218 * 1280 * t.scale + t.dy;
+                    final itemSize = (constraints.maxWidth * 0.18)
+                        .clamp(56.0, 96.0)
+                        .toDouble();
+                    final rowTop = tableTopY + 10 - (itemSize + 12);
+                    return Stack(
+                      children: [
+                        Positioned(
+                          top: rowTop < 0 ? 0.0 : rowTop,
+                          left: 0,
+                          right: 0,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: _buildDynamicDecorWidgets(
+                                  prefs.decorItems, itemSize),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
