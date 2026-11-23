@@ -912,12 +912,12 @@ class AppStrings {
       AppLanguage.ko: "리딩 기록",
       AppLanguage.ja: "リーディング履歴",
     },
-    'home.aboutTooltip': {
-      AppLanguage.vi: "Giới thiệu & Hướng dẫn sử dụng",
-      AppLanguage.en: "About & User Guide",
-      AppLanguage.zh: "介绍与使用指南",
-      AppLanguage.ko: "소개 및 사용 안내",
-      AppLanguage.ja: "紹介と使い方ガイド",
+    'home.guideTooltip': {
+      AppLanguage.vi: "Hướng dẫn sử dụng",
+      AppLanguage.en: "User guide",
+      AppLanguage.zh: "使用指南",
+      AppLanguage.ko: "사용 안내",
+      AppLanguage.ja: "使い方ガイド",
     },
     'home.adminTooltip': {
       AppLanguage.vi: "Quản trị máy chủ",
@@ -1737,6 +1737,20 @@ class AppStrings {
       AppLanguage.zh: "显示装饰品图层",
       AppLanguage.ko: "장식품 레이어 표시",
       AppLanguage.ja: "装飾品レイヤーを表示",
+    },
+    'settings.aboutSubtitle': {
+      AppLanguage.vi: "TarotDesk là gì, các bước sử dụng và bảng hướng dẫn",
+      AppLanguage.en: "What TarotDesk is, how to use it, and the user guide",
+      AppLanguage.zh: "TarotDesk 是什么、使用步骤和用户指南",
+      AppLanguage.ko: "TarotDesk 소개, 사용 방법 및 사용자 안내",
+      AppLanguage.ja: "TarotDesk とは、使い方とユーザーガイド",
+    },
+    'settings.aboutTitle': {
+      AppLanguage.vi: "Giới thiệu",
+      AppLanguage.en: "About",
+      AppLanguage.zh: "关于",
+      AppLanguage.ko: "소개",
+      AppLanguage.ja: "紹介",
     },
     'settings.showGuideSubtitle': {
       AppLanguage.vi: "Hiện lại bảng hướng dẫn mỗi khi đăng nhập hoặc tải lại app",
