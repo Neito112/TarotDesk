@@ -23,10 +23,30 @@ import 'guide_url.dart';
 const String _guideViewType = 'tarotdesk-guide-view';
 bool _registered = false;
 
+/// Callback đóng hộp thoại khi người dùng bấm ESC bên trong iframe
+/// hướng dẫn — phím ESC không tới được Flutter khi iframe đang focus,
+/// nên trang hướng dẫn gửi message 'tarotdesk-guide-escape' về cửa
+/// sổ cha (xem keydown trong web/guide/index.html). [buildGuideView]
+/// cập nhật lại callback này mỗi lần hộp thoại mở.
+VoidCallback? _onGuideEscape;
+bool _escapeListenerRegistered = false;
+
+void _ensureEscapeListener() {
+  if (_escapeListenerRegistered) return;
+  _escapeListenerRegistered = true;
+  html.window.onMessage.listen((html.MessageEvent event) {
+    if (event.data == 'tarotdesk-guide-escape') {
+      _onGuideEscape?.call();
+    }
+  });
+}
+
 /// Trả về widget nhúng trang hướng dẫn: một iframe toàn khung
 /// (100% × 100%, không viền) trỏ tới [kGuideUrl]. Cùng chữ ký với
 /// stub ([guide_view_stub.dart]) — xem [guide_view.dart].
-Widget buildGuideView() {
+Widget buildGuideView({VoidCallback? onEscape}) {
+  _onGuideEscape = onEscape;
+  _ensureEscapeListener();
   if (!_registered) {
     _registered = true;
     ui_web.platformViewRegistry.registerViewFactory(
