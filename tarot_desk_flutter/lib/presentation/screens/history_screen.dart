@@ -10,7 +10,6 @@ import '../widgets/glass_panel.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/localized_content_text.dart';
 import '../widgets/tarot_card_image.dart';
-import 'reading_detail_screen.dart';
 
 /// Màn hình lịch sử các lượt trải bài đã lưu (OldReadings).
 /// Cùng ngôn ngữ với NewReading: mỗi lượt hiện lá bài đầu tiên ở tỉ lệ
@@ -55,13 +54,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              settings: const RouteSettings(name: '/history/detail'),
-              builder: (_) => ReadingDetailScreen(reading: reading),
-            ),
-          );
+          Navigator.pushNamed(context, '/history/detail/${reading.id}');
         },
         child: Padding(
           padding: const EdgeInsets.all(8),
