@@ -868,6 +868,14 @@
           if (e.key === "Escape") closeToc();
           return;
         }
+        if (e.key === "Escape") {
+          // Khi nhúng trong app (iframe): ESC thoát lớp dialog của app.
+          // Trang độc lập thì không có dialog để đóng, bỏ qua.
+          if (window.self !== window.top) {
+            window.parent.postMessage("tarotdesk-guide-escape", "*");
+          }
+          return;
+        }
         if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); showScene(current + 1); }
         else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); showScene(current - 1); }
       });
