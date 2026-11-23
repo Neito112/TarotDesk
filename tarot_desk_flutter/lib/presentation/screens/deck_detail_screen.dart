@@ -82,6 +82,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
     final changed = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
+        settings: const RouteSettings(name: '/deck/edit-card'),
         builder: (_) => EditCardScreen(deckId: widget.deck.id!),
       ),
     );
@@ -271,6 +272,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                               final changed = await Navigator.push<bool>(
                                 context,
                                 MaterialPageRoute(
+                                  settings: const RouteSettings(name: '/deck/edit-card'),
                                   builder: (_) => EditCardScreen(
                                       card: card, deckId: card.deckId),
                                 ),
