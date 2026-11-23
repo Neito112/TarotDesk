@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
+import '../../core/tarot_router_api.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/models/tarot_card.dart';
 import '../../data/models/tarot_reading.dart';
@@ -54,7 +55,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          Navigator.pushNamed(context, '/history/detail/${reading.id}');
+          tarotPush(context, '/history/detail/${reading.id}');
         },
         child: Padding(
           padding: const EdgeInsets.all(8),
