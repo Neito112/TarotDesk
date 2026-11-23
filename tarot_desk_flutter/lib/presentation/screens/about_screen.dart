@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/guide_url.dart';
 import '../../core/responsive.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
@@ -19,11 +20,9 @@ import '../widgets/glass_panel.dart';
 class AboutScreen extends StatelessWidget {
   const AboutScreen({Key? key}) : super(key: key);
 
-  /// Link mở bộ slide HTML hướng dẫn chi tiết (kèm ảnh chụp thực
-  /// tế của app). Bấm vào là mở ra giao diện slide đã hiển thị sẵn
-  /// trong trình duyệt, không phải file thô.
-  static const _guideUrl = 'https://neito112.github.io/TarotDesk/guide/';
-
+  /// Link mở bộ hướng dẫn HTML chi tiết dùng chung [kGuideUrl]
+  /// (xem lib/core/guide_url.dart) — cùng URL với pop-up hướng
+  /// dẫn ở HomeScreen, để hai nơi không lệch nhau.
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
@@ -132,7 +131,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 12),
             InkWell(
               onTap: () async {
-                final uri = Uri.parse(_guideUrl);
+                final uri = Uri.parse(kGuideUrl);
                 if (await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }

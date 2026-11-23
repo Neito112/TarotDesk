@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/tarot_symbols.dart';
+import '../../core/guide_view.dart';
 import '../../core/responsive.dart';
+import '../../data/datasources/preferences_service.dart';
 import '../../data/models/tarot_card.dart';
 import '../../logic/auth_provider.dart';
 import '../../logic/deck_provider.dart';
@@ -51,6 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _dayRolloverTimer;
   int _dailyCardDay = -1;
 
+  /// Chặn pop-up hướng dẫn hiện quá một lần trong một lần mount
+  /// của HomeScreen: bật ngay khi [_maybeShowGuidePopup] chạy lần
+  /// đầu, dù cờ cài đặt có cho hiện hay không.
+  bool _guidePopupShown = false;
+
   /// Seed ổn định cho khách (không đăng nhập): một UUID lưu trong
   /// SharedPreferences, tạo một lần duy nhất ở lần chạy đầu tiên và
   /// không bao giờ tạo lại trừ khi người dùng xóa dữ liệu app. Nhờ
@@ -76,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DeckProvider>().fetchDecks();
       context.read<ReadingProvider>().fetchReadingsHistory();
+      _maybeShowGuidePopup();
     });
   }
 
@@ -234,6 +242,126 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text(settings.tr('common.close')),
             ),
           ],
+        );
+      },
+    );
+  }
+
+
+  /// Pop-up hướng dẫn sử dụng: hiện MỘT LẦN duy nhất ở lần mount
+  /// đầu tiên của HomeScreen sau khi vào app — đăng nhập Google,
+  /// tải lại trang với session đã lưu, hoặc vào bằng khách
+  /// ("Dùng offline"). Không hiện lại khi đi lại trong app: Home
+  /// chỉ mount lại khi quay về từ màn khác qua pop (không tạo
+  /// HomeScreen mới), và cờ [_guidePopupShown] chặn lần gọi thứ
+  /// hai trong cùng một mount.
+  ///
+  /// Đọc thẳng từ SharedPreferences thay vì provider: hàm
+  /// [SettingsProvider.initSettings] chạy bất đồng bộ (fire-and-
+  /// forget) nên lúc Home mount xong, cờ trong bộ nhớ có thể chưa
+  /// tải xong — đọc một lần trực tiếp là cách tránh race này.
+  /// Không bao giờ ném lỗi ra ngoài: lỗi lưu trữ thì pop-up chỉ
+  /// đơn giản là không hiện, màn chính vẫn chạy bình thường.
+  Future<void> _maybeShowGuidePopup() async {
+    try {
+      if (!mounted || _guidePopupShown) return;
+      _guidePopupShown = true;
+      final prefs = await PreferencesService().loadPreferences();
+      if (!mounted || !prefs.showGuidePopup) return;
+      await _showGuidePopup();
+    } catch (_) {
+      // Lỗi lưu trữ: bỏ qua, không làm hỏng màn chính.
+    }
+  }
+
+  /// Hộp thoại hướng dẫn: tiêu đề + trang hướng dẫn HTML nhúng
+  /// (web: iframe cùng origin; nền tảng khác: nút mở link ngoài)
+  /// + chân dialog có checkbox "Không hiện nữa" và nút Đóng.
+  /// Bấm ngoài dialog vẫn đóng được (barrierDismissible).
+  Future<void> _showGuidePopup() async {
+    if (!mounted) return;
+    final settings = context.read<SettingsProvider>();
+    final theme = settings.currentThemeData;
+    final screenSize = MediaQuery.of(context).size;
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        // watch để checkbox vẽ lại ngay khi bấm (lưu ngay qua
+        // provider, xem chú thích ở Checkbox bên dưới).
+        final dialogSettings = dialogContext.watch<SettingsProvider>();
+        return Dialog(
+          backgroundColor: Colors.black.withOpacity(0.94),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+                color: theme.primaryColor.withOpacity(0.5), width: 1),
+          ),
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: screenSize.width * 0.05,
+            vertical: screenSize.height * 0.075,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 1000,
+              maxHeight: screenSize.height * 0.85,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Text(
+                    dialogSettings.tr('guide.popupTitle'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: theme.primaryColor,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: buildGuideView(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Checkbox(
+                      // Cờ lưu là showGuidePopup (true = hiện);
+                      // nhãn checkbox là "không hiện nữa" nên giá
+                      // trị hiển thị là NGƯỢC lại. Bấm là lưu ngay
+                      // qua provider — đóng dialog bằng cách bấm
+                      // ngoài cũng không mất lựa chọn.
+                      value: !dialogSettings.userPrefs.showGuidePopup,
+                      activeColor: theme.primaryColor,
+                      onChanged: (value) => dialogSettings
+                          .setShowGuidePopup(!(value ?? false)),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        // Bấm cả vào nhãn chữ cũng đổi như bấm ô tick.
+                        onTap: () => dialogSettings.setShowGuidePopup(
+                            !dialogSettings.userPrefs.showGuidePopup),
+                        child: Text(
+                          dialogSettings.tr('guide.popupDontShow'),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: Text(dialogSettings.tr('common.close')),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );

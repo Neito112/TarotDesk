@@ -465,6 +465,31 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  /// Mục bật/tắt pop-up hướng dẫn khi vào app: hiện lại bảng
+  /// hướng dẫn mỗi khi đăng nhập hoặc tải lại app. Bật ở đây để
+  /// hiện lại pop-up sau khi đã tick "Không hiện nữa" trong dialog
+  /// (xem HomeScreen._showGuidePopup).
+  Widget _guideSection(SettingsProvider settings, AppThemeData theme) {
+    return GlassPanel(
+      backgroundColor: theme.cardBackgroundColor,
+      borderColor: theme.glassBorderColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(theme, settings.tr('guide.popupTitle')),
+          const SizedBox(height: 4),
+          _toggleTile(
+            theme: theme,
+            title: settings.tr('settings.showGuideTitle'),
+            subtitle: settings.tr('settings.showGuideSubtitle'),
+            value: settings.userPrefs.showGuidePopup,
+            onChanged: (val) => settings.setShowGuidePopup(val),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// MỘT mục duy nhất cho toàn bộ bàn trải bài: chất liệu mặt bàn,
   /// khăn trải bàn, đồ trang trí, và bật/tắt 3 lớp
   /// (mặt bàn / khăn / decor). Mọi control ở đây đều gọi setter
@@ -680,6 +705,8 @@ class SettingsScreen extends StatelessWidget {
                   const SizedBox(height: _sectionGap),
                   _effectsSection(settings, theme),
                 ],
+                const SizedBox(height: _sectionGap),
+                _guideSection(settings, theme),
                 const SizedBox(height: _sectionGap),
                 _tableSection(context, settings, theme),
               ],
