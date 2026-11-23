@@ -14,8 +14,6 @@ import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
 import '../widgets/localized_card_text.dart';
 import '../widgets/localized_content_text.dart';
-import 'add_deck_screen.dart';
-import 'deck_detail_screen.dart';
 
 /// Màn hình chọn & quản lý danh sách bộ bài Tarot (KHO BỘ BÀI).
 /// Điện thoại (Android, chính): lưới 2 cột, thumbnail lá bài 5:8.
@@ -148,13 +146,9 @@ class SelectDeckScreen extends StatelessWidget {
                                   deck.name,
                                 ),
                                 onOpen: () {
-                                  Navigator.push(
+                                  Navigator.pushNamed(
                                     context,
-                                    MaterialPageRoute(
-                                      settings: const RouteSettings(name: '/deck/detail'),
-                                      builder: (_) =>
-                                          DeckDetailScreen(deck: deck),
-                                    ),
+                                    '/deck/detail/${deck.id}',
                                   );
                                 },
                               );
@@ -181,13 +175,7 @@ class SelectDeckScreen extends StatelessWidget {
           style: TextStyle(fontSize: isDesktop ? 13 : 14),
         ),
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              settings: const RouteSettings(name: '/library/add'),
-              builder: (_) => const AddDeckScreen(),
-            ),
-          );
+          Navigator.pushNamed(context, '/library/add');
         },
       ),
     );
@@ -794,13 +782,7 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
                 onSelect: () => deckProvider.selectDeck(deck),
                 onDelete: () {},
                 onOpen: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      settings: const RouteSettings(name: '/deck/detail'),
-                      builder: (_) => DeckDetailScreen(deck: deck),
-                    ),
-                  );
+                  Navigator.pushNamed(context, '/deck/detail/${deck.id}');
                 },
               );
             },
