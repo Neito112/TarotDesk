@@ -1261,3 +1261,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Mục "Bộ bài của tôi" vẫn ở dưới, trống mặc định (library.myEmpty).
 - Files changed: lib/presentation/screens/select_deck_screen.dart (+ AGENT_LOG.md §16).
 - Committed directly to main, no branch/PR.
+## §17 — 23/11/2026 — Phím tắt: ESC thoát từng lớp, Back/Forward chuột gaming
+
+- ESC thoát từng lớp giao diện: hộp thoại / bottom-sheet đang mở thì đóng nó (ESC có sẵn); khay chọn bài trong màn trải bài thì đóng khay (_buildSelectionPanelWithEsc); còn không thì ESC quay lại màn hình trước (Focus gốc ở main.dart + _RouteStackObserver, bỏ qua khi route trên cùng là PopupRoute để không pop đúp).
+- Nút Back/Forward của chuột gaming = Back/Forward của trình duyệt: mỗi màn hình có tên route riêng (RouteSettings trên 14 điểm Navigator.push: /reading/new, /admin, /settings, /library, /library/add, /deck/detail, /history, /history/detail, /deck/edit-card, /settings/about) nên địa chỉ trang đổi theo từng màn hình và lịch sử trình duyệt có từng mục riêng; _RouteStackObserver ghi nhớ route trang vừa pop (builder + settings) và dựng lại khi didPushRoute (Forward) gọi đúng URL của nó; đẩy route mới thì xoá "forward" đã nhớ, giống trình duyệt.
+- ESC trong iframe hướng dẫn: trang hướng dẫn (web/guide/index.html) gửi message 'tarotdesk-guide-escape' về cửa sổ cha khi nhúng (TOC đang mở thì ESC đóng TOC trước); guide_view_web.dart lắng nghe và gọi onEscape để đóng hộp thoại (guide_dialog.dart truyền onEscape: Navigator.pop). Trang độc lập không bị ảnh hưởng.
+- Files changed: lib/main.dart, lib/presentation/screens/home_screen.dart, lib/presentation/screens/history_screen.dart, lib/presentation/screens/deck_detail_screen.dart, lib/presentation/screens/settings_screen.dart, lib/presentation/screens/select_deck_screen.dart, lib/presentation/screens/new_reading_screen.dart, lib/core/guide_view_web.dart, lib/core/guide_view_stub.dart, lib/core/guide_view.dart, lib/core/guide_dialog.dart, tarot_desk_flutter/web/guide/index.html (+ AGENT_LOG.md §16).
+- Committed directly to main, no branch/PR.
+- Lưu ý: Forward cần kiểm chứng live (Back đã chạy; Forward là giới hạn của Flutter web Navigator 1.0 — bản sửa dùng didPushRoute + route đã nhớ; nếu live test cho thấy Forward vẫn không chạy thì cần refactor sang Router/onGenerateRoute với ID trong URL).
