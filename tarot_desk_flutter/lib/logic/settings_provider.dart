@@ -81,6 +81,14 @@ class SettingsProvider extends ChangeNotifier {
     _save();
   }
 
+  /// Hiện pop-up hướng dẫn khi vào màn chính (sau đăng nhập / tải
+  /// lại / vào bằng khách): true = hiện, false = đã ẩn. Lưu ngay
+  /// để đóng dialog bằng cách bấm ngoài cũng không mất lựa chọn.
+  void setShowGuidePopup(bool value) {
+    _userPrefs.showGuidePopup = value;
+    _save();
+  }
+
   // Toggles cho 3 lớp hiển thị mặt bàn bói
   void toggleTable(bool value) {
     _userPrefs.showTable = value;
