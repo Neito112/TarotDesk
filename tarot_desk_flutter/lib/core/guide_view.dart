@@ -13,6 +13,9 @@
 ///   duyệt ngoài.
 ///
 /// Cả hai file đều khai báo cùng một hàm top-level
-/// `Widget buildGuideView();` — không tham số — nên code gọi không
-/// cần biết đang chạy nền tảng nào.
+/// `Widget buildGuideView({VoidCallback? onEscape});` — tham số
+/// onEscape (không bắt buộc) chỉ có tác dụng trên web: iframe
+/// hướng dẫn gửi message khi người dùng bấm ESC bên trong nó, và
+/// callback này đóng hộp thoại. Nên code gọi không cần biết đang
+/// chạy nền tảng nào.
 export 'guide_view_stub.dart' if (dart.library.html) 'guide_view_web.dart';
