@@ -1303,3 +1303,12 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Đánh số: bản sửa Forward bằng full-Uri parser (trước đây gọi là §20) dời thành §21 (ứng cử viên, đang chờ người dùng quyết) để không trùng số với mục này.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §20).
 - Committed directly to main, no branch/PR.
+
+## §22 — 24/11/2026 — Xấp bài bị cắt đỉnh ở toàn màn hình + decor điện thoại bé tí bay trên cao
+
+- Vấn đề 1 (ảnh chụp toàn màn hình của người dùng, 24/11): xấp bài bị CẮT đỉnh — chỉ còn nửa dưới, nhãn "XẮP BÀI" vẫn thấy. Nguyên nhân: neo §20 ở phân số tranh (0.25, 0.22) sát mép trên của bàn; ở màn hình thấp/toàn màn hình, mép bàn nằm sát mép trên màn hình nên xấp cao 155px chìa ra ngoài và bị Stack cắt. Kiểm chứng bằng zoom (§20) không bắt được lỗi này vì zoom không đổi chiều cao thật của cửa sổ — người dùng yêu cầu test bằng co kéo/toàn màn hình thật, ưu tiên cách này; nếu mãi không sửa được thì sang cách 2 (giữ nguyên bố cục trên bàn, chỉ mở rộng nền xung quanh bàn).
+- Sửa: hạ neo xấp bài xuống phân số tranh (0.25, 0.30) — cả xấp luôn hiện đủ ở mọi chiều cao màn hình, vẫn trên mặt gỗ ở góc trên-trái, không chạm thạch anh (xấp x=480–564, thạch anh từ x=586). Cách 2 (mở rộng nền) chưa cần — §20 + neo mới đã xử lý được.
+- Vấn đề 2 (người dùng test trên điện thoại): đồ decor bé tí (sprite 40px) và bay trên cùng của thảm. Nguyên nhân: lớp 4 phone/tablet trong `_buildTableBackground` đặt hàng decor ở `top: 0` (sát mép trên màn hình), trong khi mép trên của bàn nằm sâu hơn (khoảng y=0.218 của tranh) — đồ nằm trong vùng tối PHÍA TRÊN bàn, không chạm mặt bàn, lại nhỏ nên trông như bay.
+- Sửa: lớp 4 phone/tablet giờ dùng đúng phép cover (`_paintingCoverTransform`) để tìm mép trên của bàn, đặt đáy hàng decor ngay dưới mép đó 10px (trên mặt gỗ, có bóng tiếp xúc sẵn trong `_buildDecorSprite`), mỗi món rộng ~18% chiều rộng màn hình (56–96px, to gấp rưỡi trước) và trải đều (spaceEvenly). Đồ giờ ngồi trên bàn, to rõ, bám theo tranh khi co kéo. Đường desktop không đổi (vẫn `_buildDesktopDecorCutouts` theo phân số tranh).
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §22).
+- Committed directly to main, no branch/PR.
