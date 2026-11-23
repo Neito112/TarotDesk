@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
+import '../../core/tarot_router_api.dart';
 import '../../core/translation_service.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/models/tarot_card.dart';
@@ -78,7 +79,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
   /// Thêm lá bài MỚI vào bộ này (chỉ ở chế độ quản lý — kho bộ
   /// bài). Mở màn sửa lá ở chế độ tạo (card null), lưu xong tải lại lưới.
   Future<void> _addCard() async {
-    final changed = await Navigator.pushNamed<bool>(
+    final changed = await tarotPush<bool>(
       context,
       '/deck/edit-card/${widget.deck.id}',
     );
@@ -265,7 +266,7 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                           child: OutlinedButton(
                             onPressed: () async {
                               Navigator.pop(dialogContext);
-                              final changed = await Navigator.pushNamed<bool>(
+                              final changed = await tarotPush<bool>(
                                 context,
                                 '/deck/edit-card/${card.deckId}/${card.id}',
                               );
