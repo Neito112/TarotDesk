@@ -64,7 +64,11 @@ Future<void> showGuideDialog(BuildContext context) async {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: buildGuideView(),
+                  child: buildGuideView(
+                    // ESC bấm bên trong iframe hướng dẫn: iframe gửi
+                    // message về, đóng hộp thoại (xem guide_view_web).
+                    onEscape: () => Navigator.of(dialogContext).pop(),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
