@@ -715,6 +715,7 @@
 
       /* ===== Trạng thái: cảnh hiện tại + các tween đang chạy ===== */
       var current = 0;
+      var isAnimating = false;
       var camTween = null;
       var zoomTween = null;
       var liveEntrance = [];
@@ -732,8 +733,8 @@
 
       /* ===== Đồng bộ nút mép: mờ đi ở cảnh đầu / cảnh cuối ===== */
       function syncUI() {
-        prevBtn.disabled = current === 0;
-        nextBtn.disabled = current === 14;
+        prevBtn.disabled = isAnimating || current === 0;
+        nextBtn.disabled = isAnimating || current === 14;
       }
 
       /* ===== Hoạt ảnh mở màn của một cảnh: chỉ từng tween rời
@@ -790,6 +791,7 @@
          cảnh đó rồi đứng yên hẳn. Không có tua, không có đếm giờ. ===== */
       function showScene(n) {
         n = Math.max(0, Math.min(14, n));
+        if (isAnimating) return;
         killCamera();
         killEntrance();
         current = n;
@@ -804,6 +806,8 @@
           playScene(n);
           return;
         }
+        isAnimating = true;
+        syncUI();
         camTween = window.gsap.to(cam, {
           cx: target,
           duration: 1.0,
@@ -814,7 +818,14 @@
             if (zoomTween) { zoomTween.kill(); zoomTween = null; }
             cam.zoom = 1;
             render();
+            isAnimating = false;
+            syncUI();
             playScene(n);
+          },
+          onInterrupt: function () {
+            camTween = null;
+            isAnimating = false;
+            syncUI();
           }
         });
         zoomTween = window.gsap.to(cam, {
