@@ -1234,3 +1234,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Màn hình About: liên kết "Hướng dẫn chi tiết" dùng chung hằng số URL trong guide_url.dart.
 - Files changed: lib/data/models/user_preferences.dart, lib/logic/settings_provider.dart, lib/core/localization.dart, lib/core/guide_url.dart (mới), lib/core/guide_view.dart (mới), lib/core/guide_view_web.dart (mới), lib/core/guide_view_stub.dart (mới), lib/presentation/screens/home_screen.dart, lib/presentation/screens/settings_screen.dart, lib/presentation/screens/about_screen.dart, tarot_desk_flutter/pubspec.yaml.
 - Committed directly to main, no branch/PR: 17256d7, e07fe0f, 0efa1da, 7ca35cc, f46da68 (các file trên) + commit này (AGENT_LOG.md §13).
+## §14 — 23/11/2026 — Hoàn tất push pop-up hướng dẫn (thiết kế đã sửa, thay thế các bản cũ)
+
+- Đẩy lại TOÀN BỘ file của tính năng pop-up hướng dẫn lên `main`, thay thế các bản cũ từ lần push trước bị dừng giữa chừng: `c530b56` (user_preferences.dart), `4aa4a2d` (settings_provider.dart), `fcf0943` (localization.dart + guide_url.dart, guide_view.dart, guide_view_web.dart, guide_view_stub.dart, guide_dialog.dart mới), `36486ef` (home_screen.dart, settings_screen.dart, about_screen.dart), `853a6ed` (pubspec.yaml), `41264d3` (web/guide/index.html).
+- Thiết kế đã sửa: hộp thoại hướng dẫn 15 chương hiển thị TRONG app (web: nhúng HTML guide trong iframe; nền tảng khác: nút mở bằng trình duyệt). Nút ⓘ trên màn hình Home mở thẳng hộp thoại hướng dẫn, không mở màn hình About, không nhảy ra liên kết ngoài.
+- Checkbox "không hiện lại" trong hộp thoại chỉ tắt pop-up TỰ ĐỘNG khi đăng nhập/tải lại; mở hướng dẫn bằng tay (nút ⓘ, liên kết trong màn hình About) luôn hoạt động.
+- Màn hình About chuyển vào Cài đặt qua hàng "Giới thiệu"; liên kết hướng dẫn trong màn hình About mở hộp thoại trong app (không mở tab ngoài). Cài đặt có công tắc bật lại pop-up tự động.
+- Guide `web/guide/index.html` đã thay mới: gỡ bỏ "Bản nháp" ở tiêu đề/thanh trên, và thêm bản sửa ẩn thanh checkbox của chính guide khi được nhúng trong iframe của app (trong pop-up chỉ còn MỘT checkbox "không hiện lại" của hộp thoại).
+- §13 ở trên do lần push trước (bị dừng giữa chừng) ghi lại; mục này ghi nhận lần push hoàn tất với thiết kế đã sửa.
