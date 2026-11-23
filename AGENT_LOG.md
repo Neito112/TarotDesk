@@ -1242,3 +1242,13 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Màn hình About chuyển vào Cài đặt qua hàng "Giới thiệu"; liên kết hướng dẫn trong màn hình About mở hộp thoại trong app (không mở tab ngoài). Cài đặt có công tắc bật lại pop-up tự động.
 - Guide `web/guide/index.html` đã thay mới: gỡ bỏ "Bản nháp" ở tiêu đề/thanh trên, và thêm bản sửa ẩn thanh checkbox của chính guide khi được nhúng trong iframe của app (trong pop-up chỉ còn MỘT checkbox "không hiện lại" của hộp thoại).
 - §13 ở trên do lần push trước (bị dừng giữa chừng) ghi lại; mục này ghi nhận lần push hoàn tất với thiết kế đã sửa.
+
+## §15 — 23/11/2026 — Kho bộ bài: bộ cơ bản là bộ chung, đổi thứ tự mục
+
+- Sửa kho bộ bài ("Danh Sách Bộ Bài Tarot"): trước đây mục "Bộ bài của tôi (1)" ở trên chứa "Bộ bài cơ bản", còn "Bộ bài chung (0)" ở dưới trống — ngược với thiết kế. Bộ bài cơ bản (id=1, deck_key 'base', bản dịch owner 'shared') LÀ bộ bài chung, nên nay hiện trong mục chung (đầu mục, từ dữ liệu local) cùng các bộ chung từ server; mục "Bộ bài của tôi" chỉ gồm các bộ do người dùng tạo/sao chép nên mặc định TRỐNG.
+- Thứ tự mục đảo lại: "Bộ bài chung" Ở TRÊN, "Bộ bài của tôi" Ở DƯỚI.
+- Mục chung: nạp bộ cơ bản local riêng (_loadBasicDeck, không chờ mạng) rồi hiện thành một hàng ListTile (tên + số lá + nút "Xem"); số lượng trong tiêu đề = 1 (bộ cơ bản) + số bộ từ server; dòng "Chưa có bộ bài chung nào." chỉ hiện khi cả hai đều trống.
+- Hộp xem trước của bộ cơ bản: nạp bản dịch đã lưu theo deck_key 'base' (preloadDeckTranslations deckKey=kBaseDeckKey); nút hành động là "Chọn" thay vì "Sao chép" (đã có sẵn trong kho), và bị vô hiệu hoá với nhãn "Đang chọn" khi đã đang chọn; bấm "Chọn" chỉ chọn bộ đó, không tạo bản sao.
+- Mục "Bộ bài của tôi" lọc bỏ bộ cơ bản (id=1); khi trống hiện dòng mới "Bạn chưa có bộ bài nào." (khóa library.myEmpty, đủ 5 ngôn ngữ).
+- Files changed: lib/presentation/screens/select_deck_screen.dart, lib/core/localization.dart (+ AGENT_LOG.md §15).
+- Committed directly to main, no branch/PR.
