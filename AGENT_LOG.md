@@ -1269,3 +1269,13 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Files changed: lib/main.dart, lib/presentation/screens/home_screen.dart, lib/presentation/screens/history_screen.dart, lib/presentation/screens/deck_detail_screen.dart, lib/presentation/screens/settings_screen.dart, lib/presentation/screens/select_deck_screen.dart, lib/presentation/screens/new_reading_screen.dart, lib/core/guide_view_web.dart, lib/core/guide_view_stub.dart, lib/core/guide_view.dart, lib/core/guide_dialog.dart, tarot_desk_flutter/web/guide/index.html (+ AGENT_LOG.md §16).
 - Committed directly to main, no branch/PR.
 - Lưu ý: Forward cần kiểm chứng live (Back đã chạy; Forward là giới hạn của Flutter web Navigator 1.0 — bản sửa dùng didPushRoute + route đã nhớ; nếu live test cho thấy Forward vẫn không chạy thì cần refactor sang Router/onGenerateRoute với ID trong URL).
+
+## §18 — 23/11/2026 — Phím tắt: sửa Forward bằng onGenerateRoute (Router)
+
+- §17 (observer ghi nhớ route vừa pop + didPushRoute) KHÔNG sửa được Forward — kiểm chứng live 23/11: sau Back về Library, Forward vẫn đứng yên. Nguyên nhân: Navigator 1.0 + RouteSettings(name) không dựng lại được trang từ tên (trang cần cả object deck/reading/card).
+- §18 chuyển sang onGenerateRoute (main.dart): mọi màn hình có dữ liệu mã hoá ID vào URL, onGenerateRoute dựng lại trang bằng cách nạp dữ liệu theo ID (các _DeckDetailRoute / _ReadingDetailRoute / _EditCardRoute bọc ngoài, hiện vòng xoay trong lúc nạp; không tìm thấy thì thông báo + nút quay lại). onUnknownRoute về màn gốc.
+- URL: /reading/new, /admin, /settings, /settings/about, /library, /library/add, /history, /history/detail/<readingId>, /deck/detail/<deckId>, /deck/detail/<deckId>/view (chỉ xem), /deck/edit-card/<deckId> (thêm lá), /deck/edit-card/<deckId>/<cardId> (sửa lá). Cả 15 điểm Navigator.push chuyển sang pushNamed với URL có ID; các import màn hình thừa (không còn dùng) đã xoá.
+- Observer _RouteStackObserver chỉ còn giữ stack để ESC biết hộp thoại đang mở (topIsPopup); bỏ hẳn didPushRoute / _poppedPages / _isForwardPush và WidgetsBindingObserver.
+- ESC (dialog/panel/màn hình) và Back giữ nguyên, không đổi.
+- Files changed: lib/main.dart, lib/presentation/screens/home_screen.dart, history_screen.dart, deck_detail_screen.dart, select_deck_screen.dart, settings_screen.dart (+ AGENT_LOG.md §18).
+- Committed directly to main, no branch/PR.
