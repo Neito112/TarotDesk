@@ -58,6 +58,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
+              settings: const RouteSettings(name: '/history/detail'),
               builder: (_) => ReadingDetailScreen(reading: reading),
             ),
           );
