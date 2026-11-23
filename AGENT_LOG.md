@@ -1252,3 +1252,12 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Mục "Bộ bài của tôi" lọc bỏ bộ cơ bản (id=1); khi trống hiện dòng mới "Bạn chưa có bộ bài nào." (khóa library.myEmpty, đủ 5 ngôn ngữ).
 - Files changed: lib/presentation/screens/select_deck_screen.dart, lib/core/localization.dart (+ AGENT_LOG.md §15).
 - Committed directly to main, no branch/PR.
+
+## §16 — 23/11/2026 — Kho bộ bài: bộ cơ bản hiển thị Y NHƯ THẺ CŨ (sửa lại §15)
+
+- §15 đổi bộ cơ bản thành hàng chữ ListTile trong mục chung — SAI: mất cách hiển thị thẻ lớn (ảnh bìa The Fool + ngày tạo + "Đang chọn") và mất đường bấm vào chi tiết để sửa nội dung lá. Người dùng yêu cầu: vẫn hiển thị bộ bài như cũ, chỉ đổi tên mỗi cái đầu mục.
+- Sửa lại: bộ cơ bản hiện trong mục "Bộ bài chung" (trên) BẰNG ĐÚNG thẻ _DeckCard cũ (lưới, ảnh bìa, ngày tạo, "Đang chọn"), bấm vào mở DeckDetailScreen (quản lý) để sửa nội dung lá như trước. Chỉ khác: ẩn nút gửi lên server + nút xoá (tham số mới _DeckCard.showManageActions = false — bộ chung có sẵn, không gửi cũng không xoá); khi chưa chọn thì chỉ còn nút "Chọn".
+- Bỏ hẳn đường hộp xem trước cho bộ cơ bản (_openBasicDeck, alreadyLocal trong _showSharedDeckDialog, _basicCards) — bộ cơ bản không cần "Xem"/"Sao chép" nữa; hộp xem trước chỉ còn cho các bộ chung từ server (sao chép về kho).
+- Mục "Bộ bài của tôi" vẫn ở dưới, trống mặc định (library.myEmpty).
+- Files changed: lib/presentation/screens/select_deck_screen.dart (+ AGENT_LOG.md §16).
+- Committed directly to main, no branch/PR.
