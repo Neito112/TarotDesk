@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/responsive.dart';
+import '../../core/tarot_router_api.dart';
 import '../../core/translation_service.dart';
 import '../../data/datasources/database_helper.dart';
 import '../../data/datasources/tarotdesk_api_service.dart';
@@ -146,7 +147,7 @@ class SelectDeckScreen extends StatelessWidget {
                                   deck.name,
                                 ),
                                 onOpen: () {
-                                  Navigator.pushNamed(
+                                  tarotPush(
                                     context,
                                     '/deck/detail/${deck.id}',
                                   );
@@ -175,7 +176,7 @@ class SelectDeckScreen extends StatelessWidget {
           style: TextStyle(fontSize: isDesktop ? 13 : 14),
         ),
         onPressed: () {
-          Navigator.pushNamed(context, '/library/add');
+          tarotPush(context, '/library/add');
         },
       ),
     );
@@ -782,7 +783,7 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
                 onSelect: () => deckProvider.selectDeck(deck),
                 onDelete: () {},
                 onOpen: () {
-                  Navigator.pushNamed(context, '/deck/detail/${deck.id}');
+                  tarotPush(context, '/deck/detail/${deck.id}');
                 },
               );
             },
