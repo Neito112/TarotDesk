@@ -28,9 +28,11 @@ import 'deck_detail_screen.dart';
 /// Nút PC gọn: hàng thao tác cao 32, nút xóa cao 36.
 /// THỨ TỰ MỤC: "Bộ bài chung" Ở TRÊN, "Bộ bài của tôi" Ở DƯỚI.
 /// Bộ bài cơ bản (id=1, deck_key 'base') LÀ bộ bài chung — nó hiện
-/// trong mục chung (đầu mục, từ dữ liệu local) cùng các bộ chung từ
-/// server (chỉ xem + sao chép về kho của mình); mục "Bộ bài của tôi"
-/// chỉ gồm các bộ do người dùng tạo/sao chép nên mặc định TRỐNG.
+/// trong mục chung (đầu mục, từ dữ liệu local) Y NHƯ THẺ BỘ BÀI CŨ
+/// (lưới + ảnh bìa + ngày tạo + "Đang chọn", bấm vào mở chi tiết để
+/// sửa nội dung lá), cùng các bộ chung từ server (chỉ xem + sao chép
+/// về kho của mình); mục "Bộ bài của tôi" chỉ gồm các bộ do người
+/// dùng tạo/sao chép nên mặc định TRỐNG.
 /// Mỗi bộ bài của mình có thêm nút gửi lên server để chờ duyệt.
 /// Mỗi nhóm có một tiêu đề mục màu vàng + số lượng, cùng kiểu với
 /// tiêu đề nhóm bài ("Ẩn Chính (Major Arcana)") trong panel chọn lá
@@ -149,6 +151,7 @@ class SelectDeckScreen extends StatelessWidget {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
+                                      settings: const RouteSettings(name: '/deck/detail'),
                                       builder: (_) =>
                                           DeckDetailScreen(deck: deck),
                                     ),
@@ -180,7 +183,10 @@ class SelectDeckScreen extends StatelessWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AddDeckScreen()),
+            MaterialPageRoute(
+              settings: const RouteSettings(name: '/library/add'),
+              builder: (_) => const AddDeckScreen(),
+            ),
           );
         },
       ),
@@ -272,6 +278,9 @@ class _DeckCard extends StatelessWidget {
   final VoidCallback onSelect;
   final VoidCallback onDelete;
   final VoidCallback onOpen;
+  // Bộ chung (bộ cơ bản): ẩn nút gửi lên server + nút xoá — chỉ
+  // còn nút Chọn (bấm vào thẻ vẫn mở chi tiết để sửa nội dung lá).
+  final bool showManageActions;
 
   const _DeckCard({
     required this.deck,
@@ -281,6 +290,7 @@ class _DeckCard extends StatelessWidget {
     required this.onSelect,
     required this.onDelete,
     required this.onOpen,
+    this.showManageActions = true,
   });
 
   @override
@@ -398,28 +408,30 @@ class _DeckCard extends StatelessWidget {
                           child: Text(settings.tr('selectDeck.select')),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      _SubmitDeckButton(
-                        deck: deck,
-                        theme: theme,
-                        isDesktop: isDesktop,
-                      ),
-                      const SizedBox(width: 4),
-                      SizedBox(
-                        width: 56,
-                        height: actionHeight,
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.redAccent,
-                            padding: EdgeInsets.zero,
-                            textStyle: TextStyle(
-                              fontSize: isDesktop ? 12 : 13,
-                            ),
-                          ),
-                          onPressed: onDelete,
-                          child: Text(settings.tr('common.delete')),
+                      if (showManageActions) const SizedBox(width: 8),
+                      if (showManageActions)
+                        _SubmitDeckButton(
+                          deck: deck,
+                          theme: theme,
+                          isDesktop: isDesktop,
                         ),
-                      ),
+                      if (showManageActions) const SizedBox(width: 4),
+                      if (showManageActions)
+                        SizedBox(
+                          width: 56,
+                          height: actionHeight,
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.redAccent,
+                              padding: EdgeInsets.zero,
+                              textStyle: TextStyle(
+                                fontSize: isDesktop ? 12 : 13,
+                              ),
+                            ),
+                            onPressed: onDelete,
+                            child: Text(settings.tr('common.delete')),
+                          ),
+                        ),
                     ],
                   ),
           ),
@@ -507,9 +519,9 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
   String? _error;
   bool _isLoading = true;
   // Bộ bài cơ bản (id=1, deck_key 'base') LÀ bộ bài chung — hiện đầu
-  // mục chung từ dữ liệu local, cùng các bộ chung từ server.
+  // mục chung từ dữ liệu local, cùng các bộ chung từ server. Hiển
+  // thị y như thẻ bộ bài cũ (lưới + ảnh bìa + "Đang chọn").
   TarotDeckModel? _basicDeck;
-  List<TarotCardModel> _basicCards = [];
 
   @override
   void initState() {
@@ -549,11 +561,9 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
     final decks = await DatabaseHelper.instance.getDecks();
     final basic = decks.where((d) => d.id == 1).toList();
     if (basic.isEmpty) return;
-    final cards = await DatabaseHelper.instance.getCardsByDeckId(1);
     if (!mounted) return;
     setState(() {
       _basicDeck = basic.first;
-      _basicCards = cards;
     });
   }
 
@@ -589,22 +599,6 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
         ),
       );
     }
-  }
-
-  /// Mở hộp xem trước của bộ bài cơ bản (đã có sẵn local): nạp bản
-  /// dịch vĩnh viễn đã lưu theo deck_key 'base' rồi hiện hộp — nút
-  /// hành động là "Chọn" thay vì "Sao chép" (đã có trong kho).
-  Future<void> _openBasicDeck() async {
-    final deck = _basicDeck;
-    if (deck == null) return;
-    final cards = _basicCards;
-    await context.read<TranslationService>().preloadDeckTranslations(
-          deckKey: kBaseDeckKey,
-          cards: cards,
-          deckName: deck.name,
-        );
-    if (!mounted) return;
-    await _showSharedDeckDialog(deck, cards, alreadyLocal: true);
   }
 
   /// Deck name shown in the shared list: the nested deck's name,
@@ -661,21 +655,10 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
   }
 
   Future<void> _showSharedDeckDialog(
-    TarotDeckModel deck,
-    List<TarotCardModel> cards, {
-    bool alreadyLocal = false,
-  }) async {
+      TarotDeckModel deck, List<TarotCardModel> cards) async {
     final settings = context.read<SettingsProvider>();
     final theme = settings.currentThemeData;
     final deckProvider = context.read<DeckProvider>();
-    // Bộ đã có sẵn local (bộ cơ bản): nút hành động là "Chọn" thay vì
-    // "Sao chép"; nếu đã đang chọn thì nút bị vô hiệu hoá.
-    final isSelected = deckProvider.selectedDeck?.id == deck.id;
-    final actionLabel = alreadyLocal
-        ? (isSelected
-            ? settings.tr('selectDeck.currentlySelected')
-            : settings.tr('selectDeck.select'))
-        : settings.tr('library.copyDeck');
     final copy = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -720,20 +703,13 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
               backgroundColor: theme.primaryColor,
               foregroundColor: Colors.black,
             ),
-            onPressed: (alreadyLocal && isSelected)
-                ? null
-                : () => Navigator.pop(ctx, true),
-            child: Text(actionLabel),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(settings.tr('library.copyDeck')),
           ),
         ],
       ),
     );
     if (copy != true) return;
-    if (alreadyLocal) {
-      // Bộ cơ bản đã có sẵn local: chỉ chọn nó, không sao chép.
-      deckProvider.selectDeck(deck);
-      return;
-    }
     try {
       // Bộ bài mới hoàn toàn: id mới, lá bài gán lại deck_id khi insert
       // (insertFullDeckWithCards tự gán deck_id thật cho từng lá).
@@ -773,6 +749,7 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final theme = settings.currentThemeData;
+    final deckProvider = context.watch<DeckProvider>();
     final isDesktop = Responsive.isDesktop(context);
     // Tổng số bộ chung = bộ cơ bản (local) + các bộ từ server.
     final sharedCount =
@@ -789,24 +766,44 @@ class _SharedDecksSectionState extends State<_SharedDecksSection> {
               : '${settings.tr('library.sharedTitle')} ($sharedCount)',
         ),
         const SizedBox(height: 8),
-        // Bộ bài cơ bản (local, deck_key 'base') — đầu mục chung.
+        // Bộ bài cơ bản (local, deck_key 'base') — đầu mục chung,
+        // hiển thị Y NHƯ THẺ BỘ BÀI CŨ (lưới + ảnh bìa + ngày tạo +
+        // "Đang chọn"), bấm vào mở chi tiết để sửa nội dung lá.
+        // Ẩn nút gửi lên server + nút xoá (bộ chung có sẵn).
         if (_basicDeck != null)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: LocalizedDeckName(
-              deck: _basicDeck!,
-              style: TextStyle(color: theme.textColor),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 1,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: Responsive.gridColumns(context),
+              crossAxisSpacing: isDesktop ? 10 : 12,
+              mainAxisSpacing: isDesktop ? 10 : 12,
+              childAspectRatio: isDesktop ? 0.47 : 0.44,
             ),
-            subtitle: Text(
-              settings
-                  .tr('library.cardCount')
-                  .replaceAll('{count}', '${_basicCards.length}'),
-              style: TextStyle(color: theme.secondaryTextColor),
-            ),
-            trailing: TextButton(
-              onPressed: _openBasicDeck,
-              child: Text(settings.tr('library.view')),
-            ),
+            itemBuilder: (context, index) {
+              final deck = _basicDeck!;
+              final isSelected =
+                  deckProvider.selectedDeck?.id == deck.id;
+              return _DeckCard(
+                deck: deck,
+                isSelected: isSelected,
+                theme: theme,
+                isDesktop: isDesktop,
+                showManageActions: false,
+                onSelect: () => deckProvider.selectDeck(deck),
+                onDelete: () {},
+                onOpen: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      settings: const RouteSettings(name: '/deck/detail'),
+                      builder: (_) => DeckDetailScreen(deck: deck),
+                    ),
+                  );
+                },
+              );
+            },
           ),
         if (_isLoading)
           const Center(
