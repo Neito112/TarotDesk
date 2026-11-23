@@ -15,7 +15,6 @@ import '../../logic/auth_provider.dart';
 import '../../logic/deck_provider.dart';
 import '../../logic/settings_provider.dart';
 import '../widgets/glass_panel.dart';
-import 'about_screen.dart';
 
 /// Màn hình Cài đặt giao diện, Theme, Bàn bói bài & Đồ trang trí.
 /// Bố cục: mobile-first Android (1 cột), iPad/PC (Theme + Hiệu ứng
@@ -514,13 +513,7 @@ class SettingsScreen extends StatelessWidget {
         trailing:
             Icon(Icons.chevron_right, color: theme.primaryColor, size: 20),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              settings: const RouteSettings(name: '/settings/about'),
-              builder: (_) => const AboutScreen(),
-            ),
-          );
+          Navigator.pushNamed(context, '/settings/about');
         },
       ),
     );
