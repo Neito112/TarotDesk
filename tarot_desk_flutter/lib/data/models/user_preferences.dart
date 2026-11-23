@@ -8,6 +8,8 @@
 /// danh sách items. Các trường bool chấp nhận cả bool / số 1-0 /
 /// chuỗi khi đọc dữ liệu cũ.
 ///
+/// Pop-up hướng dẫn (`showGuidePopup`): true = hiện bảng hướng dẫn
+/// khi vào màn chính sau đăng nhập / tải lại / vào bằng khách.
 /// Đã bỏ trường `customBackgroundImagePath`: nó được lưu nhưng không
 /// màn hình nào đọc và không có control nào trong Cài đặt để đặt nó
 /// (xem báo cáo track 5). Dữ liệu cũ còn key `custom_bg_path` vẫn
@@ -53,6 +55,7 @@ class UserPreferencesModel {
   bool enableGlassmorphism;
   bool enableSmokeParticles;
   bool enableTwinklingText;
+  bool showGuidePopup; // Hiện pop-up hướng dẫn khi vào màn chính
 
   // Cấu hình hiển thị và Bàn Trải Bài Tarot
   bool showTable; // Bật/tắt lớp mặt bàn
@@ -72,6 +75,7 @@ class UserPreferencesModel {
     this.enableGlassmorphism = true,
     this.enableSmokeParticles = true,
     this.enableTwinklingText = true,
+    this.showGuidePopup = true,
     this.showTable = true,
     this.showCloth = true,
     this.showDecor = true,
@@ -88,6 +92,7 @@ class UserPreferencesModel {
       'enable_glassmorphism': enableGlassmorphism,
       'enable_smoke': enableSmokeParticles,
       'enable_twinkling': enableTwinklingText,
+      'show_guide_popup': showGuidePopup,
       'show_table': showTable,
       'show_cloth': showCloth,
       'show_decor': showDecor,
@@ -144,6 +149,8 @@ class UserPreferencesModel {
           _boolFrom(map['enable_glassmorphism'], true),
       enableSmokeParticles: _boolFrom(map['enable_smoke'], true),
       enableTwinklingText: _boolFrom(map['enable_twinkling'], true),
+      // Dữ liệu cũ chưa có key này -> mặc định true (hiện pop-up).
+      showGuidePopup: _boolFrom(map['show_guide_popup'], true),
       showTable: _boolFrom(map['show_table'], true),
       showCloth: _boolFrom(map['show_cloth'], true),
       showDecor: _boolFrom(map['show_decor'], true),
