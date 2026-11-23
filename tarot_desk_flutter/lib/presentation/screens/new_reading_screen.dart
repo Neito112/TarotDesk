@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui'; // Cần thiết cho PointerDeviceKind và kéo thả bằng chuột
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../../core/display_labels.dart';
@@ -443,7 +444,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                         );
                       },
                       child: _showSelectionPanel
-                          ? _buildSelectionPanel(deckCards, readingProvider, theme)
+                          ? _buildSelectionPanelWithEsc(deckCards, readingProvider, theme)
                           : _buildMainInteractiveLayout(drawnCards, readingProvider, theme),
                     ),
                   ),
@@ -523,7 +524,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: _showSelectionPanel
-                        ? _buildSelectionPanel(deckCards, readingProvider, theme)
+                        ? _buildSelectionPanelWithEsc(deckCards, readingProvider, theme)
                         : _buildDesktopTable(drawnCards, readingProvider, theme),
                   ),
                 ),
@@ -1763,6 +1764,27 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   /// Khay chọn lá bài: section riêng dạng bottom-sheet — có tay kéo,
   /// tiêu đề + nút đóng 48dp, chip chọn nhóm bài, lưới bài.
+  /// Khay chọn bài + ESC: khi khay đang mở, ESC đóng khay (lớp trong
+  /// cùng) thay vì thoát cả màn trải bài. Focus autofocus để phím
+  /// ESC tới được khay ngay khi nó mở; đóng khay thì Focus biến mất
+  /// và phím ESC lại tới được màn hình (thoát màn).
+  Widget _buildSelectionPanelWithEsc(List<TarotCardModel> deckCards, ReadingProvider readingProvider, dynamic theme) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape) {
+          setState(() {
+            _showSelectionPanel = false;
+          });
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: _buildSelectionPanel(deckCards, readingProvider, theme),
+    );
+  }
+
   Widget _buildSelectionPanel(List<TarotCardModel> deckCards, ReadingProvider readingProvider, dynamic theme) {
     final settings = context.watch<SettingsProvider>();
     // Phân loại các lá bài theo Suit
