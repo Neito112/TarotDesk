@@ -12,7 +12,6 @@ import '../widgets/glass_panel.dart';
 import '../widgets/tarot_card_image.dart';
 import '../widgets/localized_card_text.dart';
 import '../widgets/localized_content_text.dart';
-import 'edit_card_screen.dart';
 
 /// Màn hình Chi tiết Bộ Bài (Hiển thị lưới lá bài xem bộ bài, Tìm kiếm bài, Học bài Ngẫu nhiên 1 lá).
 ///
@@ -79,12 +78,9 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
   /// Thêm lá bài MỚI vào bộ này (chỉ ở chế độ quản lý — kho bộ
   /// bài). Mở màn sửa lá ở chế độ tạo (card null), lưu xong tải lại lưới.
   Future<void> _addCard() async {
-    final changed = await Navigator.push<bool>(
+    final changed = await Navigator.pushNamed<bool>(
       context,
-      MaterialPageRoute(
-        settings: const RouteSettings(name: '/deck/edit-card'),
-        builder: (_) => EditCardScreen(deckId: widget.deck.id!),
-      ),
+      '/deck/edit-card/${widget.deck.id}',
     );
     if (changed == true) _loadCards();
   }
@@ -269,13 +265,9 @@ class _DeckDetailScreenState extends State<DeckDetailScreen> {
                           child: OutlinedButton(
                             onPressed: () async {
                               Navigator.pop(dialogContext);
-                              final changed = await Navigator.push<bool>(
+                              final changed = await Navigator.pushNamed<bool>(
                                 context,
-                                MaterialPageRoute(
-                                  settings: const RouteSettings(name: '/deck/edit-card'),
-                                  builder: (_) => EditCardScreen(
-                                      card: card, deckId: card.deckId),
-                                ),
+                                '/deck/edit-card/${card.deckId}/${card.id}',
                               );
                               if (changed == true) _loadCards();
                             },
