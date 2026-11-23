@@ -1216,3 +1216,10 @@ rule, no "no author name" rule, and no banned-word rule of its own.
    15:48 i18n correction), update the rule everywhere it appears — code,
    docs, README — and mark the old rule SUPERSEDED, do not silently
    leave the wrong version standing.
+
+## 12. Guide replaced with scene-based animation (2026-11-23)
+
+- Replaced `tarot_desk_flutter/web/guide/index.html` with a new scene-based HTML guide animation (15 scenes, verified content).
+- Added `tarot_desk_flutter/web/guide/assets/` (gsap.min.js + 12 screenshots: qr-card, home-top, add-deck, daily, history, library, music, reading-empty, reading-stage, select, settings). `reading-tray.png` was NOT uploaded: its granted file ID was rejected by the upload tool, so the scene that references it may show a broken image until it is re-uploaded.
+- Deleted the stale `tarot_desk_flutter/web/guide/images/` folder (home.png, home-crop.png, phone-home.png).
+- Committed directly to main, no branch/PR, per the user's instruction: `b94f108` (index.html), `2e74f27` (assets), `a869c53` / `fc24a91` / `2a543c1` (image deletions). The flutter-web-preview run and live guide check followed the push; results were reported back to the user.
