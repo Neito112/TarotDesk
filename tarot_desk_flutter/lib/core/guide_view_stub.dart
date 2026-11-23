@@ -13,8 +13,9 @@ import 'guide_url.dart';
 
 /// Widget thay thế iframe trên nền tảng không phải web: thông báo
 /// ngắn + nút mở hướng dẫn ở trình duyệt ngoài. Cùng chữ ký với
-/// bản web ([guide_view_web.dart]) — không tham số.
-Widget buildGuideView() {
+/// bản web ([guide_view_web.dart]) — tham số onEscape (chỉ có tác
+/// dụng trên web) ở đây được bỏ qua.
+Widget buildGuideView({VoidCallback? onEscape}) {
   return Center(
     child: Padding(
       padding: const EdgeInsets.all(20),
