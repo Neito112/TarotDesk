@@ -659,16 +659,32 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             ),
           ),
         // Xấp bài ở MỘT góc bàn: góc trên-trái, luôn hiện diện.
-        Positioned(
-          top: 4,
-          left: 4,
-          child: CardStackWidget(
-            onTap: () {
-              setState(() {
-                _showSelectionPanel = true;
-              });
+        // Neo vào góc trên-trái CỦA TRANH (phân số tranh 0.25,
+        // 0.22), qua phép cover — bám đúng mặt gỗ khi co kéo
+        // màn hình, thay vì neo cứng vào góc màn hình (rơi ra
+        // vùng tối ngoài bàn).
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final t = _paintingCoverTransform(
+                  constraints.maxWidth, constraints.maxHeight);
+              return Stack(
+                children: [
+                  Positioned(
+                    left: 0.25 * 1920 * t.scale + t.dx,
+                    top: 0.22 * 1280 * t.scale + t.dy,
+                    child: CardStackWidget(
+                      onTap: () {
+                        setState(() {
+                          _showSelectionPanel = true;
+                        });
+                      },
+                      theme: theme,
+                    ),
+                  ),
+                ],
+              );
             },
-            theme: theme,
           ),
         ),
         // Lá đang đọc HIỆN TRÊN MÀN HÌNH: lá lớn 170 rộng ở
@@ -851,10 +867,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// Phụ kiện trên mép xa của bàn PC: các ảnh CẮT TRONG SUỐT (chỉ
   /// giữ vật thể, nền đã tách) đặt theo tọa độ phân số CỐ ĐỊNH
   /// trong code (xem _decorCutoutRect — một nguồn sự thật duy
-  /// nhất, không đo ngược pixel), tính theo phân số của kích thước
-  /// bàn (LayoutBuilder), cùng Stack với lớp khăn nên luôn khớp
-  /// khăn ở mọi viewport. Bóng tiếp xúc vẽ bằng code ngay dưới
-  /// chân mỗi vật (xem _buildDesktopDecorCutout): KHÔNG ClipOval,
+  /// nhất, không đo ngược pixel), tính theo PHÂN SỐ CỦA TRANH
+  /// GỐC (1920x1280) rồi qua _paintingCoverTransform (đúng phép
+  /// cover của nền gỗ/khăn) nên luôn khớp khăn ở mọi viewport,
+  /// kể cả khi co kéo đổi tỉ lệ màn hình. Bóng tiếp xúc vẽ bằng
+  /// code ngay dưới chân mỗi vật (xem _buildDesktopDecorCutout): KHÔNG ClipOval,
   /// KHÔNG nền đen sau ảnh, KHÔNG xếp hàng đều, KHÔNG thu nhỏ
   /// theo chiều sâu. Khung của mỗi vật tính theo CHIỀU RỘNG, chiều
   /// cao suy từ tỉ lệ thật của ảnh — KHÔNG BoxFit.fill (khung phân
@@ -879,9 +896,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   }
 
   /// Một món decor đặt theo tọa độ phân số cố định trong code
-  /// (xem _decorCutoutRect): neo góc trên-trái tại (x, y) phân số
-  /// của bàn. KHUNG TÍNH THEO CHIỀU RỘNG (rộng = w bàn x w phân
-  /// số), chiều cao suy từ TỈ LỆ THẬT của ảnh cắt (xem
+  /// (xem _decorCutoutRect — PHÂN SỐ CỦA TRANH GỐC, qua
+  /// _paintingCoverTransform mới ra tọa độ widget): neo góc
+  /// trên-trái tại (x, y) phân số của tranh. KHUNG TÍNH THEO
+  /// CHIỀU RỘNG (rộng = w phân số tranh x 1920 x scale cover),
   /// _decorCutoutAspect) — KHÔNG BAO GIỜ BoxFit.fill: khung phân
   /// số trên viewport 16:9 có tỉ lệ khác ảnh gốc nên vật bị kéo
   /// méo. Ảnh trong suốt vẽ bằng BoxFit.contain trong khung đúng
@@ -899,12 +917,16 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       // ảnh cắt thật rồi thêm vào _decorCutoutAsset/_decorCutoutRect.
       return const SizedBox.shrink();
     }
-    // Rộng theo phân số của bàn; cao suy từ tỉ lệ thật của ảnh.
-    final boxWidth = w * rect.width;
+    // Tọa độ trong Rect là PHÂN SỐ CỦA TRANH GỐC — phải qua
+    // _paintingCoverTransform (đúng phép cover của nền gỗ/khăn)
+    // thì vật mới bám đúng mặt bàn ở mọi tỉ lệ màn hình.
+    // Rộng theo phân số tranh; cao suy từ tỉ lệ thật của ảnh.
+    final t = _paintingCoverTransform(w, h);
+    final boxWidth = rect.width * 1920 * t.scale;
     final boxHeight = boxWidth * _decorCutoutAspect(item);
     return Positioned(
-      left: w * rect.left,
-      top: h * rect.top,
+      left: rect.left * 1920 * t.scale + t.dx,
+      top: rect.top * 1280 * t.scale + t.dy,
       width: boxWidth,
       height: boxHeight,
       child: Stack(
@@ -1007,23 +1029,46 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     }
   }
 
-  /// Tọa độ LỚP (layout constants) của từng món decor — phân số
-  /// của chiều rộng / chiều cao bàn, MỘT NGUỒN SỰ THẬT DUY NHẤT
-  /// cho vị trí vật trên bàn (HyperFrames: bố cục định trong code
-  /// trước, ảnh trong suốt chỉ đặt vào đúng tọa độ này). Chiều cao
+  /// Phép biến đổi BoxFit.cover của tranh bàn gốc (1920x1280)
+  /// trong một khung w x h — ĐÚNG phép mà nền gỗ (DecorationImage)
+  /// và khăn (Image cover) đang dùng. Trả về tỉ lệ scale và độ
+  /// dời (dx, dy) để đổi một điểm phân số của tranh sang tọa độ
+  /// widget: x = fx*1920*scale + dx, y = fy*1280*scale + dy.
+  /// Dùng phép này thì decor + xấp bài + ô gợi ý luôn bám đúng
+  /// mặt bàn khi co kéo màn hình (tỉ lệ khung hình đổi → tranh
+  /// bị cắt khác đi, vật dời theo đúng tỉ lệ đó), thay vì neo
+  /// cứng vào góc/khung màn hình rồi rơi ra ngoài bàn.
+  ({double scale, double dx, double dy}) _paintingCoverTransform(
+      double w, double h) {
+    const pw = 1920.0;
+    const ph = 1280.0;
+    final scale = w / pw > h / ph ? w / pw : h / ph;
+    final dx = (w - pw * scale) / 2;
+    final dy = (h - ph * scale) / 2;
+    return (scale: scale, dx: dx, dy: dy);
+  }
+
+  /// Tọa độ LỚP (layout constants) của từng món decor — PHÂN SỐ
+  /// CỦA TRANH GỐC (1920x1280), MỘT NGUỒN SỰ THẬT DUY NHẤT cho
+  /// vị trí vật trên bàn (HyperFrames: bố cục định trong code
+  /// trước, ảnh trong suốt chỉ đặt vào đúng tọa độ này). Đáy khung
+  /// (chân vật) neo vào mép xa của khăn, hàng decor dời sang phải
+  /// một chút để nhường góc trên-trái cho xấp bài. Chiều cao
   /// trong Rect này KHÔNG dùng để đặt khung nữa (khung tính từ
   /// chiều rộng + tỉ lệ thật của ảnh, xem _decorCutoutAspect);
-  /// nó chỉ còn là vị trí gốc đã đo từ tranh master.
+  /// nó chỉ còn là vị trí gốc đã đo từ tranh master. Khi vẽ
+  /// (_buildDesktopDecorCutout) phải qua _paintingCoverTransform
+  /// thì vật mới bám đúng mặt bàn ở mọi tỉ lệ màn hình.
   Rect? _decorCutoutRect(String item) {
     switch (item) {
       case 'Đá Thạch Anh':
-        return const Rect.fromLTWH(0.245, 0.12, 0.10, 0.16);
+        return const Rect.fromLTWH(0.305, 0.284, 0.10, 0.139);
       case 'Quả Cầu':
-        return const Rect.fromLTWH(0.368, 0.098, 0.09, 0.187);
+        return const Rect.fromLTWH(0.428, 0.270, 0.09, 0.157);
       case 'Hương Trầm':
-        return const Rect.fromLTWH(0.52, 0.0, 0.11, 0.27);
+        return const Rect.fromLTWH(0.58, 0.215, 0.11, 0.228);
       case 'Nến Đen':
-        return const Rect.fromLTWH(0.625, 0.03, 0.10, 0.24);
+        return const Rect.fromLTWH(0.685, 0.233, 0.10, 0.209);
       default:
         return null;
     }
@@ -1082,50 +1127,68 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 
   Widget _buildDesktopEmptyHint(dynamic theme, {bool hasDrawnCards = false}) {
     final settings = context.watch<SettingsProvider>();
-    return Center(
-      child: GlassPanel(
-        backgroundColor: Colors.black.withOpacity(0.55),
-        borderColor: theme.primaryColor.withOpacity(0.3),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 22),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 40,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _showSelectionPanel = true;
-                    });
-                  },
-                  icon: const Icon(Icons.style, size: 18),
-                  label: Text(settings.tr('reading.selectCard'),
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
+    // Ô gợi ý đặt ở TÂM TẤM KHĂN (phân số tranh 0.5, 0.55),
+    // không phải tâm màn hình — bám theo tranh khi co kéo
+    // (xem _paintingCoverTransform). Nhờ đó ô nằm giữa khăn,
+    // không đè lên lư hương ở mép xa.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        final t = _paintingCoverTransform(w, h);
+        final cx = 0.5 * 1920 * t.scale + t.dx;
+        final cy = 0.55 * 1280 * t.scale + t.dy;
+        final align = Alignment(
+          (cx - w / 2) / (w / 2),
+          (cy - h / 2) / (h / 2),
+        );
+        return Align(
+          alignment: align,
+          child: GlassPanel(
+            backgroundColor: Colors.black.withOpacity(0.55),
+            borderColor: theme.primaryColor.withOpacity(0.3),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 22),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 40,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _showSelectionPanel = true;
+                        });
+                      },
+                      icon: const Icon(Icons.style, size: 18),
+                      label: Text(settings.tr('reading.selectCard'),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    hasDrawnCards
+                        ? settings.tr('reading.emptyHintCollected')
+                        : settings.tr('reading.emptyHintDesktop'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.white, fontSize: 13, height: 1.5),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                hasDrawnCards
-                    ? settings.tr('reading.emptyHintCollected')
-                    : settings.tr('reading.emptyHintDesktop'),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: Colors.white, fontSize: 13, height: 1.5),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
