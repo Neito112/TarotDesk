@@ -20,12 +20,6 @@ import '../widgets/localized_content_text.dart';
 import '../widgets/smoke_particle_effect.dart';
 import '../widgets/tarot_card_image.dart';
 import '../widgets/twinkling_title.dart';
-import 'select_deck_screen.dart';
-import 'deck_detail_screen.dart';
-import 'new_reading_screen.dart';
-import 'history_screen.dart';
-import 'settings_screen.dart';
-import 'admin_screen.dart';
 
 /// Màn hình chính TarotDesk (Giao diện Tiếng Việt Tinh gọn)
 ///
@@ -176,13 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     readingProvider.startManualReading(settings.tr('home.newReadingSession'));
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        settings: const RouteSettings(name: '/reading/new'),
-        builder: (_) => const NewReadingScreen(),
-      ),
-    );
+    Navigator.pushNamed(context, '/reading/new');
   }
 
   /// Nội dung lá bài hôm nay: ảnh lớn + tên + toàn bộ ý nghĩa
@@ -489,26 +477,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: theme.primaryColor, size: 24),
                 tooltip: settings.tr('home.adminTooltip'),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      settings: const RouteSettings(name: '/admin'),
-                      builder: (_) => const AdminScreen(),
-                    ),
-                  );
+                  Navigator.pushNamed(context, '/admin');
                 },
               ),
             IconButton(
               icon: Icon(Icons.settings, color: theme.primaryColor, size: 24),
               tooltip: settings.tr('home.settingsTooltip'),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    settings: const RouteSettings(name: '/settings'),
-                    builder: (_) => const SettingsScreen(),
-                  ),
-                );
+                Navigator.pushNamed(context, '/settings');
               },
             ),
           ],
@@ -726,13 +702,7 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icons.auto_stories,
       color: theme.accentColor,
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: '/library'),
-            builder: (_) => const SelectDeckScreen(),
-          ),
-        );
+        Navigator.pushNamed(context, '/library');
       },
     );
     final traiBaiCu = _buildMenuCard(
@@ -741,13 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icons.history_edu,
       color: theme.primaryColor,
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: '/history'),
-            builder: (_) => const HistoryScreen(),
-          ),
-        );
+        Navigator.pushNamed(context, '/history');
       },
     );
     if (horizontal) {
@@ -782,22 +746,10 @@ class _HomeScreenState extends State<HomeScreen> {
         // nào thì mở kho để chọn.
         final deck = deckProvider.selectedDeck;
         if (deck == null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              settings: const RouteSettings(name: '/library'),
-              builder: (_) => const SelectDeckScreen(),
-            ),
-          );
+          Navigator.pushNamed(context, '/library');
           return;
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: '/deck/detail'),
-            builder: (_) => DeckDetailScreen(deck: deck, readOnly: true),
-          ),
-        );
+        Navigator.pushNamed(context, '/deck/detail/${deck.id}/view');
       },
       child: GlassPanel(
         blurAmount: settings.userPrefs.enableGlassmorphism ? 12 : 0,
@@ -879,13 +831,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final count = readingProvider.readingsHistory.length;
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: '/history'),
-            builder: (_) => const HistoryScreen(),
-          ),
-        );
+        Navigator.pushNamed(context, '/history');
       },
       child: GlassPanel(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
