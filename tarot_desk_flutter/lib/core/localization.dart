@@ -870,6 +870,20 @@ class AppStrings {
       AppLanguage.ko: "카드 정보가 업데이트되었습니다!",
       AppLanguage.ja: "カード情報を更新しました！",
     },
+    'guide.popupDontShow': {
+      AppLanguage.vi: "Không hiện hướng dẫn này nữa",
+      AppLanguage.en: "Don't show this guide again",
+      AppLanguage.zh: "不再显示本指南",
+      AppLanguage.ko: "이 안내를 다시 표시하지 않기",
+      AppLanguage.ja: "このガイドを今後表示しない",
+    },
+    'guide.popupTitle': {
+      AppLanguage.vi: "Hướng dẫn sử dụng",
+      AppLanguage.en: "How to Use",
+      AppLanguage.zh: "使用指南",
+      AppLanguage.ko: "사용 안내",
+      AppLanguage.ja: "使い方ガイド",
+    },
     'history.cardCount': {
       AppLanguage.vi: "{n} lá bài",
       AppLanguage.en: "{n} cards",
@@ -1723,6 +1737,20 @@ class AppStrings {
       AppLanguage.zh: "显示装饰品图层",
       AppLanguage.ko: "장식품 레이어 표시",
       AppLanguage.ja: "装飾品レイヤーを表示",
+    },
+    'settings.showGuideSubtitle': {
+      AppLanguage.vi: "Hiện lại bảng hướng dẫn mỗi khi đăng nhập hoặc tải lại app",
+      AppLanguage.en: "Show the guide again every time you sign in or reload the app",
+      AppLanguage.zh: "每次登录或重新加载应用时再次显示指南",
+      AppLanguage.ko: "로그인하거나 앱을 다시 로드할 때마다 안내를 다시 표시",
+      AppLanguage.ja: "ログインまたはアプリの再読み込みのたびにガイドを再表示",
+    },
+    'settings.showGuideTitle': {
+      AppLanguage.vi: "Hiện hướng dẫn khi đăng nhập",
+      AppLanguage.en: "Show guide on sign-in",
+      AppLanguage.zh: "登录时显示指南",
+      AppLanguage.ko: "로그인 시 안내 표시",
+      AppLanguage.ja: "ログイン時にガイドを表示",
     },
     'settings.showTableSubtitle': {
       AppLanguage.vi: "Bật/Tắt lớp nền chất liệu bàn bên dưới",
