@@ -178,7 +178,10 @@ class _HomeScreenState extends State<HomeScreen> {
     readingProvider.startManualReading(settings.tr('home.newReadingSession'));
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const NewReadingScreen()),
+      MaterialPageRoute(
+        settings: const RouteSettings(name: '/reading/new'),
+        builder: (_) => const NewReadingScreen(),
+      ),
     );
   }
 
@@ -488,7 +491,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const AdminScreen()),
+                    MaterialPageRoute(
+                      settings: const RouteSettings(name: '/admin'),
+                      builder: (_) => const AdminScreen(),
+                    ),
                   );
                 },
               ),
@@ -498,7 +504,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  MaterialPageRoute(
+                    settings: const RouteSettings(name: '/settings'),
+                    builder: (_) => const SettingsScreen(),
+                  ),
                 );
               },
             ),
@@ -719,7 +728,10 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const SelectDeckScreen()),
+          MaterialPageRoute(
+            settings: const RouteSettings(name: '/library'),
+            builder: (_) => const SelectDeckScreen(),
+          ),
         );
       },
     );
@@ -731,7 +743,10 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const HistoryScreen()),
+          MaterialPageRoute(
+            settings: const RouteSettings(name: '/history'),
+            builder: (_) => const HistoryScreen(),
+          ),
         );
       },
     );
@@ -769,13 +784,17 @@ class _HomeScreenState extends State<HomeScreen> {
         if (deck == null) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const SelectDeckScreen()),
+            MaterialPageRoute(
+              settings: const RouteSettings(name: '/library'),
+              builder: (_) => const SelectDeckScreen(),
+            ),
           );
           return;
         }
         Navigator.push(
           context,
           MaterialPageRoute(
+            settings: const RouteSettings(name: '/deck/detail'),
             builder: (_) => DeckDetailScreen(deck: deck, readOnly: true),
           ),
         );
@@ -862,7 +881,10 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const HistoryScreen()),
+          MaterialPageRoute(
+            settings: const RouteSettings(name: '/history'),
+            builder: (_) => const HistoryScreen(),
+          ),
         );
       },
       child: GlassPanel(
