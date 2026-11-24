@@ -1065,15 +1065,21 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// (_buildDesktopDecorCutout) phải qua _paintingCoverTransform
   /// thì vật mới bám đúng mặt bàn ở mọi tỉ lệ màn hình.
   Rect? _decorCutoutRect(String item) {
+    // Đáy của cả 4 món CÙNG nằm trên một đường sâu (y=0.43 của
+    // tranh) — vật nào cũng đứng trên cùng một mặt bàn, hàng decor
+    // thẳng hàng, không món nào lún cao/thấp hơn món khác. (Trước
+    // đây đáy lệch nhau 0.423–0.443 nên hàng nhìn hơi xộc xệch.)
+    // Top = 0.43 − chiều cao khung (khung tính từ chiều rộng +
+    // tỉ lệ thật của ảnh, xem _decorCutoutAspect).
     switch (item) {
       case 'Đá Thạch Anh':
-        return const Rect.fromLTWH(0.305, 0.284, 0.10, 0.139);
+        return const Rect.fromLTWH(0.305, 0.291, 0.10, 0.139);
       case 'Quả Cầu':
-        return const Rect.fromLTWH(0.428, 0.270, 0.09, 0.157);
+        return const Rect.fromLTWH(0.428, 0.273, 0.09, 0.157);
       case 'Hương Trầm':
-        return const Rect.fromLTWH(0.58, 0.215, 0.11, 0.228);
+        return const Rect.fromLTWH(0.58, 0.202, 0.11, 0.228);
       case 'Nến Đen':
-        return const Rect.fromLTWH(0.685, 0.233, 0.10, 0.209);
+        return const Rect.fromLTWH(0.685, 0.221, 0.10, 0.209);
       default:
         return null;
     }
@@ -1104,6 +1110,31 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
+          // Bóng đổ (cast shadow): vệt bóng mềm hắt xuống-phải
+          // (ngược hướng đèn chính ấm từ trên-trái), mờ dần ra xa.
+          // Chỉ có bóng tiếp xúc thì vật trông như dán lên bàn;
+          // thêm bóng đổ thì vật mới thật sự "đứng" trên mặt bàn
+          // và có chiều sâu. Nằm dưới chân vật, chìa ra phải và
+          // xuống dưới, bo tròn mềm.
+          Positioned(
+            left: size * 0.12,
+            right: -size * 0.38,
+            bottom: -size * 0.05,
+            height: size * 0.32,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(size * 0.16),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.black.withOpacity(0.42),
+                    Colors.black.withOpacity(0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
           // Bóng tiếp xúc: ellipse đen ngay dưới chân vật.
           Positioned(
             left: size * 0.05,
@@ -2302,11 +2333,22 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     child: child,
                   );
                 },
-                child: Image.asset(
-                  _clothImageAsset(prefs.clothStyle),
-                  key: ValueKey('cloth-${prefs.clothStyle}'),
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
+                // Khăn TO RA (×1.2, lấy tâm): khăn vẽ gốc chỉ chiếm
+                // 74% rộng × 51% cao của tranh nên nhìn bé tí, lọt
+                // thỏm giữa bàn. Phóng to 1.2 quanh tâm thì khăn
+                // phủ ~89% rộng × 61% cao, mép trên sát mép xa của
+                // bàn, mép dưới vẫn trên mặt bàn — khăn thành tấm
+                // thảm lớn đúng như yêu cầu "cho khăn to ra". Decor
+                // và ô gợi ý neo theo phân số tranh gỗ nên vẫn nằm
+                // trên khăn (xem _paintingCoverTransform).
+                child: Transform.scale(
+                  scale: 1.2,
+                  child: Image.asset(
+                    _clothImageAsset(prefs.clothStyle),
+                    key: ValueKey('cloth-${prefs.clothStyle}'),
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                  ),
                 ),
               ),
             ),
