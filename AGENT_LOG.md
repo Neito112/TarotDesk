@@ -1330,3 +1330,12 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Lưu ý: file workflow (.github/workflows/*) không đẩy được bằng GitHub MCP (403) — phải đẩy qua GitHub web UI (Chrome của người dùng), như các file code khác.
 - Files changed: .github/workflows/flutter-web-preview.yml (+ AGENT_LOG.md §24).
 - Committed directly to main, no branch/PR.
+
+## §25 — 24/11/2026 — Bóng đổ mềm + khăn to hơn (×1.3) + vật phẩm co dãn cùng bàn
+
+- Phản hồi của người dùng (ảnh chụp màn hình 23:11): (1) "chỉ có bóng là xấu thôi" — bóng đổ nhìn như vệt mực dán lên bàn; (2) khăn trải bàn vẫn "lọt thỏm" trong bàn; (3) khi co kéo màn hình, các vật phẩm phải co dãn đồng thời với bàn để vị trí và kích thước tương quan không đổi.
+- Bóng đổ: bóng cũ là hình bình hành xiên (Matrix4.skewX) + linear gradient (PC) và hình chữ nhật + linear gradient (sprite phone) — cạnh cứng, hình học, nhìn như vệt mực. Đổi cả hai sang radial gradient trong một ellipse dài nghiêng ~24° theo hướng đèn (xuống-phải), mờ dần MỌI hướng nên mềm và tự nhiên như bóng thật; độ đậm giảm 0.45/0.42 → 0.28. Bóng tiếp xúc (ellipse đen ngay dưới chân) giữ nguyên.
+- Khăn: tăng từ ×1.2 lên ×1.3 (khăn phủ ~96% rộng × 66% cao). Scale quanh tâm đẩy mép trên lên quá mép xa của bàn nên bọc thêm LayoutBuilder tính đúng phần vượt (qua phép cover) và dịch xuống để mép trên vẫn sát mép xa, khăn mọc xuống và sang hai bên, mép dưới vẫn trên mặt bàn.
+- Co dãn cùng bàn: decor PC vốn đã scale theo tỉ lệ cover (boxWidth dùng t.scale). Xấp bài trước đây cố định 84px nên co màn hình lại thì xấp vẫn to nguyên — giờ bọc Transform.scale(scale: t.scale, alignment: topLeft) để xấp to ra/nhỏ lại cùng bàn, góc trên-trái vẫn neo đúng phân số tranh (0.25, 0.30). Decor phone trước đây cỡ theo chiều rộng màn hình (maxWidth×0.18) nên đổi chiều cao thì bàn đổi mà đồ không đổi — giờ cỡ theo tỉ lệ cover (106×t.scale, kẹp 56–120).
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §25).
+- Committed directly to main, no branch/PR.
