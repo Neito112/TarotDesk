@@ -668,6 +668,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         // chìa ra ngoài, bị Stack cắt); hạ xuống 0.30 thì cả xấp
         // luôn hiện đủ, vẫn trên mặt gỗ, không chạm thạch anh
         // (xấp x=480–564, thạch anh từ x=586).
+        // Xấp bài CO DÃN CÙNG BÀN: bọc Transform.scale theo tỉ lệ
+        // cover của tranh (t.scale) — khi co kéo màn hình, bàn to
+        // ra/nhỏ lại thì xấp bài cũng to ra/nhỏ lại theo đúng tỉ
+        // lệ đó, vị trí và kích thước tương quan với bàn không
+        // đổi. Trước đây xấp cố định 84px nên co màn hình lại
+        // thì xấp vẫn to nguyên, trông lệch hẳn so với bàn.
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -678,13 +684,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   Positioned(
                     left: 0.25 * 1920 * t.scale + t.dx,
                     top: 0.30 * 1280 * t.scale + t.dy,
-                    child: CardStackWidget(
-                      onTap: () {
-                        setState(() {
-                          _showSelectionPanel = true;
-                        });
-                      },
-                      theme: theme,
+                    child: Transform.scale(
+                      scale: t.scale,
+                      alignment: Alignment.topLeft,
+                      child: CardStackWidget(
+                        onTap: () {
+                          setState(() {
+                            _showSelectionPanel = true;
+                          });
+                        },
+                        theme: theme,
+                      ),
                     ),
                   ),
                 ],
@@ -938,31 +948,33 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         clipBehavior: Clip.none,
         children: [
           // Bóng ĐỔ: bóng hắt xuống-phải theo ánh sáng của bàn
-          // (sáng từ trên-trái), kéo dài trên mặt bàn và mờ dần
-          // — vật "đứng" trên bàn thay vì dán lên tranh. Vẽ bằng
-          // code (chữ nhật xiên + gradient) nên đổi màu khăn vẫn
-          // đúng. Cần Clip.none của Stack này để bóng tràn ra
-          // ngoài khung vật, xuống-phải mặt khăn.
+          // (sáng từ trên-trái) — dùng radial gradient trong một
+          // ellipse dài nghiêng theo hướng đèn, mờ dần MỌI hướng
+          // nên mềm và tự nhiên như bóng thật. Hình bình hành xiên
+          // + linear gradient cũ nhìn như vệt mực dán lên bàn
+          // (cạnh cứng, hình học) nên người dùng thấy xấu. Mờ
+          // nhẹ (0.28) để vật "đứng" trên bàn mà không nặng nề.
+          // Cần Clip.none của Stack này để bóng tràn ra ngoài
+          // khung vật, xuống-phải mặt khăn.
           Positioned(
-            left: boxWidth * 0.10,
-            top: boxHeight * 0.55,
-            width: boxWidth * 1.15,
-            height: boxHeight * 0.55,
-            child: Transform(
-              transform: Matrix4.skewX(0.45),
+            left: boxWidth * 0.02,
+            top: boxHeight * 0.58,
+            width: boxWidth * 1.30,
+            height: boxHeight * 0.52,
+            child: Transform.rotate(
+              angle: 0.42, // nghiêng ~24° theo hướng đèn xuống-phải
+              alignment: Alignment.center,
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                  shape: BoxShape.circle, // ellipse qua width/height
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.30, -0.55),
+                    radius: 0.95,
                     colors: [
-                      Colors.black.withOpacity(0.45),
+                      Colors.black.withOpacity(0.28),
                       Colors.black.withOpacity(0.0),
                     ],
-                    stops: const [0.0, 0.85],
                   ),
-                  borderRadius:
-                      BorderRadius.circular(boxHeight * 0.18),
                 ),
               ),
             ),
@@ -1111,26 +1123,32 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         clipBehavior: Clip.none,
         children: [
           // Bóng đổ (cast shadow): vệt bóng mềm hắt xuống-phải
-          // (ngược hướng đèn chính ấm từ trên-trái), mờ dần ra xa.
-          // Chỉ có bóng tiếp xúc thì vật trông như dán lên bàn;
-          // thêm bóng đổ thì vật mới thật sự "đứng" trên mặt bàn
-          // và có chiều sâu. Nằm dưới chân vật, chìa ra phải và
-          // xuống dưới, bo tròn mềm.
+          // (ngược hướng đèn chính ấm từ trên-trái) — dùng radial
+          // gradient trong một ellipse dài nghiêng theo hướng đèn,
+          // mờ dần MỌI hướng nên mềm và tự nhiên như bóng thật.
+          // Hình chữ nhật + linear gradient cũ nhìn như vệt mực
+          // dán lên bàn (cạnh cứng, hình học) nên người dùng thấy
+          // xấu. Mờ nhẹ (0.28). Nằm dưới chân vật, chìa ra phải
+          // và xuống dưới.
           Positioned(
-            left: size * 0.12,
-            right: -size * 0.38,
-            bottom: -size * 0.05,
-            height: size * 0.32,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(size * 0.16),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.black.withOpacity(0.42),
-                    Colors.black.withOpacity(0.0),
-                  ],
+            left: size * 0.02,
+            right: -size * 0.45,
+            bottom: -size * 0.08,
+            height: size * 0.34,
+            child: Transform.rotate(
+              angle: 0.42, // nghiêng ~24° theo hướng đèn xuống-phải
+              alignment: Alignment.center,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle, // ellipse qua width/height
+                  gradient: RadialGradient(
+                    center: const Alignment(-0.30, -0.55),
+                    radius: 0.95,
+                    colors: [
+                      Colors.black.withOpacity(0.28),
+                      Colors.black.withOpacity(0.0),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -2333,22 +2351,41 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     child: child,
                   );
                 },
-                // Khăn TO RA (×1.2, lấy tâm): khăn vẽ gốc chỉ chiếm
-                // 74% rộng × 51% cao của tranh nên nhìn bé tí, lọt
-                // thỏm giữa bàn. Phóng to 1.2 quanh tâm thì khăn
-                // phủ ~89% rộng × 61% cao, mép trên sát mép xa của
-                // bàn, mép dưới vẫn trên mặt bàn — khăn thành tấm
-                // thảm lớn đúng như yêu cầu "cho khăn to ra". Decor
-                // và ô gợi ý neo theo phân số tranh gỗ nên vẫn nằm
-                // trên khăn (xem _paintingCoverTransform).
-                child: Transform.scale(
-                  scale: 1.2,
-                  child: Image.asset(
-                    _clothImageAsset(prefs.clothStyle),
-                    key: ValueKey('cloth-${prefs.clothStyle}'),
-                    fit: BoxFit.cover,
-                    gaplessPlayback: true,
-                  ),
+                // Khăn TO RA (×1.3, giữ mép trên sát mép xa):
+                // khăn vẽ gốc chỉ chiếm 74% rộng × 51% cao của
+                // tranh nên nhìn bé tí, lọt thỏm giữa bàn. Phóng
+                // to 1.3 thì khăn phủ ~96% rộng × 66% cao. Scale
+                // quanh tâm đẩy mép trên lên QUÁ mép xa của bàn
+                // nên dịch xuống đúng phần vượt đó (tính qua phép
+                // cover) để mép trên vẫn sát mép xa, khăn mọc
+                // xuống và sang hai bên, mép dưới vẫn trên mặt
+                // bàn. Decor và ô gợi ý neo theo phân số tranh gỗ
+                // nên vẫn nằm trên khăn (xem _paintingCoverTransform).
+                child: LayoutBuilder(
+                  key: ValueKey('cloth-${prefs.clothStyle}'),
+                  builder: (context, constraints) {
+                    final t = _paintingCoverTransform(
+                        constraints.maxWidth, constraints.maxHeight);
+                    // Mép trên của khăn (phân số tranh 0.268) sau
+                    // khi scale 1.3 quanh tâm tranh (0.5) sẽ ở
+                    // y = 0.5 − 0.232×1.3 = 0.198 — cao hơn mép xa
+                    // của bàn (0.218). Dịch xuống phần vượt đó.
+                    const clothScale = 1.3;
+                    final topY = 0.5 - 0.232 * clothScale;
+                    final over = 0.218 - topY; // > 0 khi vượt mép xa
+                    final shiftY = over > 0 ? over * 1280 * t.scale : 0.0;
+                    return Transform.translate(
+                      offset: Offset(0, shiftY),
+                      child: Transform.scale(
+                        scale: clothScale,
+                        child: Image.asset(
+                          _clothImageAsset(prefs.clothStyle),
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -2381,9 +2418,13 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           // đồ bé tí và bay trong vùng tối PHÍA TRÊN bàn (mép trên
           // của bàn nằm sâu hơn, khoảng y=0.218 của tranh). Giờ đặt
           // đồ TRÊN BÀN: dùng đúng phép cover để tìm mép trên của
-          // bàn, đặt đáy hàng decor ngay dưới mép đó (trên mặt gỗ),
-          // mỗi món rộng ~18% chiều rộng màn hình (to gấp rưỡi
-          // trước) và trải đều. Vẫn IgnorePointer.
+          // bàn, đặt đáy hàng decor ngay dưới mép đó (trên mặt gỗ).
+          // Đồ CO DÃN CÙNG BÀN: cỡ món tính theo tỉ lệ cover của
+          // tranh (t.scale) — khi co kéo màn hình, bàn to ra/nhỏ
+          // lại thì đồ cũng to ra/nhỏ lại theo đúng tỉ lệ đó, vị
+          // trí và kích thước tương quan với bàn không đổi. Trước
+          // đây cỡ món chỉ theo chiều rộng màn hình nên đổi chiều
+          // cao thì bàn đổi mà đồ không đổi, trông lệch hẳn.
           // PC: không có gì ở đây, phụ kiện là ảnh cắt đặt theo
           // phân số tranh trên mép xa của bàn (xem
           // _buildDesktopDecorCutouts trong _buildDesktopTable).
@@ -2398,8 +2439,8 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     // tọa độ widget; đáy hàng decor đặt ngay dưới
                     // mép đó 10px, trên mặt gỗ.
                     final tableTopY = 0.218 * 1280 * t.scale + t.dy;
-                    final itemSize = (constraints.maxWidth * 0.18)
-                        .clamp(56.0, 96.0)
+                    final itemSize = (106.0 * t.scale)
+                        .clamp(56.0, 120.0)
                         .toDouble();
                     final rowTop = tableTopY + 10 - (itemSize + 12);
                     return Stack(
