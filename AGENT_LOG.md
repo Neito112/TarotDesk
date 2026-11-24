@@ -1339,3 +1339,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Co dãn cùng bàn: decor PC vốn đã scale theo tỉ lệ cover (boxWidth dùng t.scale). Xấp bài trước đây cố định 84px nên co màn hình lại thì xấp vẫn to nguyên — giờ bọc Transform.scale(scale: t.scale, alignment: topLeft) để xấp to ra/nhỏ lại cùng bàn, góc trên-trái vẫn neo đúng phân số tranh (0.25, 0.30). Decor phone trước đây cỡ theo chiều rộng màn hình (maxWidth×0.18) nên đổi chiều cao thì bàn đổi mà đồ không đổi — giờ cỡ theo tỉ lệ cover (106×t.scale, kẹp 56–120).
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §25).
 - Committed directly to main, no branch/PR.
+
+## §26 — 25/11/2026 — Xấp bài kẹp tỉ lệ tối thiểu 0.86 (không teo quá nhỏ ở cửa sổ hẹp)
+
+- Người dùng gửi 2 ảnh chụp (không mô tả, nhờ tự phân tích): ảnh 1 cửa sổ rộng 1915×861 nhìn ổn; ảnh 2 cửa sổ hẹp 1315×849 thì xấp bài chỉ còn một lá mỏng ~56px, nhãn "XẮP BÀI" bé tí (~7.5px) gần như không đọc được. Đo từ ảnh: đồ decor co theo đúng tỉ lệ cover (pha lê 157→108px, tỉ lệ 0.69 khớp t.scale 0.685), nhưng xấp bài teo quá mức dùng được.
+- Nguyên nhân: §25 bọc xấp bài trong Transform.scale(scale: t.scale) để co dãn cùng bàn. Ở cửa sổ hẹp t.scale≈0.69 nên xấp còn 84×0.69≈58px, nhãn 11×0.69≈7.5px — đúng tỉ lệ với bàn nhưng quá nhỏ để bấm và đọc.
+- Sửa: kẹp tỉ lệ xấp bài ở [0.86, 1.25] — vẫn co dãn cùng bàn trong khoảng dùng được, nhưng không bao giờ nhỏ hơn 84×0.86≈72px (nhãn ≥9.5px, vẫn bấm và đọc được). Vị trí xấp vẫn neo đúng phân số tranh (0.25, 0.30). Bóng đổ radial (§25) và khăn ×1.3 giữ nguyên.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §26).
+- Committed directly to main, no branch/PR.
