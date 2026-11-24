@@ -1321,3 +1321,12 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Vị trí chưa đẹp: đáy 4 món trước đây lệch nhau (y=0.423–0.443) nên hàng nhìn hơi xộc xệch. Sửa: căn đáy cả 4 món cùng về một đường sâu y=0.43 của tranh (`_decorCutoutRect`: thạch anh top 0.291, quả cầu 0.273, trầm 0.202, nến 0.221) — hàng decor thẳng hàng, món nào cũng đứng trên cùng một mặt bàn.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §23).
 - Committed directly to main, no branch/PR.
+
+## §24 — 24/11/2026 — Sửa deploy GitHub Pages: tách workflow thành 2 job (build + deploy)
+
+- Vấn đề: §23 đẩy xong (HEAD fc2c7e7, build Flutter thành công mọi lần) nhưng deploy lên GitHub Pages đỏ 4 lần liên tiếp, app live kẹt ở §22 (run #106): #107 FAILED, #108 FAILED — "Multiple artifacts named github-pages were unexpectedly found. Artifact count is 2", #109 FAILED — "Found 0 artifact(s)", #110 FAILED — "Found 0 artifact(s)" (cả hai run mới bằng workflow_dispatch). Trang trạng thái GitHub báo "All Systems Operational", không có sự cố được công bố.
+- Nguyên nhân gốc (đọc file workflow): workflow cũ gộp build + upload + deploy vào MỘT job "deploy". (1) Chạy lại job đơn lẻ thì chạy lại cả bước upload, tải lên artifact thứ 2 cùng tên "github-pages" vào cùng run → deploy-pages thấy 2 artifact và từ chối (#108). (2) Deploy chạy ngay sau upload trong cùng job, metadata của artifact chưa kịp hiện trên API GitHub → deploy-pages thấy 0 artifact dù upload đã xong (#109, #110). Cả hai đều là hệ quả của cấu trúc 1 job, không phải lỗi code.
+- Sửa: tách workflow `.github/workflows/flutter-web-preview.yml` thành 2 job theo đúng mẫu chuẩn của GitHub Pages — job `build` (checkout, build Flutter, configure-pages, upload-pages-artifact) và job `deploy` (`needs: build`, environment github-pages, chỉ chạy `deploy-pages@v4`). Deploy chạy sau khi build hoàn tất hẳn, trên runner mới (artifact có thời gian hiện metadata), và chạy lại riêng job deploy không tải lên artifact nữa nên không bao giờ trùng. Không đổi code app, không đổi trigger (push main + workflow_dispatch), không đổi quyền hay concurrency.
+- Lưu ý: file workflow (.github/workflows/*) không đẩy được bằng GitHub MCP (403) — phải đẩy qua GitHub web UI (Chrome của người dùng), như các file code khác.
+- Files changed: .github/workflows/flutter-web-preview.yml (+ AGENT_LOG.md §24).
+- Committed directly to main, no branch/PR.
