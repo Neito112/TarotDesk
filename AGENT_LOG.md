@@ -1312,3 +1312,12 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa: lớp 4 phone/tablet giờ dùng đúng phép cover (`_paintingCoverTransform`) để tìm mép trên của bàn, đặt đáy hàng decor ngay dưới mép đó 10px (trên mặt gỗ, có bóng tiếp xúc sẵn trong `_buildDecorSprite`), mỗi món rộng ~18% chiều rộng màn hình (56–96px, to gấp rưỡi trước) và trải đều (spaceEvenly). Đồ giờ ngồi trên bàn, to rõ, bám theo tranh khi co kéo. Đường desktop không đổi (vẫn `_buildDesktopDecorCutouts` theo phân số tranh).
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §22).
 - Committed directly to main, no branch/PR.
+
+## §23 — 24/11/2026 — Khăn to ra + bóng đổ có hướng cho phụ kiện + hàng decor thẳng hàng
+
+- Vấn đề (người dùng, 24/11): "vị trí và đổ bóng của phụ kiện chưa đẹp. khăn thì vẫn bé tí, lọt thỏm trong cái bàn." Hai việc riêng: khăn bé, bóng đổ chưa đẹp.
+- Khăn bé: đo ảnh khăn cắt (`cloth_*_cut.png`, 1920x1280): khăn chỉ chiếm x 0.133–0.876 (rộng 74%) × y 0.268–0.773 (cao 51%) của tranh — đúng là lọt thỏm giữa bàn. Đây cũng là yêu cầu cũ từ 20/11 ("cho khăn to ra"). Sửa: bọc ảnh khăn trong `Transform.scale(scale: 1.2)` lấy tâm (trong `_buildTableBackground`) — khăn giờ phủ ~89% rộng × 61% cao, mép trên sát mép xa của bàn, mép dưới vẫn trên mặt bàn. Decor và ô gợi ý neo theo phân số tranh gỗ nên vẫn nằm trên khăn (không cần dời).
+- Bóng đổ chưa đẹp: phụ kiện trước đây chỉ có bóng tiếp xúc (ellipse đen nhỏ ngay dưới chân) — không có bóng hắt ra mặt bàn nên vật trông như dán lên bàn. Sửa: thêm bóng đổ CÓ HƯỚNG trong `_buildDecorSprite` (dùng chung cho PC + phone): vệt bóng mềm hắt xuống-phải (ngược hướng đèn chính ấm từ trên-trái), gradient đen 0.42 → trong suốt, mờ dần ra xa, chìa ra phải và xuống dưới. Giữ nguyên bóng tiếp xúc. Xấp bài đã có bóng đổ có hướng sẵn (BoxShadow offset 8,12 trong CardStackWidget) nên không chạm.
+- Vị trí chưa đẹp: đáy 4 món trước đây lệch nhau (y=0.423–0.443) nên hàng nhìn hơi xộc xệch. Sửa: căn đáy cả 4 món cùng về một đường sâu y=0.43 của tranh (`_decorCutoutRect`: thạch anh top 0.291, quả cầu 0.273, trầm 0.202, nến 0.221) — hàng decor thẳng hàng, món nào cũng đứng trên cùng một mặt bàn.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §23).
+- Committed directly to main, no branch/PR.
