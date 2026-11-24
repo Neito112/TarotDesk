@@ -668,12 +668,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         // chìa ra ngoài, bị Stack cắt); hạ xuống 0.30 thì cả xấp
         // luôn hiện đủ, vẫn trên mặt gỗ, không chạm thạch anh
         // (xấp x=480–564, thạch anh từ x=586).
-        // Xấp bài CO DÃN CÙNG BÀN: bọc Transform.scale theo tỉ lệ
-        // cover của tranh (t.scale) — khi co kéo màn hình, bàn to
-        // ra/nhỏ lại thì xấp bài cũng to ra/nhỏ lại theo đúng tỉ
-        // lệ đó, vị trí và kích thước tương quan với bàn không
-        // đổi. Trước đây xấp cố định 84px nên co màn hình lại
-        // thì xấp vẫn to nguyên, trông lệch hẳn so với bàn.
+        // Xấp bài CO DÃN CÙNG BÀN (kẹp 0.86–1.25): bọc
+        // Transform.scale theo tỉ lệ cover của tranh (t.scale) —
+        // khi co kéo màn hình, bàn to ra/nhỏ lại thì xấp bài cũng
+        // to ra/nhỏ lại theo đúng tỉ lệ đó, vị trí và kích thước
+        // tương quan với bàn không đổi. NHƯNG kẹp dưới ở 0.86:
+        // scale thẳng t.scale làm xấp teo còn ~58px ở cửa sổ hẹp
+        // (t.scale≈0.69), nhãn "XẮP BÀI" còn ~7.5px nên không
+        // đọc được — người dùng chụp màn hình hẹp 1315×849 thấy
+        // xấp chỉ còn một lá mỏng với nhãn bị cắt. Kẹp 0.86 giữ
+        // xấp ≥72px, nhãn ≥9.5px, vẫn bấm và đọc được, trong khi
+        // cửa sổ lớn vẫn co dãn bình thường.
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -685,7 +690,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     left: 0.25 * 1920 * t.scale + t.dx,
                     top: 0.30 * 1280 * t.scale + t.dy,
                     child: Transform.scale(
-                      scale: t.scale,
+                      scale: t.scale.clamp(0.86, 1.25),
                       alignment: Alignment.topLeft,
                       child: CardStackWidget(
                         onTap: () {
