@@ -1450,3 +1450,8 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Xấp bài: hình thang mạnh hơn (cạnh xa 75% → 68% đáy) ở _DeckTopClipper và _DeckEdgePainter; rộng hơn (PC 84 → 96, tablet 100 → 108, phone giữ 84); chiều cao bị phối cảnh nén 0.85 (fh = w·8/5·0.85) nên tỉ lệ trung bình đọc đúng 5:8 (0.618) thay vì dài/hẹp.
 - Khăn: 3 ảnh khăn (vàng/tím/đen) được thêm nếp vải — shading nếp mềm dọc theo chiều dài khăn (hội tụ về phía xa theo phối cảnh) + gradient sáng trên/tối dưới + noise vân vải; giữ nguyên shape/alpha nên khớp đúng khung bàn. File cùng tên cloth_*_cut.png (thay nội dung).
 - Đã render kiểm tra hình học xấp bài mới ở kích thước thật (96px, 3x): hình thang rõ, mặt lưng thật, độ dày kem + bóng mềm.
+
+## §39 — Xấp bài nằm phẳng + nếp khăn dọc hội tụ (2026-11-26)
+- Kiểm tra live §38: hình thang xấp bài đã rõ ở kích thước thường, mặt lưng thật, nhưng xấp vẫn đọc như lá bài dựng đứng (cao/rộng 1,6–1,7) thay vì nằm phẳng trên bàn nhìn xiên; nếp khăn §38 quá mờ và chạy chéo (do period đổi theo y làm phase xiên).
+- Xấp bài: nén chiều cao mạnh theo phối cảnh — fh = w·8/5·0,55 (was 0,85). Tổng cao/rộng ≈ 0,94: xấp nằm phẳng, mặt lưng thành ellipse đúng phối cảnh. Đã render kiểm tra ở kích thước thật (96px, 3x).
+- Khăn: nếp làm lại — warp x hội tụ về mép xa (compress 0,62x ở trên, 1,0x ở dưới), nếp dọc, period 150px, depth 0,17, bóng sắc/gờ sáng mềm. Đã xem preview trên gỗ: nếp dọc rõ, hội tụ về xa, đọc như vải rũ.
