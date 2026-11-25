@@ -1444,3 +1444,9 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa 3 — MODEL: `TarotDeckModel` thêm `backImageUrl` (nullable, toMap/fromMap `back_image_url`) để bộ bài mang theo ảnh lưng; xấp bài đọc qua `DeckProvider.selectedDeck?.backImageUrl`.
 - Files changed: lib/presentation/screens/new_reading_screen.dart, lib/data/models/tarot_deck.dart, assets/images/deck_back_default.png (MỚI), AGENT_LOG.md §37.
 - Committed directly to main, no branch/PR.
+
+## §38 — Xấp bài phối cảnh mạnh + khăn có nếp vải (2026-11-26)
+- Kiểm tra live §37: xấp bài có mặt lưng thật + độ dày + bóng, nhưng hình thang đọc yếu (88–92% thay vì 75%) và xấp trông hẹp/dài hơn 5:8; khăn phẳng/cứng, không nếp vải.
+- Xấp bài: hình thang mạnh hơn (cạnh xa 75% → 68% đáy) ở _DeckTopClipper và _DeckEdgePainter; rộng hơn (PC 84 → 96, tablet 100 → 108, phone giữ 84); chiều cao bị phối cảnh nén 0.85 (fh = w·8/5·0.85) nên tỉ lệ trung bình đọc đúng 5:8 (0.618) thay vì dài/hẹp.
+- Khăn: 3 ảnh khăn (vàng/tím/đen) được thêm nếp vải — shading nếp mềm dọc theo chiều dài khăn (hội tụ về phía xa theo phối cảnh) + gradient sáng trên/tối dưới + noise vân vải; giữ nguyên shape/alpha nên khớp đúng khung bàn. File cùng tên cloth_*_cut.png (thay nội dung).
+- Đã render kiểm tra hình học xấp bài mới ở kích thước thật (96px, 3x): hình thang rõ, mặt lưng thật, độ dày kem + bóng mềm.
