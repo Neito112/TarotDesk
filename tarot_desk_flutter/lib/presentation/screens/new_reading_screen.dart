@@ -2703,21 +2703,24 @@ class _DeckStackFrame extends StatelessWidget {
     );
   }
 
+  // BoxFit.fill: ÉP DẸT ảnh lưng theo đúng phối cảnh nằm phẳng.
+  // (BoxFit.cover chỉ crop ảnh nên vòng tròn/ngôi sao vẫn tròn —
+  // xấp đọc như dựng đứng. Fill ép dọc 0.55 nên sao thành ellipse dẹt.)
   Widget _backImage() {
     final url = backImageUrl;
     if (url != null && url.isNotEmpty) {
       return Image.network(
         url,
-        fit: BoxFit.cover,
+        fit: BoxFit.fill,
         errorBuilder: (_, __, ___) => Image.asset(
           'assets/images/deck_back_default.png',
-          fit: BoxFit.cover,
+          fit: BoxFit.fill,
         ),
       );
     }
     return Image.asset(
       'assets/images/deck_back_default.png',
-      fit: BoxFit.cover,
+      fit: BoxFit.fill,
     );
   }
 }
