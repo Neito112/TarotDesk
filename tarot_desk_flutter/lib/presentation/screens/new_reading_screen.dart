@@ -884,6 +884,55 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
+  /// Bóng đổ THẬT (cast shadow) của một vật: lấy đúng hình dáng
+  /// (silhouette) của vật, chiếu xuống-phải theo hướng đèn.
+  ///
+  /// Cách tính — ánh sáng chính ấm từ trên-trái, bóng hắt
+  /// xuống-phải. Một điểm trên vật ở độ cao h so với mặt bàn thì
+  /// bóng của nó dời (h*kx, h*ky) theo hướng đèn: điểm càng cao
+  /// thì bóng càng xa chân vật. Trong tọa độ widget (y tăng xuống
+  /// dưới), điểm ở đỉnh vật (y nhỏ) dời nhiều hơn điểm ở chân
+  /// (y lớn). Ma trận thực hiện đúng hình chiếu đó: neo ở
+  /// bottomCenter (chân vật đứng yên), nghiêng skewX(-kx) để
+  /// đỉnh vật ngả sang phải, rồi dịch cả bóng xuống-phải.
+  /// Silhouette lấy từ chính ảnh cắt của vật (ColorFiltered đen,
+  /// BlendMode.srcIn) nên bóng có đúng hình dáng vật — gai thạch
+  /// anh, thân nến, lư hương, đế cầu — không phải ellipse chung
+  /// chung. Làm mờ bằng ImageFiltered (blur) cho viền mềm (bán
+  /// dạ). Quả cầu pha lê trong suốt nên bóng nhạt hơn (vật trong
+  /// suốt cho ánh sáng xuyên qua, chỉ đế và viền đổ bóng đậm).
+  /// Trả về một Positioned.fill để đặt trong Stack của vật
+  /// (Stack phải có clipBehavior: Clip.none để bóng tràn ra
+  /// ngoài khung vật, xuống-phải mặt khăn).
+  Widget _realCastShadow({
+    required String asset,
+    required double boxWidth,
+    required double boxHeight,
+    double opacity = 0.32,
+  }) {
+    const kx = 0.38; // độ nghiêng bóng theo hướng đèn (ngả phải)
+    return Positioned.fill(
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Transform(
+          alignment: Alignment.bottomCenter,
+          transform: Matrix4.identity()
+            ..translate(boxWidth * 0.22, boxHeight * 0.10)
+            ..skewX(-kx)
+            ..scale(1.06, 0.96),
+          child: Opacity(
+            opacity: opacity,
+            child: ColorFiltered(
+              colorFilter:
+                  const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+              child: Image.asset(asset, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Phụ kiện trên mép xa của bàn PC: các ảnh CẮT TRONG SUỐT (chỉ
   /// giữ vật thể, nền đã tách) đặt theo tọa độ phân số CỐ ĐỊNH
   /// trong code (xem _decorCutoutRect — một nguồn sự thật duy
@@ -952,37 +1001,16 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Bóng ĐỔ: bóng hắt xuống-phải theo ánh sáng của bàn
-          // (sáng từ trên-trái) — dùng radial gradient trong một
-          // ellipse dài nghiêng theo hướng đèn, mờ dần MỌI hướng
-          // nên mềm và tự nhiên như bóng thật. Hình bình hành xiên
-          // + linear gradient cũ nhìn như vệt mực dán lên bàn
-          // (cạnh cứng, hình học) nên người dùng thấy xấu. Mờ
-          // nhẹ (0.28) để vật "đứng" trên bàn mà không nặng nề.
-          // Cần Clip.none của Stack này để bóng tràn ra ngoài
-          // khung vật, xuống-phải mặt khăn.
-          Positioned(
-            left: boxWidth * 0.02,
-            top: boxHeight * 0.58,
-            width: boxWidth * 1.30,
-            height: boxHeight * 0.52,
-            child: Transform.rotate(
-              angle: 0.42, // nghiêng ~24° theo hướng đèn xuống-phải
-              alignment: Alignment.center,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle, // ellipse qua width/height
-                  gradient: RadialGradient(
-                    center: const Alignment(-0.30, -0.55),
-                    radius: 0.95,
-                    colors: [
-                      Colors.black.withOpacity(0.28),
-                      Colors.black.withOpacity(0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          // Bóng ĐỔ THẬT: silhouette của chính vật, chiếu
+          // xuống-phải theo hướng đèn (xem _realCastShadow).
+          // Ellipse radial-gradient cũ là đốm mờ chung chung,
+          // không khớp hình dáng vật nên nhìn xấu. Quả cầu pha
+          // lê trong suốt nên bóng nhạt hơn.
+          _realCastShadow(
+            asset: asset,
+            boxWidth: boxWidth,
+            boxHeight: boxHeight,
+            opacity: item == 'Quả Cầu' ? 0.18 : 0.32,
           ),
           // Bóng tiếp xúc vẽ bằng code: ellipse đen mờ nằm NGAY
           // DƯỚI CHÂN vật, chạm vào đáy khung — vật "đứng trên"
@@ -1127,36 +1155,16 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Bóng đổ (cast shadow): vệt bóng mềm hắt xuống-phải
-          // (ngược hướng đèn chính ấm từ trên-trái) — dùng radial
-          // gradient trong một ellipse dài nghiêng theo hướng đèn,
-          // mờ dần MỌI hướng nên mềm và tự nhiên như bóng thật.
-          // Hình chữ nhật + linear gradient cũ nhìn như vệt mực
-          // dán lên bàn (cạnh cứng, hình học) nên người dùng thấy
-          // xấu. Mờ nhẹ (0.28). Nằm dưới chân vật, chìa ra phải
-          // và xuống dưới.
-          Positioned(
-            left: size * 0.02,
-            right: -size * 0.45,
-            bottom: -size * 0.08,
-            height: size * 0.34,
-            child: Transform.rotate(
-              angle: 0.42, // nghiêng ~24° theo hướng đèn xuống-phải
-              alignment: Alignment.center,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle, // ellipse qua width/height
-                  gradient: RadialGradient(
-                    center: const Alignment(-0.30, -0.55),
-                    radius: 0.95,
-                    colors: [
-                      Colors.black.withOpacity(0.28),
-                      Colors.black.withOpacity(0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          // Bóng đổ THẬT: silhouette của chính vật, chiếu
+          // xuống-phải theo hướng đèn (xem _realCastShadow).
+          // Ellipse radial-gradient cũ là đốm mờ chung chung,
+          // không khớp hình dáng vật nên nhìn xấu. Quả cầu pha
+          // lê trong suốt nên bóng nhạt hơn.
+          _realCastShadow(
+            asset: asset,
+            boxWidth: size,
+            boxHeight: size,
+            opacity: item == 'Quả Cầu' ? 0.18 : 0.32,
           ),
           // Bóng tiếp xúc: ellipse đen ngay dưới chân vật.
           Positioned(
@@ -2356,10 +2364,12 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     child: child,
                   );
                 },
-                // Khăn TO RA (×1.3, giữ mép trên sát mép xa):
+                // Khăn TO RA (×1.45, giữ mép trên sát mép xa):
                 // khăn vẽ gốc chỉ chiếm 74% rộng × 51% cao của
                 // tranh nên nhìn bé tí, lọt thỏm giữa bàn. Phóng
-                // to 1.3 thì khăn phủ ~96% rộng × 66% cao. Scale
+                // to 1.45 thì khăn phủ ~108% rộng × 73% cao — tràn
+                // nhẹ ra hai mép bàn như khăn thật rủ xuống, mép
+                // dưới xuống sát khung chạm khắc dưới. Scale
                 // quanh tâm đẩy mép trên lên QUÁ mép xa của bàn
                 // nên dịch xuống đúng phần vượt đó (tính qua phép
                 // cover) để mép trên vẫn sát mép xa, khăn mọc
@@ -2372,10 +2382,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     final t = _paintingCoverTransform(
                         constraints.maxWidth, constraints.maxHeight);
                     // Mép trên của khăn (phân số tranh 0.268) sau
-                    // khi scale 1.3 quanh tâm tranh (0.5) sẽ ở
-                    // y = 0.5 − 0.232×1.3 = 0.198 — cao hơn mép xa
+                    // khi scale 1.45 quanh tâm tranh (0.5) sẽ ở
+                    // y = 0.5 − 0.232×1.45 = 0.164 — cao hơn mép xa
                     // của bàn (0.218). Dịch xuống phần vượt đó.
-                    const clothScale = 1.3;
+                    const clothScale = 1.45;
                     final topY = 0.5 - 0.232 * clothScale;
                     final over = 0.218 - topY; // > 0 khi vượt mép xa
                     final shiftY = over > 0 ? over * 1280 * t.scale : 0.0;
