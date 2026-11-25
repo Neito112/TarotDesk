@@ -2656,10 +2656,11 @@ class _DeckStackFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final w = width;
-    final fh = w * 8 / 5 * 0.55; // Mặt trên: lá bài cơ bản 5:8,
+    final fh = w * 8 / 5 * 0.42; // Mặt trên: lá bài cơ bản 5:8,
     // nhưng chiều cao (hướng sâu của bàn) bị phối cảnh nén mạnh
-    // 0.55 — bàn nhìn xiên nên xấp bài NẰM PHẲNG, cao/rộng ≈ 0.9,
-    // không còn đọc như lá bài dựng đứng (0.85 nén quá nhẹ).
+    // 0.42 — khung xấp RỘNG HƠN CAO (cao/rộng tổng ≈ 0,74) nên ở
+    // cỡ xem thường cũng đọc là NẰM PHẲNG, không còn như sách dựng
+    // (0.55 cho khung gần vuông 0,94 — vẫn đọc như chân dung).
     const dx = 7.0; // Chiều dày xấp lộ sang phải.
     const dy = 12.0; // Chiều dày xấp lộ xuống dưới.
     return Container(
