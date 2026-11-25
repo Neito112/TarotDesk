@@ -1347,3 +1347,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa: kẹp tỉ lệ xấp bài ở [0.86, 1.25] — vẫn co dãn cùng bàn trong khoảng dùng được, nhưng không bao giờ nhỏ hơn 84×0.86≈72px (nhãn ≥9.5px, vẫn bấm và đọc được). Vị trí xấp vẫn neo đúng phân số tranh (0.25, 0.30). Bóng đổ radial (§25) và khăn ×1.3 giữ nguyên.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §26).
 - Committed directly to main, no branch/PR.
+
+## §27 — 25/11/2026 — Xấp bài kẹp tối thiểu 1.0 (luôn đủ 84px, không teo ở cửa sổ hẹp)
+
+- Người dùng gửi thêm 2 ảnh (1328×904 hẹp, 1919×920 rộng) và yêu cầu tự nhìn/tự test, chỉ báo cáo khi co kéo không còn hỏng như trước. Đo từ ảnh: cửa sổ hẹp xấp bài 73px (kẹp 0.86 của §26 đã có tác dụng — không còn 58px), nhưng 3 lá chồng lên nhau vẫn trông như một lá mỏng, nhãn ~9.5px vẫn khó đọc; người dùng thấy hỏng y như cũ.
+- Nguyên nhân: kẹp dưới 0.86 vẫn để xấp nhỏ hơn cỡ gốc thiết kế (84px). Ở cửa sổ hẹp, xấp 72px với độ lệch 3 lá chỉ ~4px nên không thấy được là một xấp bài.
+- Sửa: nâng kẹp dưới lên 1.0 — xấp bài luôn ≥84px (đúng cỡ gốc, 3 lá chồng thấy rõ, nhãn 11px đọc được) ở mọi cửa sổ; cửa sổ lớn vẫn co dãn lên tới 1.25×. Vị trí xấp vẫn neo đúng phân số tranh (0.25, 0.30). Bóng đổ radial (§25) và khăn ×1.3 giữ nguyên.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §27).
+- Committed directly to main, no branch/PR.
