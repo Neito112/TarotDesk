@@ -2438,10 +2438,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             ),
           ),
 
-          // LỚP 3: Nội dung của ứng dụng
-          child,
-
-          // LỚP 4: Đồ trang trí — chỉ phone/tablet. Trước đây là
+          // LỚP 4: Đồ trang trí — chỉ phone/tablet. Đặt TRƯỚC
+          // nội dung (LỚP 3) để decor nằm DƯỚI giao diện — decor
+          // là đồ trên mặt bàn (nền), không phải lớp phủ UI.
+          // Trước đây decor ở SAU nội dung nên khi mở khay chọn
+          // bài trên điện thoại, decor đè lên nút lọc bộ bài và
+          // thẻ bài trong khay. Ẩn decor khi khay chọn bài đang
+          // mở để nó không lộ qua panel kính (GlassPanel chỉ mờ
+          // 0.7, decor vẫn thấy mờ mờ sau panel). Trước đây là
           // hàng sprite 40px ở sát mép trên màn hình (top: 0) nên
           // đồ bé tí và bay trong vùng tối PHÍA TRÊN bàn (mép trên
           // của bàn nằm sâu hơn, khoảng y=0.218 của tranh). Giờ đặt
@@ -2456,7 +2460,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           // PC: không có gì ở đây, phụ kiện là ảnh cắt đặt theo
           // phân số tranh trên mép xa của bàn (xem
           // _buildDesktopDecorCutouts trong _buildDesktopTable).
-          if (prefs.showDecor && !isDesktop)
+          if (prefs.showDecor && !isDesktop && !_showSelectionPanel)
             Positioned.fill(
               child: IgnorePointer(
                 child: LayoutBuilder(
@@ -2492,6 +2496,9 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 ),
               ),
             ),
+
+          // LỚP 3: Nội dung của ứng dụng
+          child,
         ],
       ),
     );
