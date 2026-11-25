@@ -1387,3 +1387,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa (chỉ đổi tham số trong _realCastShadow, không đổi cấu trúc): blur sigma 5 → 2.5 (đủ mềm nhưng giữ được hình dáng vật); độ mờ mặc định 0.32 → 0.45 (bóng đủ đậm để đọc hình dáng), quả cầu 0.18 → 0.25 (vẫn nhạt nhất vì trong suốt, nhưng đọc được); dịch bóng dài hơn (0.22w, 0.10h) → (0.28w, 0.13h); nghiêng kx 0.38 → 0.45 (hình dáng trải rõ hơn). Khăn ×1.45 giữ nguyên.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §30).
 - Committed directly to main, no branch/PR.
+
+## §31 — 25/11/2026 — Bóng đổ giữ được hình dáng vật (nghiêng nhẹ, blur nhẹ, bóng cầu đậm hơn, xấp bài có bóng chữ nhật)
+
+- Kiểm tra live §30 (cloud browser, viewport 1919×998, HEAD 56930d3, phóng to ×3): bóng thạch anh và lư hương đã tối hơn và dài hơn xuống-phải (thạch anh 45–50px, lư ~100px), nhưng VẪN là vệt/nêm chung chung, KHÔNG đọc được hình dáng — không thấy gai thạch anh, không thấy thân/núm/quai lư. Bóng tròn của quả cầu gần như không xuất hiện. Xấp bài KHÔNG có bóng chữ nhật (chỉ tối tiếp xúc ở đáy). Khăn vẫn lớn, phủ phần lớn mặt bàn.
+- Nguyên nhân: (1) nghiêng kx 0.45 quá mạnh — bôi ngang hình dáng thành vệt nêm/tam giác (đỉnh vật dời tới 0.45×chiều cao, gai nhọn và quai bị kéo dẹt vào nhau); (2) bóng quả cầu quá nhạt (0.25) + thủy tinh trong suốt làm silhouette thủy tinh mờ, nên hình tròn không thấy; (3) xấp bài chỉ có BoxShadow offset (8,12) blur 12 — quá mờ, chỉ thấy tối tiếp xúc, không thấy hình chữ nhật.
+- Sửa: (1) nghiêng NHẸ kx 0.45 → 0.18 — bóng vẫn ngả sang phải theo hướng đèn nhưng giữ được hình dáng vật (gai, quai, thân không bị bôi ngang); blur sigma 2.5 → 2.0 (sắc hơn, đọc được hình); dịch bóng dài hơn (0.28w, 0.13h) → (0.32w, 0.16h) để hình dáng tách rõ khỏi vật. (2) bóng quả cầu 0.25 → 0.35 — vẫn nhạt nhất (trong suốt) nhưng đủ đậm để thấy hình tròn. (3) xấp bài: BoxShadow offset (8,12) → (14,18), blur 12 → 10, spread 2 → 3, độ mờ 0.5 → 0.55 — bóng chữ nhật đổ xuống-phải rõ ràng. Khăn ×1.45 giữ nguyên.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §31).
+- Committed directly to main, no branch/PR.
