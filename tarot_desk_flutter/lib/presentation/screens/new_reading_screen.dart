@@ -893,8 +893,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// thì bóng càng xa chân vật. Trong tọa độ widget (y tăng xuống
   /// dưới), điểm ở đỉnh vật (y nhỏ) dời nhiều hơn điểm ở chân
   /// (y lớn). Ma trận thực hiện đúng hình chiếu đó: neo ở
-  /// bottomCenter (chân vật đứng yên), nghiêng skewX(-kx) để
-  /// đỉnh vật ngả sang phải, rồi dịch cả bóng xuống-phải.
+  /// bottomCenter (chân vật đứng yên), nghiêng setEntry(0, 1, -kx)
+  /// để đỉnh vật ngả sang phải, rồi dịch cả bóng xuống-phải.
+  /// (Matrix4 của vector_math không có skewX — nghiêng bằng
+  /// setEntry(0, 1, s) cho x' = x + s*y.)
   /// Silhouette lấy từ chính ảnh cắt của vật (ColorFiltered đen,
   /// BlendMode.srcIn) nên bóng có đúng hình dáng vật — gai thạch
   /// anh, thân nến, lư hương, đế cầu — không phải ellipse chung
@@ -918,7 +920,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           alignment: Alignment.bottomCenter,
           transform: Matrix4.identity()
             ..translate(boxWidth * 0.22, boxHeight * 0.10)
-            ..skewX(-kx)
+            ..setEntry(0, 1, -kx) // nghiêng: x' = x - kx*y (đỉnh ngả phải)
             ..scale(1.06, 0.96),
           child: Opacity(
             opacity: opacity,
