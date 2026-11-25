@@ -2653,11 +2653,27 @@ class CardStackWidget extends StatelessWidget {
           // bóng đổ mềm theo hình xấp. Trước đây là 3 lá bài phẳng
           // xòe quạt, xoay lệch nhau — trông như đồ chơi, không
           // giống một xấp bài thật đặt trên bàn.
-          SizedBox(
-            width: stackWidth + 6,
-            height: stackWidth * 8 / 5 + 11,
-            child: CustomPaint(
-              painter: _DeckStackPainter(theme.primaryColor),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                // Bóng đổ của xấp bài: mềm, nhạt như bóng thật
+                // (§32) — BoxShadow vẽ ngoài biên widget nên
+                // không bị cắt như bóng vẽ trong CustomPaint.
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.40),
+                  blurRadius: 14,
+                  spreadRadius: 2,
+                  offset: const Offset(10, 12),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              width: stackWidth + 9,
+              height: stackWidth * 8 / 5 + 16,
+              child: CustomPaint(
+                painter: _DeckStackPainter(theme.primaryColor),
+              ),
             ),
           ),
           const SizedBox(height: 6),
@@ -2690,14 +2706,14 @@ class _DeckStackPainter extends CustomPainter {
   _DeckStackPainter(this.gold);
 
   // Chiều dày xấp bài hiện ra (sang phải + xuống dưới).
-  static const double _dx = 6.0;
-  static const double _dy = 11.0;
+  static const double _dx = 9.0;
+  static const double _dy = 16.0;
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width - _dx; // rộng mặt trên (cạnh gần)
     final h = size.height - _dy; // cao mặt trên (cạnh gần)
-    final inset = w * 0.055; // phối cảnh: cạnh xa ngắn hơn
+    final inset = w * 0.14; // phối cảnh MẠNH: cạnh xa ngắn hơn rõ rệt (trước 0.055 quá nhẹ, nhìn như hình chữ nhật)
     // 4 góc mặt trên: tl/tr = cạnh xa (trên), bl/br = cạnh gần (dưới).
     final tl = Offset(inset, 0);
     final tr = Offset(w - inset, 0);
@@ -2728,31 +2744,17 @@ class _DeckStackPainter extends CustomPainter {
         ];
     Path quadFrom(List<Offset> c) => quad(c[0], c[1], c[2], c[3]);
 
-    // 1) Bóng đổ: bóng của hình xấp (mặt trên + cạnh), lệch
-    // xuống-phải, mờ, nhạt.
-    final silhouette = Path()
-      ..moveTo(tl.dx, tl.dy)
-      ..lineTo(tr.dx, tr.dy)
-      ..lineTo(tr2.dx, tr2.dy)
-      ..lineTo(br2.dx, br2.dy)
-      ..lineTo(bl2.dx, bl2.dy)
-      ..lineTo(bl.dx, bl.dy)
-      ..close();
-    canvas.save();
-    canvas.translate(10, 12);
-    canvas.drawPath(
-      silhouette,
-      Paint()
-        ..color = Colors.black.withOpacity(0.25)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.0),
-    );
-    canvas.restore();
+    // 1) Bóng đổ: KHÔNG vẽ trong painter — bóng vẽ trong
+    // CustomPaint bị cắt ở biên canvas (dịch 10,12 ra ngoài
+    // khung nên chỉ còn một vệt mờ dưới mép). Bóng đổ dùng
+    // BoxShadow của Container bọc ngoài (xem CardStackWidget),
+    // vẽ ngoài biên widget nên không bị cắt (§32).
 
     // 2) Chiều dày — mặt trước: mép giấy kem, vạch lớp bài.
     canvas.drawPath(frontFace, Paint()..color = const Color(0xFFD9CDB4));
     final edgeLine = Paint()
-      ..color = const Color(0xFF8A7F68)
-      ..strokeWidth = 0.8;
+      ..color = const Color(0xFF6B5F45)
+      ..strokeWidth = 1.0;
     for (final t in [0.3, 0.55, 0.8]) {
       canvas.drawLine(
         Offset.lerp(bl, bl2, t)!,
