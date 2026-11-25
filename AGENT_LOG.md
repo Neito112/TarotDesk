@@ -1395,3 +1395,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa: (1) nghiêng NHẸ kx 0.45 → 0.18 — bóng vẫn ngả sang phải theo hướng đèn nhưng giữ được hình dáng vật (gai, quai, thân không bị bôi ngang); blur sigma 2.5 → 2.0 (sắc hơn, đọc được hình); dịch bóng dài hơn (0.28w, 0.13h) → (0.32w, 0.16h) để hình dáng tách rõ khỏi vật. (2) bóng quả cầu 0.25 → 0.35 — vẫn nhạt nhất (trong suốt) nhưng đủ đậm để thấy hình tròn. (3) xấp bài: BoxShadow offset (8,12) → (14,18), blur 12 → 10, spread 2 → 3, độ mờ 0.5 → 0.55 — bóng chữ nhật đổ xuống-phải rõ ràng. Khăn ×1.45 giữ nguyên.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §31).
 - Committed directly to main, no branch/PR.
+
+## §32 — 25/11/2026 — Bóng đổ MỀM và NHẠT như bóng thật (không phải vệt mực đen)
+
+- Người dùng gửi ảnh chụp màn hình (khăn VÀNG sáng): "vẫn lỗi thảm, đổ bóng khá hơn nhưng vẫn xấu, chưa thật". Nhìn ảnh: bóng §31 quá đậm, quá dài, quá cứng — thành vệt mực đen loang trên khăn sáng, nhất là bóng nến và thạch anh. Trên khăn tím tối thì bóng đậm còn đỡ, trên khăn vàng sáng thì lộ rõ là vết đen giả.
+- Nguyên nhân: bóng thật trên bàn là vùng tối MỀM và NHẠT — ánh sáng bị chặn một phần, vân gỗ/vân vải vẫn thấy qua, viền loang dần. §29–§31 đi sai hướng: cứ tăng độ đậm (0.32→0.45) và kéo dài bóng (tới 150–180px) để "đọc được hình dáng", nhưng kết quả là mảng đen đặc, cứng, như vết mực — càng đậm càng giả. Hình dáng chi tiết (gai, núm, quai) vốn đã không đọc được qua silhouette (bóng nằm dưới vật, chỉ thấy rìa nhô ra), nên tăng độ đậm chỉ làm vệt đen rõ hơn chứ không làm hình dáng rõ hơn.
+- Sửa (đổi hướng: mềm + nhạt + ngắn): độ mờ mặc định 0.45 → 0.25, quả cầu 0.35 → 0.18 (vẫn nhạt nhất); blur sigma 2.0 → 5.0 (viền thật mềm, ánh sáng khuếch tán); chiếu NGẮN (0.32w, 0.16h) → (0.18w, 0.09h) — bóng của vật nhỏ dưới đèn ấm treo cao là vùng tối ngắn sát chân vật, hình dáng gần như vật; nghiêng rất nhẹ kx 0.18 → 0.10. Xấp bài: BoxShadow độ mờ 0.55 → 0.40, blur 10 → 14, offset (14,18) → (10,12), spread 3 → 2. Khăn ×1.45 giữ nguyên.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §32).
+- Committed directly to main, no branch/PR.
