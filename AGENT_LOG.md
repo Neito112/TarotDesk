@@ -1427,3 +1427,20 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa: (1) inset 0.055 → 0.14 (cạnh trên còn 72% cạnh dưới — đã render kiểm chứng bằng PIL ở cỡ thật 84px, thấy rõ hình thang); (2) bỏ bóng vẽ trong painter, khôi phục BoxShadow của Container bọc ngoài (offset 10,12, blur 14, opacity 0.40 — vẽ ngoài biên widget nên không bị cắt, như §32); (3) chiều dày dx 6 → 9, dy 11 → 16; vạch lớp bài đậm hơn (0xFF6B5F45, width 1.0). Cỡ mặt trên, tap mở khay, nhãn "XẮP BÀI" không đổi.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §35).
 - Committed directly to main, no branch/PR.
+
+## §36 — 26/11/2026 — Xấp bài bằng ảnh thật cắt nền (phương pháp HyperFrames)
+
+- Người dùng: bộ bài cũng giả tạo; nhắc lại phương pháp đã dặn trước đây — tạo ảnh thật đầy đủ đồ rồi cắt hình tách nền ra làm asset, đừng đoán mò bằng code nữa. (Cả khăn/thảm cũng đang cứng đờ, không co dãn theo mặt bàn — vẫn còn đó, xem §36-note.)
+- Sửa: bỏ hẳn CustomPaint `_DeckStackPainter` (§34/§35). Vẽ ảnh xấp bài thật bằng image generation (mặt trên chàm đậm, viền vàng đôi, sao 8 cánh vàng, mép giấy kem có vạch lớp bài), tách nền bằng flood-fill + giữ component lớn nhất (rembg nặng quá, OOM trên VM), warp phối cảnh cho cạnh xa ngắn hơn cạnh gần, ra asset `assets/images/deck_stack_cut.png` (4K, 2097×3840, trong suốt, ~8MB, đã upscale Lanczos + unsharp cho sắc nét theo yêu cầu). `CardStackWidget` giờ dùng `Image.asset` đó (rộng = stackWidth, cao theo tỉ lệ ảnh 1652/902); BoxShadow mềm ngoài Container giữ nguyên; tap mở khay + nhãn "XẮP BÀI" không đổi.
+- §36-note (khăn cứng đờ): đã đo bằng ảnh thật (gỗ + khăn tím tải từ live build, mô phỏng BoxFit.cover + Transform.scale 1.45 + shiftY ở 1920×1080 / 1328×904 / 1920×998) — mép trên khăn giữ đúng y≈0.218, nhưng mép dưới lệch 0.890–0.950 theo tỉ lệ màn hình (cao 0.673–0.732), tức khăn không dính cố định vào một vị trí trên bàn khi đổi tỉ lệ màn hình. Chưa sửa trong §36 (tập trung xấp bài theo yêu cầu); hướng sửa: neo khăn theo `_paintingCoverTransform` (tọa độ tranh) thay vì BoxFit.cover + Transform.scale quanh tâm màn hình.
+- Files changed: lib/presentation/screens/new_reading_screen.dart, assets/images/deck_stack_cut.png (MỚI), AGENT_LOG.md §36.
+- Committed directly to main, no branch/PR.
+
+## §37 — 26/11/2026 — Toàn cảnh: khăn neo theo tranh + xấp bài khung + ảnh lưng
+
+- Người dùng: sao chỉ vẽ mỗi bộ bài — làm tổng thể toàn bộ bàn + decor + khăn + bộ bài. Bộ bài vừa rồi bị hẹp/rộng sai tỉ lệ — cứ dùng bộ bài cơ bản. Nhắc lại: mỗi bộ bài up lên kèm 1 ảnh mặt lưng; chọn bộ nào thì lấy ảnh lưng bộ đó dùng luôn — vẽ đẹp, crop khung bám sát mép lá bài, rồi scale ảnh lưng khớp vào bộ mặc định.
+- Sửa 1 — KHĂN (§37, lỗi "khăn cứng đờ, không co dãn theo mặt bàn"): khăn giờ neo theo TỌA ĐỘ TRANH qua `_paintingCoverTransform` (hộp khăn = hộp tranh phóng 1.45× quanh tâm tranh, mép trên sát mép xa 0.218), thay cho BoxFit.cover + Transform.scale quanh tâm màn hình. Đã đo bằng ảnh thật: cách cũ mép dưới khăn lệch 0.890–0.950 theo tỉ lệ màn hình; cách mới neo thẳng vào tranh nên khăn dính cố định vào bàn.
+- Sửa 2 — XẤP BÀI (§37, tỉ lệ sai + mặt lưng giả): bỏ hẳn asset deck_stack_cut.png (§36, chưa đẩy, đã bỏ). Xấp bài giờ là `_DeckStackFrame`: khung hình thang phối cảnh bám sát mép lá (tỉ lệ bộ cơ bản 5:8, cạnh xa 75% cạnh gần), bên trong là ẢNH MẶT LƯNG của bộ đang chọn — `TarotDeckModel.backImageUrl` (mới thêm, nullable) scale khớp vào khung; chưa có ảnh lưng thì dùng `deck_back_default.png` (ảnh lưng vẽ tay 5:8, chàm + viền vàng + sao 8 cánh). Mép giấy kem (dải trước + dải phải, có vạch lớp bài) + bóng đổ mềm giữ nguyên. Đã render kiểm chứng hình học ở cỡ thật (84px): hình thang rõ, lưng thật, mép kem + bóng đầy đủ.
+- Sửa 3 — MODEL: `TarotDeckModel` thêm `backImageUrl` (nullable, toMap/fromMap `back_image_url`) để bộ bài mang theo ảnh lưng; xấp bài đọc qua `DeckProvider.selectedDeck?.backImageUrl`.
+- Files changed: lib/presentation/screens/new_reading_screen.dart, lib/data/models/tarot_deck.dart, assets/images/deck_back_default.png (MỚI), AGENT_LOG.md §37.
+- Committed directly to main, no branch/PR.
