@@ -1363,3 +1363,12 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa: bỏ hẳn kẹp tỉ lệ ở xấp bài — Transform.scale(scale: t.scale) thuần, neo góc trên-trái vào đúng một tọa độ trên tranh (phân số 0.25, 0.30). Xấp bài co dãn đúng tỉ lệ với bàn ở mọi cửa sổ, vị trí và kích thước tương quan không đổi. Decor PC vốn đã scale thường (boxWidth dùng t.scale, không kẹp); bóng đổ radial (§25) và khăn ×1.3 giữ nguyên.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §28).
 - Committed directly to main, no branch/PR.
+
+## §29 — 25/11/2026 — Khăn to ra ×1.45 + bóng đổ THẬT (silhouette vật, tính theo hướng đèn)
+
+- Người dùng: đồ đạc đã ok, nhưng khăn chưa sửa (cứ lờ đi khăn), và bóng đổ của đồ đạc phải tính toán ra bóng thật — bóng hiện tại (ellipse radial) nhìn chán, xấu.
+- Kiểm tra live (cloud browser, viewport 1919×998, build §28): khăn đã đủ lớn và hợp bàn (mép trên ~78% rộng, mép dưới ~71%, cao ~65% mặt bàn, mép tuân phối cảnh) — nhưng người dùng vẫn thấy chưa đủ, nên phóng to thêm cho rõ; bóng đổ đúng là các đốm/vệt bầu dục chung chung, KHÔNG bóng nào mang hình dáng vật (thạch anh không thấy gai nhọn, cầu không thấy hình tròn/đế, lư không thấy tay cầm), và quả cầu pha lê trong suốt lại đổ bóng tối đặc như vật đục (sai vật lý).
+- Sửa 1 — khăn: clothScale 1.3 → 1.45. Khăn phủ ~108% rộng × 73% cao — tràn nhẹ ra hai mép bàn như khăn thật rủ xuống, mép dưới xuống sát khung chạm khắc dưới; mép trên vẫn giữ sát mép xa nhờ shiftY tính qua phép cover (công thức cũ, chỉ đổi hệ số). Decor và ô gợi ý neo theo phân số tranh nên vẫn nằm trên khăn.
+- Sửa 2 — bóng đổ THẬT (helper mới _realCastShadow): lấy đúng silhouette của vật — chính ảnh cắt của vật qua ColorFiltered đen (BlendMode.srcIn) — rồi chiếu xuống-phải theo hướng đèn: neo bottomCenter (chân vật đứng yên), nghiêng skewX(-0.38) để đỉnh vật ngả sang phải (điểm càng cao thì bóng càng xa chân), dịch xuống-phải (0.22w, 0.10h), scale nhẹ (1.06, 0.96) cho bóng dài ra và nén dọc theo phối cảnh. Làm mờ bằng ImageFiltered blur sigma 5 cho viền mềm (bán dạ), độ mờ 0.32. Quả cầu pha lê trong suốt nên bóng nhạt hơn (0.18) — vật trong suốt cho ánh sáng xuyên qua, chỉ đế và viền đổ bóng đậm. Thay thế ellipse radial-gradient ở CẢ hai chỗ: _buildDesktopDecorCutout (PC) và _buildDecorSprite (phone/tablet). Bóng tiếp xúc (ellipse đậm ngay dưới chân) giữ nguyên — đó là hiệu ứng tiếp xúc đúng, khác bóng đổ.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §29).
+- Committed directly to main, no branch/PR.
