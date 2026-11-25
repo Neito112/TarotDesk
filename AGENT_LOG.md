@@ -1460,3 +1460,8 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Kiểm tra live §39: khung xấp đã phẳng (cao/rộng ~1,0), nhưng vòng tròn/ngôi sao trên lưng bài chỉ hơi dẹt (0,83) — vẫn gần tròn, xấp hơi giống sách dựng; khăn §39 vẫn mờ, không gờ/rãnh, không hội tụ.
 - NGUYÊN NHÂN sao không dẹt: _backImage dùng BoxFit.cover — ảnh chỉ bị CROP (scale đều rồi cắt trên/dưới) nên sao vẫn tròn. Đổi sang BoxFit.fill (3 chỗ: network + fallback + asset): ảnh bị ÉP DỌC 0,55, sao thành ellipse dẹt rõ, khớp phối cảnh nằm phẳng. Đã render kiểm tra: sao là ellipse dẹt rõ.
 - Khăn: nếp làm lại lần 4 — profile sắc (sign(s)·|s|^0,5: rãnh tối sắc + gờ sáng mềm), depth 0,28, period 120px, vẫn dọc + hội tụ (warp x 0,62x ở trên). Đã xem preview trên gỗ: nếp dọc rõ, tương phản cao, đọc như vải rũ có nếp.
+
+## §41 — Xấp bài rộng hơn cao + khăn nếp THẬT (vẽ lại bằng ảnh) (2026-11-26)
+- Kiểm tra live §40: sao trên lưng bài đã là ellipse dẹt rõ (0,37–0,40), hình thang rõ, nhưng ở cỡ thường khung xấp vẫn đọc như chân dung/dựng; khăn §40 vẫn chỉ là dải sáng/tối mềm, không có gờ/rãnh nếp sắc.
+- Xấp bài: nén chiều cao mạnh hơn — fh = w·8/5·0,42 (was 0,55). Khung tổng cao/rộng ≈ 0,74: RỘNG HƠN CAO, đọc là nằm phẳng ngay ở cỡ thường.
+- Khăn: BỎ shading nếp bằng code (4 lần thử đều chỉ ra vệt sáng mềm, không ra nếp thật). Dùng đúng phương pháp HyperFrames của user: tạo ẢNH THẬT rồi cắt nền. Vẽ lại cả 3 khăn (vàng/tím/đen) bằng image generation từ composite gỗ+khăn, rồi cắt lại bằng đúng alpha mask gốc nên giữ nguyên khớp khung bàn. Nếp thật: gờ/rãnh rõ, hội tụ về mép xa, gờ sáng + rãnh tối. Đã xem preview cả 3 màu trên gỗ: nếp dọc rõ, đọc như vải lụa rũ thật.
