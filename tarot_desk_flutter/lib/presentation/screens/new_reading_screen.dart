@@ -903,11 +903,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// chung. Làm mờ bằng ImageFiltered (blur) cho viền mềm (bán
   /// dạ). Quả cầu pha lê trong suốt nên bóng nhạt hơn (vật trong
   /// suốt cho ánh sáng xuyên qua, chỉ đế và viền đổ bóng đậm).
-  /// Độ mờ và độ sắc: blur sigma 2.5 (đủ mềm nhưng vẫn giữ
+  /// Độ mờ và độ sắc: blur sigma 2.0 (đủ mềm nhưng vẫn giữ
   /// được hình dáng vật — sigma 5 làm nhòe hết gai thạch anh,
   /// thân nến thành đốm mờ chung chung), độ mờ 0.45 để bóng
-  /// đủ đậm mà đọc được hình dáng. Bóng chiếu dài hơn (dịch
-  /// 0.28w, 0.13h, nghiêng 0.45) để hình dáng trải ra, dễ đọc.
+  /// đủ đậm mà đọc được hình dáng. Nghiêng NHẸ (kx 0.18):
+  /// nghiêng mạnh (0.38–0.45) làm nhòe hình dáng thành vệt
+  /// nêm/tam giác — gai thạch anh, quai lư bị bôi ngang thành
+  /// khối chung chung; nghiêng nhẹ thì bóng vẫn là hình dáng
+  /// vật, chỉ ngả sang phải theo hướng đèn. Bóng chiếu dài
+  /// hơn (dịch 0.32w, 0.16h) để hình dáng tách rõ khỏi vật,
+  /// dễ đọc. Quả cầu 0.35 (vẫn nhạt nhất vì trong suốt, nhưng
+  /// đủ đậm để thấy hình tròn).
   /// Trả về một Positioned.fill để đặt trong Stack của vật
   /// (Stack phải có clipBehavior: Clip.none để bóng tràn ra
   /// ngoài khung vật, xuống-phải mặt khăn).
@@ -917,14 +923,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     required double boxHeight,
     double opacity = 0.45,
   }) {
-    const kx = 0.45; // độ nghiêng bóng theo hướng đèn (ngả phải)
+    const kx = 0.18; // nghiêng NHẸ theo hướng đèn (ngả phải, giữ hình dáng)
     return Positioned.fill(
       child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+        imageFilter: ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
         child: Transform(
           alignment: Alignment.bottomCenter,
           transform: Matrix4.identity()
-            ..translate(boxWidth * 0.28, boxHeight * 0.13)
+            ..translate(boxWidth * 0.32, boxHeight * 0.16)
             ..setEntry(0, 1, -kx) // nghiêng: x' = x - kx*y (đỉnh ngả phải)
             ..scale(1.06, 0.96),
           child: Opacity(
@@ -1017,7 +1023,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             asset: asset,
             boxWidth: boxWidth,
             boxHeight: boxHeight,
-            opacity: item == 'Quả Cầu' ? 0.25 : 0.45,
+            opacity: item == 'Quả Cầu' ? 0.35 : 0.45,
           ),
           // Bóng tiếp xúc vẽ bằng code: ellipse đen mờ nằm NGAY
           // DƯỚI CHÂN vật, chạm vào đáy khung — vật "đứng trên"
@@ -1171,7 +1177,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             asset: asset,
             boxWidth: size,
             boxHeight: size,
-            opacity: item == 'Quả Cầu' ? 0.25 : 0.45,
+            opacity: item == 'Quả Cầu' ? 0.35 : 0.45,
           ),
           // Bóng tiếp xúc: ellipse đen ngay dưới chân vật.
           Positioned(
@@ -2636,11 +2642,16 @@ class CardStackWidget extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
+                // Bóng đổ HÌNH CHỮ NHẬT của xấp bài: đổ xuống-phải
+                // theo hướng đèn (như bóng decor), đủ đậm và dài
+                // để đọc được là bóng của một xấp bài chữ nhật —
+                // offset cũ (8,12) + blur 12 quá mờ, chỉ thấy tối
+                // tiếp xúc ở đáy, không thấy hình chữ nhật.
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                  offset: const Offset(8, 12),
+                  color: Colors.black.withOpacity(0.55),
+                  blurRadius: 10,
+                  spreadRadius: 3,
+                  offset: const Offset(14, 18),
                 ),
               ],
             ),
