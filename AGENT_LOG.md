@@ -1455,3 +1455,8 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Kiểm tra live §38: hình thang xấp bài đã rõ ở kích thước thường, mặt lưng thật, nhưng xấp vẫn đọc như lá bài dựng đứng (cao/rộng 1,6–1,7) thay vì nằm phẳng trên bàn nhìn xiên; nếp khăn §38 quá mờ và chạy chéo (do period đổi theo y làm phase xiên).
 - Xấp bài: nén chiều cao mạnh theo phối cảnh — fh = w·8/5·0,55 (was 0,85). Tổng cao/rộng ≈ 0,94: xấp nằm phẳng, mặt lưng thành ellipse đúng phối cảnh. Đã render kiểm tra ở kích thước thật (96px, 3x).
 - Khăn: nếp làm lại — warp x hội tụ về mép xa (compress 0,62x ở trên, 1,0x ở dưới), nếp dọc, period 150px, depth 0,17, bóng sắc/gờ sáng mềm. Đã xem preview trên gỗ: nếp dọc rõ, hội tụ về xa, đọc như vải rũ.
+
+## §40 — Sao trên lưng bài ép dẹt + nếp khăn tương phản rõ (2026-11-26)
+- Kiểm tra live §39: khung xấp đã phẳng (cao/rộng ~1,0), nhưng vòng tròn/ngôi sao trên lưng bài chỉ hơi dẹt (0,83) — vẫn gần tròn, xấp hơi giống sách dựng; khăn §39 vẫn mờ, không gờ/rãnh, không hội tụ.
+- NGUYÊN NHÂN sao không dẹt: _backImage dùng BoxFit.cover — ảnh chỉ bị CROP (scale đều rồi cắt trên/dưới) nên sao vẫn tròn. Đổi sang BoxFit.fill (3 chỗ: network + fallback + asset): ảnh bị ÉP DỌC 0,55, sao thành ellipse dẹt rõ, khớp phối cảnh nằm phẳng. Đã render kiểm tra: sao là ellipse dẹt rõ.
+- Khăn: nếp làm lại lần 4 — profile sắc (sign(s)·|s|^0,5: rãnh tối sắc + gờ sáng mềm), depth 0,28, period 120px, vẫn dọc + hội tụ (warp x 0,62x ở trên). Đã xem preview trên gỗ: nếp dọc rõ, tương phản cao, đọc như vải rũ có nếp.
