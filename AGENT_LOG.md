@@ -1419,3 +1419,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa: thay 3 lá xòe quạt bằng `CustomPaint` (`_DeckStackPainter`) vẽ một xấp bài thật, góc nhìn phối cảnh (nhìn từ trên xuống, như tranh bàn): mặt trên là hình thang (cạnh xa ngắn hơn cạnh gần, hội tụ về điểm tụ phía trên), nền chàm đậm + viền vàng đôi + hoa văn sao 4 cánh ở giữa; cạnh trước + cạnh phải hiện rõ chiều dày của xấp (mép giấy kem sáng, có vạch ngang gợi các lớp bài) — chính mép giấy sáng này làm xấp có khối; bóng đổ mềm theo hình xấp (mặt trên + cạnh), lệch xuống-phải, mờ nhạt như bóng thật (§32). Cỡ mặt trên giữ nguyên (PC 84 / tablet 100 / phone 84), tap mở khay chọn bài và nhãn "XẮP BÀI" không đổi. `_buildCardBack` cũ (chỉ dùng trong xấp bài) đã xóa.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §34).
 - Committed directly to main, no branch/PR.
+
+## §35 — 26/11/2026 — Sửa §34: phối cảnh xấp bài mạnh hơn, bóng không bị cắt
+
+- Kiểm tra live §34 (cloud browser, 1919×998, zoom 3×): KHÔNG đạt — xấp bài vẫn là hình chữ nhật đứng, cạnh song song, cạnh trên rộng bằng cạnh dưới; độ dày chỉ là vài vạch mỏng ở mép dưới; bóng chỉ là vệt mờ nhẹ dưới mép. Hoa văn (chàm + viền vàng đôi + sao 4 cánh + 4 chấm) đúng. Chức năng tốt (bấm mở khay chọn bài).
+- Nguyên nhân: (1) phối cảnh quá nhẹ — inset 0.055 (cạnh trên 89% cạnh dưới) nên nhìn như hình chữ nhật; (2) bóng đổ vẽ trong CustomPaint bị cắt ở biên canvas (dịch 10,12 ra ngoài khung) nên chỉ còn vệt mờ; (3) chiều dày mỏng (dx 6, dy 11) nên mép giấy không rõ.
+- Sửa: (1) inset 0.055 → 0.14 (cạnh trên còn 72% cạnh dưới — đã render kiểm chứng bằng PIL ở cỡ thật 84px, thấy rõ hình thang); (2) bỏ bóng vẽ trong painter, khôi phục BoxShadow của Container bọc ngoài (offset 10,12, blur 14, opacity 0.40 — vẽ ngoài biên widget nên không bị cắt, như §32); (3) chiều dày dx 6 → 9, dy 11 → 16; vạch lớp bài đậm hơn (0xFF6B5F45, width 1.0). Cỡ mặt trên, tap mở khay, nhãn "XẮP BÀI" không đổi.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §35).
+- Committed directly to main, no branch/PR.
