@@ -2394,24 +2394,40 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   builder: (context, constraints) {
                     final t = _paintingCoverTransform(
                         constraints.maxWidth, constraints.maxHeight);
-                    // Mép trên của khăn (phân số tranh 0.268) sau
-                    // khi scale 1.45 quanh tâm tranh (0.5) sẽ ở
-                    // y = 0.5 − 0.232×1.45 = 0.164 — cao hơn mép xa
-                    // của bàn (0.218). Dịch xuống phần vượt đó.
+                    // Khăn neo theo TỌA ĐỘ TRANH (§37): hộp khăn =
+                    // hộp tranh (t.dx, t.dy, 1920*t.scale,
+                    // 1280*t.scale) phóng 1.45× quanh TÂM TRANH,
+                    // rồi dịch xuống để mép trên khăn vẫn sát mép
+                    // xa của bàn (0.218). Trước đây khăn dùng
+                    // BoxFit.cover + Transform.scale quanh TÂM MÀN
+                    // HÌNH nên khi đổi tỉ lệ màn hình, khăn lệch
+                    // khỏi bàn — cứng đờ, không co dãn theo mặt
+                    // bàn. Giờ khăn co dãn CÙNG mặt bàn ở mọi tỉ
+                    // lệ màn hình, dính cố định vào bàn.
                     const clothScale = 1.45;
+                    final pw = 1920.0 * t.scale;
+                    final ph = 1280.0 * t.scale;
+                    final cx = t.dx + pw / 2;
+                    final cy = t.dy + ph / 2;
+                    final cw = pw * clothScale;
+                    final ch = ph * clothScale;
                     final topY = 0.5 - 0.232 * clothScale;
                     final over = 0.218 - topY; // > 0 khi vượt mép xa
                     final shiftY = over > 0 ? over * 1280 * t.scale : 0.0;
-                    return Transform.translate(
-                      offset: Offset(0, shiftY),
-                      child: Transform.scale(
-                        scale: clothScale,
-                        child: Image.asset(
-                          _clothImageAsset(prefs.clothStyle),
-                          fit: BoxFit.cover,
-                          gaplessPlayback: true,
+                    return Stack(
+                      children: [
+                        Positioned(
+                          left: cx - cw / 2,
+                          top: cy - ch / 2 + shiftY,
+                          width: cw,
+                          height: ch,
+                          child: Image.asset(
+                            _clothImageAsset(prefs.clothStyle),
+                            fit: BoxFit.fill,
+                            gaplessPlayback: true,
+                          ),
                         ),
-                      ),
+                      ],
                     );
                   },
                 ),
@@ -2623,6 +2639,160 @@ class _TrayFlight {
   const _TrayFlight({required this.card, required this.from, required this.to});
 }
 
+/// Khung xấp bài (§37): một khung hình thang phối cảnh bám sát
+/// mép lá bài (tỉ lệ bộ bài cơ bản 5:8, cạnh xa ngắn hơn cạnh
+/// gần), bên trong là ẢNH MẶT LƯNG của bộ bài đang chọn — scale
+/// khớp vào khung mặc định. Mỗi bộ bài up lên kèm 1 ảnh mặt lưng
+/// (TarotDeckModel.backImageUrl); chọn bộ nào thì xấp hiện lưng
+/// bộ đó. Chưa có ảnh lưng thì dùng ảnh lưng mặc định
+/// (deck_back_default.png). Mép giấy kem + bóng đổ mềm làm xấp
+/// có khối, đặt thật trên bàn.
+class _DeckStackFrame extends StatelessWidget {
+  final double width;
+  final String? backImageUrl;
+
+  const _DeckStackFrame({required this.width, this.backImageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final w = width;
+    final fh = w * 8 / 5; // Mặt trên: tỉ lệ lá bài cơ bản 5:8.
+    const dx = 7.0; // Chiều dày xấp lộ sang phải.
+    const dy = 12.0; // Chiều dày xấp lộ xuống dưới.
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          // Bóng đổ mềm, nhạt như bóng thật (§32).
+          BoxShadow(
+            color: Colors.black.withOpacity(0.40),
+            blurRadius: 14,
+            spreadRadius: 2,
+            offset: const Offset(10, 12),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: w + dx,
+        height: fh + dy,
+        child: Stack(
+          children: [
+            // Mép giấy kem (cạnh xấp): dải trước + dải phải.
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _DeckEdgePainter(w, fh, dx, dy),
+              ),
+            ),
+            // Mặt trên: ảnh mặt lưng, cắt theo hình thang phối cảnh.
+            Positioned(
+              left: 0,
+              top: 0,
+              width: w,
+              height: fh,
+              child: ClipPath(
+                clipper: _DeckTopClipper(),
+                child: _backImage(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _backImage() {
+    final url = backImageUrl;
+    if (url != null && url.isNotEmpty) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/images/deck_back_default.png',
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+    return Image.asset(
+      'assets/images/deck_back_default.png',
+      fit: BoxFit.cover,
+    );
+  }
+}
+
+/// Cắt ảnh mặt lưng theo hình thang phối cảnh: cạnh xa (trên)
+/// ngắn hơn cạnh gần (dưới) — 75% chiều rộng đáy.
+class _DeckTopClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final w = size.width;
+    final h = size.height;
+    final topW = w * 0.75;
+    final x0 = (w - topW) / 2;
+    return Path()
+      ..moveTo(x0, 0)
+      ..lineTo(x0 + topW, 0)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+/// Vẽ mép giấy của xấp bài: dải trước (dưới) + dải phải, màu kem,
+/// có vạch ngang gợi các lớp bài xếp chồng.
+class _DeckEdgePainter extends CustomPainter {
+  final double w;
+  final double fh;
+  final double dx;
+  final double dy;
+
+  _DeckEdgePainter(this.w, this.fh, this.dx, this.dy);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final topW = w * 0.75;
+    final x0 = (w - topW) / 2;
+    // Dải trước (dưới): hình thang kem.
+    final front = Path()
+      ..moveTo(0, fh)
+      ..lineTo(w, fh)
+      ..lineTo(w + dx, fh + dy)
+      ..lineTo(dx, fh + dy)
+      ..close();
+    canvas.drawPath(front, Paint()..color = const Color(0xFFD9CDB4));
+    // Dải phải: hình thang kem sẫm hơn một chút.
+    final right = Path()
+      ..moveTo(x0 + topW, 0)
+      ..lineTo(w, fh)
+      ..lineTo(w + dx, fh + dy)
+      ..lineTo(x0 + topW + dx, dy)
+      ..close();
+    canvas.drawPath(right, Paint()..color = const Color(0xFFBFAF90));
+    // Vạch lớp bài trên dải trước.
+    final linePaint = Paint()
+      ..color = const Color(0xFF8A7F68)
+      ..strokeWidth = 1.0;
+    for (final f in [0.3, 0.55, 0.8]) {
+      final y = fh + dy * f;
+      canvas.drawLine(Offset(dx * f, y), Offset(w + dx * f, y), linePaint);
+    }
+    // Vạch lớp bài trên dải phải (song song mép phải).
+    for (final f in [0.3, 0.55, 0.8]) {
+      canvas.drawLine(
+        Offset(x0 + topW + dx * f, dy * f),
+        Offset(w + dx * f, fh + dy * f),
+        linePaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DeckEdgePainter old) =>
+      old.w != w || old.fh != fh || old.dx != dx || old.dy != dy;
+}
+
 class CardStackWidget extends StatelessWidget {
   final VoidCallback onTap;
   final dynamic theme;
@@ -2645,36 +2815,21 @@ class CardStackWidget extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Xấp bài VẼ CHÂN THẬT: CustomPaint vẽ một xấp bài thật
-          // đặt trên mặt bàn, góc nhìn phối cảnh (nhìn từ trên
-          // xuống, như tranh bàn): mặt trên là hình thang (cạnh xa
-          // ngắn hơn cạnh gần), cạnh trước + cạnh phải hiện rõ
-          // chiều dày của xấp (mép giấy sáng, có vạch lớp bài),
-          // bóng đổ mềm theo hình xấp. Trước đây là 3 lá bài phẳng
-          // xòe quạt, xoay lệch nhau — trông như đồ chơi, không
-          // giống một xấp bài thật đặt trên bàn.
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                // Bóng đổ của xấp bài: mềm, nhạt như bóng thật
-                // (§32) — BoxShadow vẽ ngoài biên widget nên
-                // không bị cắt như bóng vẽ trong CustomPaint.
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.40),
-                  blurRadius: 14,
-                  spreadRadius: 2,
-                  offset: const Offset(10, 12),
-                ),
-              ],
-            ),
-            child: SizedBox(
-              width: stackWidth + 9,
-              height: stackWidth * 8 / 5 + 16,
-              child: CustomPaint(
-                painter: _DeckStackPainter(theme.primaryColor),
-              ),
-            ),
+          // Xấp bài = KHUNG + ẢNH MẶT LƯNG (§37): khung là hình
+          // thang phối cảnh bám sát mép lá bài (tỉ lệ bộ bài cơ
+          // bản 5:8, cạnh xa ngắn hơn cạnh gần), bên trong khung
+          // là ẢNH MẶT LƯNG của bộ bài đang chọn — scale khớp vào
+          // khung mặc định. Mỗi bộ bài up lên kèm 1 ảnh mặt lưng;
+          // chọn bộ nào thì xấp hiện lưng bộ đó. Chưa có ảnh lưng
+          // thì dùng ảnh lưng mặc định (deck_back_default.png).
+          // Mép giấy kem + bóng đổ mềm làm xấp có khối, đặt thật
+          // trên bàn. Không còn vẽ mặt lưng bằng code nữa.
+          _DeckStackFrame(
+            width: stackWidth,
+            backImageUrl: context
+                .watch<DeckProvider>()
+                .selectedDeck
+                ?.backImageUrl,
           ),
           const SizedBox(height: 6),
           Text(
@@ -2690,159 +2845,6 @@ class CardStackWidget extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Vẽ một xấp bài Tarot thật đặt trên mặt bàn, góc nhìn phối cảnh.
-/// - Mặt trên: hình thang (cạnh xa ngắn hơn cạnh gần, hội tụ về
-///   điểm tụ phía trên như mặt bàn), nền chàm đậm, viền vàng đôi,
-///   hoa văn sao 4 cánh ở giữa.
-/// - Chiều dày: mặt trước + mặt phải là mép giấy sáng (kem), có
-///   vạch ngang gợi các lớp bài — chính mép giấy sáng này làm xấp
-///   bài trông có khối, không còn là tờ giấy phẳng.
-/// - Bóng đổ: bóng của chính hình xấp (mặt trên + cạnh), lệch
-///   xuống-phải, mờ, nhạt như bóng thật (§32).
-class _DeckStackPainter extends CustomPainter {
-  final Color gold;
-  _DeckStackPainter(this.gold);
-
-  // Chiều dày xấp bài hiện ra (sang phải + xuống dưới).
-  static const double _dx = 9.0;
-  static const double _dy = 16.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width - _dx; // rộng mặt trên (cạnh gần)
-    final h = size.height - _dy; // cao mặt trên (cạnh gần)
-    final inset = w * 0.14; // phối cảnh MẠNH: cạnh xa ngắn hơn rõ rệt (trước 0.055 quá nhẹ, nhìn như hình chữ nhật)
-    // 4 góc mặt trên: tl/tr = cạnh xa (trên), bl/br = cạnh gần (dưới).
-    final tl = Offset(inset, 0);
-    final tr = Offset(w - inset, 0);
-    final br = Offset(w, h);
-    final bl = Offset(0, h);
-    // Góc ngoài của cạnh dày (dịch xuống-phải).
-    final tr2 = tr + const Offset(_dx, _dy);
-    final br2 = br + const Offset(_dx, _dy);
-    final bl2 = bl + const Offset(_dx, _dy);
-
-    Path quad(Offset a, Offset b, Offset c, Offset d) => Path()
-      ..moveTo(a.dx, a.dy)
-      ..lineTo(b.dx, b.dy)
-      ..lineTo(c.dx, c.dy)
-      ..lineTo(d.dx, d.dy)
-      ..close();
-    final topFace = quad(tl, tr, br, bl);
-    final frontFace = quad(bl, br, br2, bl2);
-    final rightFace = quad(tr, br, br2, tr2);
-    final center = Offset((tl.dx + tr.dx + br.dx + bl.dx) / 4,
-        (tl.dy + tr.dy + br.dy + bl.dy) / 4);
-    // Thu hình thang về tâm (nội suy từng góc) — dùng cho viền/chấm.
-    List<Offset> insetCorners(double f) => [
-          Offset.lerp(tl, center, f)!,
-          Offset.lerp(tr, center, f)!,
-          Offset.lerp(br, center, f)!,
-          Offset.lerp(bl, center, f)!,
-        ];
-    Path quadFrom(List<Offset> c) => quad(c[0], c[1], c[2], c[3]);
-
-    // 1) Bóng đổ: KHÔNG vẽ trong painter — bóng vẽ trong
-    // CustomPaint bị cắt ở biên canvas (dịch 10,12 ra ngoài
-    // khung nên chỉ còn một vệt mờ dưới mép). Bóng đổ dùng
-    // BoxShadow của Container bọc ngoài (xem CardStackWidget),
-    // vẽ ngoài biên widget nên không bị cắt (§32).
-
-    // 2) Chiều dày — mặt trước: mép giấy kem, vạch lớp bài.
-    canvas.drawPath(frontFace, Paint()..color = const Color(0xFFD9CDB4));
-    final edgeLine = Paint()
-      ..color = const Color(0xFF6B5F45)
-      ..strokeWidth = 1.0;
-    for (final t in [0.3, 0.55, 0.8]) {
-      canvas.drawLine(
-        Offset.lerp(bl, bl2, t)!,
-        Offset.lerp(br, br2, t)!,
-        edgeLine,
-      );
-    }
-    // Chiều dày — mặt phải: hơi sẫm hơn mặt trước (ánh sáng khác).
-    canvas.drawPath(rightFace, Paint()..color = const Color(0xFFBFAF90));
-    for (final t in [0.3, 0.55, 0.8]) {
-      canvas.drawLine(
-        Offset.lerp(tr, tr2, t)!,
-        Offset.lerp(br, br2, t)!,
-        edgeLine,
-      );
-    }
-
-    // 3) Mặt trên: nền chàm đậm, sáng nhẹ ở giữa, tối dần ra viền.
-    canvas.drawPath(
-      topFace,
-      Paint()
-        ..shader = const RadialGradient(
-          center: Alignment.center,
-          radius: 0.75,
-          colors: [Color(0xFF322A5E), Color(0xFF0E0B1E)],
-        ).createShader(Rect.fromLTWH(0, 0, w, h)),
-    );
-    // Ánh sáng từ trên: vệt sáng nhẹ ở nửa trên mặt bài.
-    canvas.drawPath(
-      topFace,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment(0, 0.45),
-          colors: [Color(0x1FFFFFFF), Color(0x00FFFFFF)],
-        ).createShader(Rect.fromLTWH(0, 0, w, h)),
-    );
-
-    // Viền vàng đôi.
-    canvas.drawPath(
-      quadFrom(insetCorners(0.085)),
-      Paint()
-        ..color = gold
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0,
-    );
-    canvas.drawPath(
-      quadFrom(insetCorners(0.15)),
-      Paint()
-        ..color = gold.withOpacity(0.7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.0,
-    );
-
-    // Hoa văn giữa: vòng tròn (hơi dẹt theo phối cảnh) + sao 4 cánh.
-    final ringR = w * 0.17;
-    canvas.drawOval(
-      Rect.fromCenter(
-          center: center, width: ringR * 2, height: ringR * 2 * 0.92),
-      Paint()
-        ..color = gold
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
-    final starR = w * 0.11;
-    final star = Path();
-    for (var i = 0; i < 8; i++) {
-      final ang = -pi / 2 + i * pi / 4;
-      final r = i.isEven ? starR : starR * 0.28;
-      final px = center.dx + r * cos(ang);
-      final py = center.dy + r * sin(ang) * 0.92;
-      if (i == 0) {
-        star.moveTo(px, py);
-      } else {
-        star.lineTo(px, py);
-      }
-    }
-    star.close();
-    canvas.drawPath(star, Paint()..color = gold);
-    // 4 chấm nhỏ ở 4 góc trong của viền.
-    final dotPaint = Paint()..color = gold;
-    for (final p in insetCorners(0.22)) {
-      canvas.drawCircle(p, 1.6, dotPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DeckStackPainter old) => old.gold != gold;
 }
 
 /// Custom ScrollBehavior hỗ trợ kéo cuộn bằng chuột trên Web & Desktop
