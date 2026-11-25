@@ -668,17 +668,18 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         // chìa ra ngoài, bị Stack cắt); hạ xuống 0.30 thì cả xấp
         // luôn hiện đủ, vẫn trên mặt gỗ, không chạm thạch anh
         // (xấp x=480–564, thạch anh từ x=586).
-        // Xấp bài CO DÃN CÙNG BÀN (kẹp 0.86–1.25): bọc
+        // Xấp bài CO DÃN CÙNG BÀN (kẹp 1.0–1.25): bọc
         // Transform.scale theo tỉ lệ cover của tranh (t.scale) —
         // khi co kéo màn hình, bàn to ra/nhỏ lại thì xấp bài cũng
         // to ra/nhỏ lại theo đúng tỉ lệ đó, vị trí và kích thước
-        // tương quan với bàn không đổi. NHƯNG kẹp dưới ở 0.86:
-        // scale thẳng t.scale làm xấp teo còn ~58px ở cửa sổ hẹp
-        // (t.scale≈0.69), nhãn "XẮP BÀI" còn ~7.5px nên không
-        // đọc được — người dùng chụp màn hình hẹp 1315×849 thấy
-        // xấp chỉ còn một lá mỏng với nhãn bị cắt. Kẹp 0.86 giữ
-        // xấp ≥72px, nhãn ≥9.5px, vẫn bấm và đọc được, trong khi
-        // cửa sổ lớn vẫn co dãn bình thường.
+        // tương quan với bàn không đổi. NHƯNG kẹp dưới ở 1.0:
+        // kẹp 0.86 (§26) vẫn để xấp còn ~72px ở cửa sổ hẹp
+        // (t.scale≈0.69), 3 lá chồng lên nhau trông như một lá
+        // mỏng, nhãn "XẮP BÀI" còn ~9.5px nên người dùng vẫn thấy
+        // hỏng y như cũ (ảnh 1328×904). Kẹp 1.0 giữ xấp luôn
+        // ≥84px — đúng cỡ gốc thiết kế, 3 lá chồng thấy rõ, nhãn
+        // 11px đọc được — ở mọi cửa sổ, trong khi cửa sổ lớn vẫn
+        // co dãn lên tới 1.25×.
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -690,7 +691,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     left: 0.25 * 1920 * t.scale + t.dx,
                     top: 0.30 * 1280 * t.scale + t.dy,
                     child: Transform.scale(
-                      scale: t.scale.clamp(0.86, 1.25),
+                      scale: t.scale.clamp(1.0, 1.25),
                       alignment: Alignment.topLeft,
                       child: CardStackWidget(
                         onTap: () {
