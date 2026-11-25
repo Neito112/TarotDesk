@@ -1355,3 +1355,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa: nâng kẹp dưới lên 1.0 — xấp bài luôn ≥84px (đúng cỡ gốc, 3 lá chồng thấy rõ, nhãn 11px đọc được) ở mọi cửa sổ; cửa sổ lớn vẫn co dãn lên tới 1.25×. Vị trí xấp vẫn neo đúng phân số tranh (0.25, 0.30). Bóng đổ radial (§25) và khăn ×1.3 giữ nguyên.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §27).
 - Committed directly to main, no branch/PR.
+
+## §28 — 25/11/2026 — Xấp bài scale thường, bỏ kẹp (neo một tọa độ, co dãn cùng bàn)
+
+- Người dùng chỉ rõ: đừng đoán lỗi nữa — chỉ là hiệu ứng scale thông thường, chọn 1 tọa độ khóa cứng vị trí rồi khi co kéo nó không xê dịch. Hiện tại như tờ giấy trên khay cát: khay mở rộng mà giấy vẫn đứng yên một chỗ.
+- Nguyên nhân: các kẹp tỉ lệ 0.86 (§26) rồi 1.0 (§27) làm xấp bài đứng yên một chỗ (không nhỏ đi khi bàn nhỏ lại, không to ra khi bàn to ra) trong khi bàn co dãn — đúng hiệu ứng "giấy trên khay" người dùng mô tả.
+- Sửa: bỏ hẳn kẹp tỉ lệ ở xấp bài — Transform.scale(scale: t.scale) thuần, neo góc trên-trái vào đúng một tọa độ trên tranh (phân số 0.25, 0.30). Xấp bài co dãn đúng tỉ lệ với bàn ở mọi cửa sổ, vị trí và kích thước tương quan không đổi. Decor PC vốn đã scale thường (boxWidth dùng t.scale, không kẹp); bóng đổ radial (§25) và khăn ×1.3 giữ nguyên.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §28).
+- Committed directly to main, no branch/PR.
