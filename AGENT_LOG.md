@@ -1372,3 +1372,10 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa 2 — bóng đổ THẬT (helper mới _realCastShadow): lấy đúng silhouette của vật — chính ảnh cắt của vật qua ColorFiltered đen (BlendMode.srcIn) — rồi chiếu xuống-phải theo hướng đèn: neo bottomCenter (chân vật đứng yên), nghiêng skewX(-0.38) để đỉnh vật ngả sang phải (điểm càng cao thì bóng càng xa chân), dịch xuống-phải (0.22w, 0.10h), scale nhẹ (1.06, 0.96) cho bóng dài ra và nén dọc theo phối cảnh. Làm mờ bằng ImageFiltered blur sigma 5 cho viền mềm (bán dạ), độ mờ 0.32. Quả cầu pha lê trong suốt nên bóng nhạt hơn (0.18) — vật trong suốt cho ánh sáng xuyên qua, chỉ đế và viền đổ bóng đậm. Thay thế ellipse radial-gradient ở CẢ hai chỗ: _buildDesktopDecorCutout (PC) và _buildDecorSprite (phone/tablet). Bóng tiếp xúc (ellipse đậm ngay dưới chân) giữ nguyên — đó là hiệu ứng tiếp xúc đúng, khác bóng đổ.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §29).
 - Committed directly to main, no branch/PR.
+
+## §29-fix — 25/11/2026 — Sửa lỗi biên dịch: Matrix4 không có skewX
+
+- Run #121/#122 FAILED: `new_reading_screen.dart:921:15: Error: The method 'skewX' isn't defined for the type 'Matrix4'` — Matrix4 của vector_math không có phương thức skewX (đó là API của lớp khác, không phải Matrix4).
+- Sửa: thay `..skewX(-kx)` bằng `..setEntry(0, 1, -kx)` — setEntry(0, 1, s) đặt phần tử hàng 0 cột 1, cho x' = x + s*y, đúng hiệu ứng nghiêng cần thiết (đỉnh vật ngả sang phải). Chỉ đổi một dòng này; khăn ×1.45 và phần còn lại của _realCastShadow giữ nguyên.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §29-fix).
+- Committed directly to main, no branch/PR.
