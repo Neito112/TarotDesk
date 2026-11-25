@@ -903,6 +903,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// chung. Làm mờ bằng ImageFiltered (blur) cho viền mềm (bán
   /// dạ). Quả cầu pha lê trong suốt nên bóng nhạt hơn (vật trong
   /// suốt cho ánh sáng xuyên qua, chỉ đế và viền đổ bóng đậm).
+  /// Độ mờ và độ sắc: blur sigma 2.5 (đủ mềm nhưng vẫn giữ
+  /// được hình dáng vật — sigma 5 làm nhòe hết gai thạch anh,
+  /// thân nến thành đốm mờ chung chung), độ mờ 0.45 để bóng
+  /// đủ đậm mà đọc được hình dáng. Bóng chiếu dài hơn (dịch
+  /// 0.28w, 0.13h, nghiêng 0.45) để hình dáng trải ra, dễ đọc.
   /// Trả về một Positioned.fill để đặt trong Stack của vật
   /// (Stack phải có clipBehavior: Clip.none để bóng tràn ra
   /// ngoài khung vật, xuống-phải mặt khăn).
@@ -910,16 +915,16 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     required String asset,
     required double boxWidth,
     required double boxHeight,
-    double opacity = 0.32,
+    double opacity = 0.45,
   }) {
-    const kx = 0.38; // độ nghiêng bóng theo hướng đèn (ngả phải)
+    const kx = 0.45; // độ nghiêng bóng theo hướng đèn (ngả phải)
     return Positioned.fill(
       child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        imageFilter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
         child: Transform(
           alignment: Alignment.bottomCenter,
           transform: Matrix4.identity()
-            ..translate(boxWidth * 0.22, boxHeight * 0.10)
+            ..translate(boxWidth * 0.28, boxHeight * 0.13)
             ..setEntry(0, 1, -kx) // nghiêng: x' = x - kx*y (đỉnh ngả phải)
             ..scale(1.06, 0.96),
           child: Opacity(
@@ -1012,7 +1017,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             asset: asset,
             boxWidth: boxWidth,
             boxHeight: boxHeight,
-            opacity: item == 'Quả Cầu' ? 0.18 : 0.32,
+            opacity: item == 'Quả Cầu' ? 0.25 : 0.45,
           ),
           // Bóng tiếp xúc vẽ bằng code: ellipse đen mờ nằm NGAY
           // DƯỚI CHÂN vật, chạm vào đáy khung — vật "đứng trên"
@@ -1166,7 +1171,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             asset: asset,
             boxWidth: size,
             boxHeight: size,
-            opacity: item == 'Quả Cầu' ? 0.18 : 0.32,
+            opacity: item == 'Quả Cầu' ? 0.25 : 0.45,
           ),
           // Bóng tiếp xúc: ellipse đen ngay dưới chân vật.
           Positioned(
