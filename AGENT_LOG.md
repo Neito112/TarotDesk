@@ -1379,3 +1379,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa: thay `..skewX(-kx)` bằng `..setEntry(0, 1, -kx)` — setEntry(0, 1, s) đặt phần tử hàng 0 cột 1, cho x' = x + s*y, đúng hiệu ứng nghiêng cần thiết (đỉnh vật ngả sang phải). Chỉ đổi một dòng này; khăn ×1.45 và phần còn lại của _realCastShadow giữ nguyên.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §29-fix).
 - Committed directly to main, no branch/PR.
+
+## §30 — 25/11/2026 — Bóng đổ silhouette phải ĐỌC ĐƯỢC hình dáng (giảm blur, tăng độ đậm, chiếu dài hơn)
+
+- Kiểm tra live §29 (cloud browser, viewport 1919×998, HEAD 5c13fa1): khăn đã LỚN, phủ phần lớn mặt bàn (mép trên x 490–1400, mép dưới x 210–1700, y 275–960) — phần "khăn lớn" đạt, nhưng khăn vẫn nằm lọt trong khung chạm khắc, chưa tràn qua mép bàn như vải rủ thật (tranh khăn vẽ sẵn là hình thang phẳng trên mặt bàn, scale chỉ phóng to hình thang đó — muốn rủ qua mép cần vẽ lại tranh khăn, không làm bằng scale). Bóng đổ: VẪN là đốm mờ chung chung, KHÔNG đọc được hình dáng vật — thạch anh chỉ thấy vệt nêm/tam giác (không thấy gai nhọn), cầu gần như không thấy bóng, lư chỉ thấy vệt bầu dục mờ (không thấy nắp/quai). Quả cầu đúng là nhạt nhất như thiết kế, nhưng mọi bóng đều quá nhạt nên khó khẳng định.
+- Nguyên nhân: blur sigma 5 quá mạnh cho ảnh nhỏ (~100–200px) — nhòe hết chi tiết gai nhọn, thân nến thành đốm mờ; độ mờ 0.32 quá nhạt nên hình dáng không đọc được; bóng chiếu quá ngắn (40–60px) nên hình dáng không trải ra.
+- Sửa (chỉ đổi tham số trong _realCastShadow, không đổi cấu trúc): blur sigma 5 → 2.5 (đủ mềm nhưng giữ được hình dáng vật); độ mờ mặc định 0.32 → 0.45 (bóng đủ đậm để đọc hình dáng), quả cầu 0.18 → 0.25 (vẫn nhạt nhất vì trong suốt, nhưng đọc được); dịch bóng dài hơn (0.22w, 0.10h) → (0.28w, 0.13h); nghiêng kx 0.38 → 0.45 (hình dáng trải rõ hơn). Khăn ×1.45 giữ nguyên.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §30).
+- Committed directly to main, no branch/PR.
