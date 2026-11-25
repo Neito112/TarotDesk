@@ -2656,7 +2656,9 @@ class _DeckStackFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final w = width;
-    final fh = w * 8 / 5; // Mặt trên: tỉ lệ lá bài cơ bản 5:8.
+    final fh = w * 8 / 5 * 0.85; // Mặt trên: lá bài cơ bản 5:8,
+    // nhưng chiều cao (hướng sâu của bàn) bị phối cảnh nén lại
+    // 0.85 nên xấp không còn dài/hẹp — đọc đúng tỉ lệ 5:8.
     const dx = 7.0; // Chiều dày xấp lộ sang phải.
     const dy = 12.0; // Chiều dày xấp lộ xuống dưới.
     return Container(
@@ -2720,13 +2722,13 @@ class _DeckStackFrame extends StatelessWidget {
 }
 
 /// Cắt ảnh mặt lưng theo hình thang phối cảnh: cạnh xa (trên)
-/// ngắn hơn cạnh gần (dưới) — 75% chiều rộng đáy.
+/// ngắn hơn cạnh gần (dưới) — 68% chiều rộng đáy.
 class _DeckTopClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final w = size.width;
     final h = size.height;
-    final topW = w * 0.75;
+    final topW = w * 0.68;
     final x0 = (w - topW) / 2;
     return Path()
       ..moveTo(x0, 0)
@@ -2752,7 +2754,7 @@ class _DeckEdgePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final topW = w * 0.75;
+    final topW = w * 0.68;
     final x0 = (w - topW) / 2;
     // Dải trước (dưới): hình thang kem.
     final front = Path()
@@ -2806,9 +2808,9 @@ class CardStackWidget extends StatelessWidget {
     // tablet 100, phone 84. Đây là CỠ MẶT TRÊN của xấp bài; chiều
     // dày (cạnh xấp) vẽ thêm sang phải/xuống dưới trong painter.
     final stackWidth = Responsive.isDesktop(context)
-        ? 84.0
+        ? 96.0
         : Responsive.isTablet(context)
-            ? 100.0
+            ? 108.0
             : 84.0;
     return GestureDetector(
       onTap: onTap,
