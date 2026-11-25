@@ -1403,3 +1403,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa (đổi hướng: mềm + nhạt + ngắn): độ mờ mặc định 0.45 → 0.25, quả cầu 0.35 → 0.18 (vẫn nhạt nhất); blur sigma 2.0 → 5.0 (viền thật mềm, ánh sáng khuếch tán); chiếu NGẮN (0.32w, 0.16h) → (0.18w, 0.09h) — bóng của vật nhỏ dưới đèn ấm treo cao là vùng tối ngắn sát chân vật, hình dáng gần như vật; nghiêng rất nhẹ kx 0.18 → 0.10. Xấp bài: BoxShadow độ mờ 0.55 → 0.40, blur 10 → 14, offset (14,18) → (10,12), spread 3 → 2. Khăn ×1.45 giữ nguyên.
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §32).
 - Committed directly to main, no branch/PR.
+
+## §33 — 25/11/2026 — Sửa lỗi điện thoại: decor đè lên khay chọn bài
+
+- Người dùng gửi ảnh chụp điện thoại (Android, dọc): mở khay "Chọn lá bài" thì các món decor (thạch anh, quả cầu, lư hương) đè lên nút lọc bộ bài và thẻ bài trong khay.
+- Nguyên nhân: trong `_buildTableBackground`, lớp decor phone/tablet (LỚP 4) đặt SAU nội dung (LỚP 3) trong Stack nên decor vẽ TRÊN giao diện. Trên PC không lỗi vì decor nằm trong `_buildDesktopTable` (một phần của nội dung) và khay chọn bài thay thế cả bàn qua AnimatedSwitcher nên decor biến mất khi khay mở. Trên điện thoại, decor là lớp riêng ngoài AnimatedSwitcher nên vẫn hiện khi khay mở, đè lên khay.
+- Sửa: (1) chuyển lớp decor phone/tablet lên TRƯỚC nội dung (LỚP 3) trong Stack — decor là đồ trên mặt bàn (nền), nằm dưới giao diện; khi xem bàn (không mở khay) decor vẫn thấy qua vùng trong suốt của nội dung, khi mở khay thì khay che decor. (2) Ẩn hẳn decor khi khay chọn bài đang mở (`!_showSelectionPanel`) để decor không lộ mờ qua panel kính (GlassPanel chỉ mờ 0.7). PC không đổi (decor PC đã nằm trong nội dung).
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §33).
+- Committed directly to main, no branch/PR.
