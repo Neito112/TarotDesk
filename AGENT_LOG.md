@@ -1411,3 +1411,11 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Sửa: (1) chuyển lớp decor phone/tablet lên TRƯỚC nội dung (LỚP 3) trong Stack — decor là đồ trên mặt bàn (nền), nằm dưới giao diện; khi xem bàn (không mở khay) decor vẫn thấy qua vùng trong suốt của nội dung, khi mở khay thì khay che decor. (2) Ẩn hẳn decor khi khay chọn bài đang mở (`!_showSelectionPanel`) để decor không lộ mờ qua panel kính (GlassPanel chỉ mờ 0.7). PC không đổi (decor PC đã nằm trong nội dung).
 - Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §33).
 - Committed directly to main, no branch/PR.
+
+## §34 — 26/11/2026 — Xấp bài vẽ chân thật, góc phối cảnh đặt trên bàn
+
+- Người dùng: xấp bài vẽ chân thật, góc độ phối cảnh để trông thực sự là đang được đặt trên mặt bàn — hiện tại như một đồ chơi.
+- Nguyên nhân: `CardStackWidget` cũ là 3 lá bài phẳng xòe quạt, xoay lệch nhau, không phối cảnh, không chiều dày — trông như đồ chơi, không giống một xấp bài thật đặt trên bàn.
+- Sửa: thay 3 lá xòe quạt bằng `CustomPaint` (`_DeckStackPainter`) vẽ một xấp bài thật, góc nhìn phối cảnh (nhìn từ trên xuống, như tranh bàn): mặt trên là hình thang (cạnh xa ngắn hơn cạnh gần, hội tụ về điểm tụ phía trên), nền chàm đậm + viền vàng đôi + hoa văn sao 4 cánh ở giữa; cạnh trước + cạnh phải hiện rõ chiều dày của xấp (mép giấy kem sáng, có vạch ngang gợi các lớp bài) — chính mép giấy sáng này làm xấp có khối; bóng đổ mềm theo hình xấp (mặt trên + cạnh), lệch xuống-phải, mờ nhạt như bóng thật (§32). Cỡ mặt trên giữ nguyên (PC 84 / tablet 100 / phone 84), tap mở khay chọn bài và nhãn "XẮP BÀI" không đổi. `_buildCardBack` cũ (chỉ dùng trong xấp bài) đã xóa.
+- Files changed: lib/presentation/screens/new_reading_screen.dart (+ AGENT_LOG.md §34).
+- Committed directly to main, no branch/PR.
