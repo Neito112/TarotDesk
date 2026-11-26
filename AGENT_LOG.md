@@ -1472,3 +1472,9 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Khăn: vẽ lại cả 3 màu theo hướng tinh tế — vàng thành vàng cổ đồng-champagne trầm (không còn vàng chói), tím thành mận trầm, đen thành than chì ánh nâu ấm; nếp tự nhiên không đều (rộng/hẹp xen kẽ, vài nếp nhăn mềm), không còn xếp ly song song đều. Vẫn cắt bằng đúng alpha mask gốc nên khớp khung bàn.
 - Bóng xấp bài: đậm + sắc hơn (0,40 → 0,55, blur 14 → 10, offset (10,12) → (12,14)) — §41 chê bóng quá mờ trên khăn vàng.
 - Đã render kiểm tra xấp bài với lưng mới ở kích thước thật: trăng lưỡi liềm + sao thành ellipse dẹt thanh lịch, viền vàng mảnh, rất tinh tế.
+
+## §43 — Khăn phẳng mịn + bóng xấp bài rõ (2026-11-26)
+- Kiểm tra live §42 (2026-11-26 22:29, 1919×998): mặt lưng ĐẠT (tối giản, trăng lưỡi liềm + sao, sang); màu khăn ĐẠT (đồng cổ-champagne trầm); nhưng (1) dải sau/sát mép trên khăn vẫn còn nếp gấp dọc song song đều như xếp ly; (2) bóng xấp bài vẫn chưa đạt — chỉ một vệt tối xanh-xám rất mờ, lẫn vào bóng nếp vải.
+- Khăn: vẽ lại cả 3 màu theo hướng phẳng mịn — phần lớn bề mặt phẳng, chỉ vài nếp rủ rộng mềm không đều, không còn xếp ly song song ở bất cứ đâu. (Bản thử 'phá nếp đều' trước đó tệ hơn — tạo đống vải nhăn nhúm ở mép trên — đã bỏ.)
+- Bóng xấp bài: tăng mạnh (0,55 → 0,70, blur 10 → 8, offset (12,14) → (14,16)) — phải rõ, tối, sắc nét, phân biệt được với bóng nếp vải.
+- Cả 3 khăn đã xem trước trên nền gỗ và kiểm tra: phẳng mịn, vài nếp rủ rộng mềm, không xếp ly.
