@@ -2668,11 +2668,12 @@ class _DeckStackFrame extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           // Bóng đổ mềm, nhạt như bóng thật (§32).
+          // Bóng đổ đậm + sắc hơn (§41: bóng 0.40 quá mờ trên khăn vàng).
           BoxShadow(
-            color: Colors.black.withOpacity(0.40),
-            blurRadius: 14,
+            color: Colors.black.withOpacity(0.55),
+            blurRadius: 10,
             spreadRadius: 2,
-            offset: const Offset(10, 12),
+            offset: const Offset(12, 14),
           ),
         ],
       ),
