@@ -1465,3 +1465,10 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Kiểm tra live §40: sao trên lưng bài đã là ellipse dẹt rõ (0,37–0,40), hình thang rõ, nhưng ở cỡ thường khung xấp vẫn đọc như chân dung/dựng; khăn §40 vẫn chỉ là dải sáng/tối mềm, không có gờ/rãnh nếp sắc.
 - Xấp bài: nén chiều cao mạnh hơn — fh = w·8/5·0,42 (was 0,55). Khung tổng cao/rộng ≈ 0,74: RỘNG HƠN CAO, đọc là nằm phẳng ngay ở cỡ thường.
 - Khăn: BỎ shading nếp bằng code (4 lần thử đều chỉ ra vệt sáng mềm, không ra nếp thật). Dùng đúng phương pháp HyperFrames của user: tạo ẢNH THẬT rồi cắt nền. Vẽ lại cả 3 khăn (vàng/tím/đen) bằng image generation từ composite gỗ+khăn, rồi cắt lại bằng đúng alpha mask gốc nên giữ nguyên khớp khung bàn. Nếp thật: gờ/rãnh rõ, hội tụ về mép xa, gờ sáng + rãnh tối. Đã xem preview cả 3 màu trên gỗ: nếp dọc rõ, đọc như vải lụa rũ thật.
+
+## §42 — Bộ bài + khăn TINH TẾ lại (2026-11-26)
+- User (2026-11-26 22:16): tỉ lệ hết lỗi rồi, nhưng bộ bài xấu quá, khăn cũng xấu, không tinh tế gì cả.
+- Bộ bài: vẽ lại mặt lưng mặc định — bỏ mandala sao 8 cánh to + viền vàng đôi dày (trông lòe loẹt). Bản mới: nền chàm-đêm gần đen, vân linen mịn, MỘT viền vàng mảnh + góc trang trí nhỏ, ở giữa chỉ một trăng lưỡi liềm mảnh ôm một ngôi sao 8 cánh nhỏ, nhiều khoảng trống — tối giản, sang, kín đáo. (deck_back_default.png thay bằng bản elegant, cùng tên, 1000×1600 5:8.)
+- Khăn: vẽ lại cả 3 màu theo hướng tinh tế — vàng thành vàng cổ đồng-champagne trầm (không còn vàng chói), tím thành mận trầm, đen thành than chì ánh nâu ấm; nếp tự nhiên không đều (rộng/hẹp xen kẽ, vài nếp nhăn mềm), không còn xếp ly song song đều. Vẫn cắt bằng đúng alpha mask gốc nên khớp khung bàn.
+- Bóng xấp bài: đậm + sắc hơn (0,40 → 0,55, blur 14 → 10, offset (10,12) → (12,14)) — §41 chê bóng quá mờ trên khăn vàng.
+- Đã render kiểm tra xấp bài với lưng mới ở kích thước thật: trăng lưỡi liềm + sao thành ellipse dẹt thanh lịch, viền vàng mảnh, rất tinh tế.
