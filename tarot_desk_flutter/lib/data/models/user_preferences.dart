@@ -20,7 +20,13 @@ class UserPreferencesModel {
   /// dialog đổi bàn trong NewReadingScreen — hai nơi này dùng
   /// chính các danh sách này, không hard-code riêng.
   static const List<String> tableStyles = ['Gỗ Sồi', 'Đá Cổ', 'Vũ Trụ'];
-  static const List<String> clothStyles = ['Nhung Tím', 'Lụa Vàng', 'Thảm Đen'];
+  static const List<String> clothStyles = [
+    'Nhung Xanh Ngọc',
+    'Nhung Xanh Rừng',
+    'Linen Be',
+    'Nhung Đỏ Rượu',
+    'Nhung Xanh Đêm'
+  ];
   static const List<String> decorOptions = [
     'Đá Thạch Anh',
     'Quả Cầu',
@@ -80,7 +86,7 @@ class UserPreferencesModel {
     this.showCloth = true,
     this.showDecor = true,
     this.tableStyle = 'Gỗ Sồi',
-    this.clothStyle = 'Nhung Tím',
+    this.clothStyle = 'Nhung Xanh Ngọc',
     this.decorItems = defaultDecorItems,
     this.spreadMode = 'multi',
     this.languageCode = 'vi',
@@ -155,7 +161,8 @@ class UserPreferencesModel {
       showCloth: _boolFrom(map['show_cloth'], true),
       showDecor: _boolFrom(map['show_decor'], true),
       tableStyle: _choiceFrom(map['table_style'], tableStyles, 'Gỗ Sồi'),
-      clothStyle: _choiceFrom(map['cloth_style'], clothStyles, 'Nhung Tím'),
+      clothStyle:
+          _choiceFrom(map['cloth_style'], clothStyles, 'Nhung Xanh Ngọc'),
       decorItems: _decorFrom(map['decor_items']),
       // Dữ liệu cũ chưa có key này -> mặc định 'multi' (nhiều hàng).
       spreadMode: (map['spread_mode'] as String? ?? 'multi') == 'single'
@@ -167,3 +174,4 @@ class UserPreferencesModel {
     );
   }
 }
+
