@@ -1253,6 +1253,7 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Files changed: lib/presentation/screens/select_deck_screen.dart, lib/core/localization.dart (+ AGENT_LOG.md §15).
 - Committed directly to main, no branch/PR.
 
+
 ## §16 — 23/11/2026 — Kho bộ bài: bộ cơ bản hiển thị Y NHƯ THẺ CŨ (sửa lại §15)
 
 - §15 đổi bộ cơ bản thành hàng chữ ListTile trong mục chung — SAI: mất cách hiển thị thẻ lớn (ảnh bìa The Fool + ngày tạo + "Đang chọn") và mất đường bấm vào chi tiết để sửa nội dung lá. Người dùng yêu cầu: vẫn hiển thị bộ bài như cũ, chỉ đổi tên mỗi cái đầu mục.
@@ -1498,4 +1499,13 @@ rule, no "no author name" rule, and no banned-word rule of its own.
 - Model: UserPreferencesModel giữ nguyên (clothStyles 5 tên + mặc định Nhung Xanh Ngọc; key `cloth_style` giờ CHỌN CẢNH — cố ý giữ tên key, không đổi). decorItems giữ trong model (dữ liệu đã lưu), chỉ ẩn UI. tarot_deck.dart: cập nhật comment — xấp bài trên bàn trải vẽ sẵn trong ảnh cảnh, backImageUrl vẫn là thuộc tính hợp lệ (thư viện / chi tiết bộ bài), giữ nguyên field.
 - Cài đặt: settings_screen.dart cũng dọn theo §46 — bỏ mục chọn đồ decor (FilterChip) và hai công tắc Hiện khăn / Hiện decor (thành no-op sau §46); bỏ luôn mục chọn chất liệu mặt bàn (cảnh quyết định cả bàn, chỉ Gỗ Sồi có nghĩa); bộ chọn khăn thành bộ chọn HÌNH NỀN (dùng key reading.background + reading.sceneNote đã có). Chỉ còn công tắc Hiện mặt bàn (ẩn/hiện cả cảnh nền). Các key cũ (settings.clothLabel/clothHint/decorLabel/showCloth*/showDecor*/tableMaterialLabel/tableHint) giữ trong localization.dart, không xóa.
 - Files changed: lib/presentation/screens/new_reading_screen.dart, lib/presentation/screens/settings_screen.dart, lib/data/models/user_preferences.dart (giữ nguyên từ §45), lib/data/models/tarot_deck.dart (comment), lib/core/display_labels.dart (giữ nguyên từ §45), lib/core/localization.dart (2 key mới + desktopTableIntro), assets/images/scene_{teal,green,beige,burgundy,blue}.jpg (MỚI), AGENT_LOG.md §46.
+- Committed directly to main, no branch/PR.
+## §47 — Khay chọn bài bị cắt lá ở toàn màn hình ngang (2026-11-27)
+- User (2026-11-27 17:21, kèm ảnh chụp): ở chế độ toàn màn hình (màn hình dài ngang), lá bài trong khay "Chọn lá bài" bị cắt — lá cuối hàng trên (Justice) bị cắt, chữ J của JUSTICE mất hẳn. Đo ảnh chụp: lưới 12 cột vừa khít bề rộng panel (gần như 0 biên), lá Justice nằm sát mép phải; góc bo 8/7 của ô lá cắt mất chữ J ở góc dưới-trái của ảnh lá.
+- Sửa trong new_reading_screen.dart (chỉ file này):
+  - Desktop: lưới chọn bài dùng SliverGridDelegateWithMaxCrossAxisExtent (tối đa ~150px/lá) thay cho số cột cố định 12 — lưới tự tính số cột theo chiều rộng thật nhận được, không bao giờ tràn ngang dù cửa sổ rộng bao nhiêu. Phone/tablet giữ số cột cố định 4/5 như cũ.
+  - Khe giữa các lá 8→6 (ngang + dọc) cho cả desktop lẫn phone/tablet.
+  - Bo góc ô lá 8/7→4/4 (cả ô lưới, feedback kéo-thả, và ô khay dưới) để góc bo không cắt mất chữ ở góc ảnh lá.
+  - Column của _buildDesktopBody thêm crossAxisAlignment.stretch để panel/bàn luôn chiếm đủ chiều rộng khả dụng.
+- Files changed: lib/presentation/screens/new_reading_screen.dart, AGENT_LOG.md §47.
 - Committed directly to main, no branch/PR.
