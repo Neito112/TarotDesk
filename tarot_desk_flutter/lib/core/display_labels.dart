@@ -47,7 +47,7 @@ String tableStyleDisplayKey(String id) {
   }
 }
 
-/// Cloth style: takes the stored option string (`Nhung Tím`, …).
+/// Cloth style: takes the stored option string (`Nhung Xanh Ngọc`, …).
 String clothDisplayKey(String id) {
   switch (id) {
     case 'Nhung Tím':
@@ -56,6 +56,16 @@ String clothDisplayKey(String id) {
       return 'cloth.goldSilk';
     case 'Thảm Đen':
       return 'cloth.blackCarpet';
+    case 'Nhung Xanh Ngọc':
+      return 'cloth.tealVelvet';
+    case 'Nhung Xanh Rừng':
+      return 'cloth.forestGreenVelvet';
+    case 'Linen Be':
+      return 'cloth.beigeLinen';
+    case 'Nhung Đỏ Rượu':
+      return 'cloth.wineRedVelvet';
+    case 'Nhung Xanh Đêm':
+      return 'cloth.midnightBlueVelvet';
     default:
       return id;
   }
@@ -97,3 +107,4 @@ String trackTitleKey(int index) {
       return 'music.track${index + 1}';
   }
 }
+
