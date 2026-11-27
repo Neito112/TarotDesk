@@ -30,20 +30,15 @@ import '../widgets/tarot_card_image.dart';
 /// Panel chọn bài là một section riêng (dạng bottom-sheet) thay thế
 /// vùng chính, không đè lên khay bài.
 ///
-/// PC (desktop): bàn là một CẢNH VẼ LỚP (HyperFrames-style —
+/// PC (desktop): bàn là MỘT ẢNH CẢNH (HyperFrames-style —
 /// tranh vẽ phối cảnh góc nhìn thứ nhất, KHÔNG phải engine 3D thời
-/// gian thực). Bố cục định TRƯỚC trong code (một nguồn sự thật
-/// duy nhất), không đo ngược pixel từ ảnh: LỚP 1 nền là bàn gỗ
-/// trống `table_bare_wood.png` (BoxFit.cover, toàn bộ viewport); LỚP 2 khăn — ảnh cắt TRONG
-/// SUỐT toàn khung (1920x1280), vẽ thẳng trên bàn gỗ trống rồi
-/// tách nền, khớp điểm tụ và góc độ với bàn; cả 3 màu khăn đều
-/// vẽ trên cùng một bàn nên đổi màu không bao giờ lộ màu cũ
-/// bên dưới; LỚP 3 phụ kiện là các ảnh cắt TRONG SUỐT (chỉ giữ vật
-/// thể, đã tách nền) đặt theo tọa độ phân số cố định trong code,
-/// bóng tiếp xúc vẽ bằng code ngay dưới chân vật. Khăn sống trong
-/// cùng Stack với nền gỗ (cùng box, cùng BoxFit.cover) nên luôn
-/// khớp pixel với gỗ ở mọi viewport; phụ kiện sống trong Stack
-/// của bàn.
+/// gian thực). Mỗi cảnh là một ảnh toàn khung 1920x1280 — bàn gỗ +
+/// khăn + đồ decor + xấp bài vẽ sẵn trong cùng một ảnh, đúng ảnh
+/// đã duyệt (xem _sceneImageAsset). KHÔNG còn lớp gỗ riêng, lớp
+/// khăn cắt riêng, lớp decor riêng — cả ba đã nằm trong ảnh cảnh.
+/// Đổi hình nền là đổi cả ảnh cảnh (BoxFit.cover, toàn bộ viewport).
+/// Xấp bài là vùng chạm vô hình trên xấp vẽ trong cảnh (xem
+/// deckRectForScene + CardStackWidget).
 /// Trên bàn KHÔNG còn lá nào: bàn chỉ là không gian (gỗ, khăn,
 /// phụ kiện, xấp bài ở góc). Lá đang đọc HIỆN TRÊN MÀN HÌNH —
 /// lá lớn 150 rộng + panel giải nghĩa ngay bên cạnh, ở giữa-phía
@@ -203,14 +198,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     if (!_tableArtPrecached) {
       _tableArtPrecached = true;
       for (final asset in const [
-        'assets/images/table_bare_wood.png',
-        'assets/images/cloth_purple_cut.png',
-        'assets/images/cloth_gold_cut.png',
-        'assets/images/cloth_black_cut.png',
-        'assets/images/cut_crystal.png',
-        'assets/images/cut_ball.png',
-        'assets/images/cut_incense.png',
-        'assets/images/cut_candle.png',
+        'assets/images/scene_teal.jpg',
+        'assets/images/scene_green.jpg',
+        'assets/images/scene_beige.jpg',
+        'assets/images/scene_burgundy.jpg',
+        'assets/images/scene_blue.jpg',
       ]) {
         precacheImage(AssetImage(asset), context);
       }
@@ -629,77 +621,40 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           Positioned.fill(
             child: _buildDesktopEmptyHint(theme, hasDrawnCards: true),
           ),
-        // Phụ kiện: ảnh CẮT TRONG SUỐT (chỉ giữ vật thể, nền
-        // đã tách) đặt theo tọa độ phân số cố định trong code
-        // (xem _buildDesktopDecorCutouts), cùng Stack với lớp
-        // khăn nên luôn khớp khăn ở mọi viewport. Bóng tiếp xúc
-        // vẽ bằng code ngay dưới chân mỗi vật. Đổi trong
-        // dialog/Cài đặt cập nhật ngay với hiệu ứng mờ dần
-        // (AnimatedSwitcher theo danh sách decor đã chọn).
-        // IgnorePointer nên không bao giờ chặn lá bài.
-        if (prefs.showDecor && prefs.decorItems.isNotEmpty)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.96, end: 1.0)
-                          .animate(CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOut)),
-                      child: child,
-                    ),
-                  );
-                },
-                child: _buildDesktopDecorCutouts(prefs.decorItems),
-              ),
-            ),
-          ),
-        // Xấp bài ở MỘT góc bàn: góc trên-trái, luôn hiện diện.
-        // Neo vào góc trên-trái CỦA TRANH (phân số tranh 0.25,
-        // 0.30), qua phép cover — bám đúng mặt gỗ khi co kéo
-        // màn hình, thay vì neo cứng vào góc màn hình (rơi ra
-        // vùng tối ngoài bàn). Neo ở 0.22 (sát mép trên của bàn)
-        // làm đỉnh xấp bị CẮT ở màn hình thấp/toàn màn hình
-        // (mép bàn nằm sát mép trên màn hình nên xấp cao 155px
-        // chìa ra ngoài, bị Stack cắt); hạ xuống 0.30 thì cả xấp
-        // luôn hiện đủ, vẫn trên mặt gỗ, không chạm thạch anh
-        // (xấp x=480–564, thạch anh từ x=586).
-        // Xấp bài CO DÃN CÙNG BÀN — scale thông thường, neo cứng
-        // vào MỘT tọa độ trên tranh (phân số 0.25, 0.30): bọc
-        // Transform.scale theo đúng tỉ lệ cover của tranh
-        // (t.scale), neo góc trên-trái vào tọa độ đó. Khi co kéo
-        // màn hình, bàn to ra/nhỏ lại thì xấp bài cũng to ra/nhỏ
-        // lại theo đúng tỉ lệ đó, vị trí và kích thước tương quan
-        // với bàn không đổi — như dán cứng lên mặt bàn. KHÔNG
-        // kẹp tỉ lệ nữa: các kẹp 0.86 (§26) rồi 1.0 (§27) làm
-        // xấp đứng yên một chỗ trong khi bàn co dãn — như tờ
-        // giấy trên khay cát, khay mở rộng mà giấy vẫn đứng yên.
-        // Scale thường, neo một điểm, là đủ.
+        // Xấp bài = VÙNG CHẠM VÔ HÌNH (§46): xấp bài đã vẽ sẵn
+        // trong ảnh cảnh (bàn + khăn + decor + xấp trong một ảnh).
+        // CardStackWidget giờ chỉ là một GestureDetector trong suốt
+        // + nhãn "Xấp bài" — vị trí + kích cỡ hộp chạm tính ở đây
+        // từ deckRectForScene + phép cover (xem _paintingCoverTransform),
+        // khớp đúng xấp vẽ trong cảnh đang chọn. Chạm vào xấp vẽ
+        // thì mở khay chọn bài để rút. KHÔNG còn khung xấp vẽ bằng
+        // code, KHÔNG còn ảnh mặt lưng riêng. Khi co kéo màn hình,
+        // bàn to ra/nhỏ lại thì vùng chạm cũng to ra/nhỏ lại theo
+        // đúng tỉ lệ đó, vị trí tương quan với bàn không đổi — như
+        // dán cứng lên mặt bàn. Nhãn "Xấp bài" nằm ngay dưới xấp vẽ.
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, constraints) {
               final t = _paintingCoverTransform(
                   constraints.maxWidth, constraints.maxHeight);
+              final rect = deckRectForScene(prefs.clothStyle);
+              final left = rect.left * 1920 * t.scale + t.dx;
+              final top = rect.top * 1280 * t.scale + t.dy;
+              final boxW = rect.width * 1920 * t.scale;
+              final boxH = rect.height * 1280 * t.scale;
               return Stack(
                 children: [
                   Positioned(
-                    left: 0.25 * 1920 * t.scale + t.dx,
-                    top: 0.30 * 1280 * t.scale + t.dy,
-                    child: Transform.scale(
-                      scale: t.scale,
-                      alignment: Alignment.topLeft,
-                      child: CardStackWidget(
-                        onTap: () {
-                          setState(() {
-                            _showSelectionPanel = true;
-                          });
-                        },
-                        theme: theme,
-                      ),
+                    left: left,
+                    top: top,
+                    child: CardStackWidget(
+                      onTap: () {
+                        setState(() {
+                          _showSelectionPanel = true;
+                        });
+                      },
+                      theme: theme,
+                      tapSize: Size(boxW, boxH),
                     ),
                   ),
                 ],
@@ -884,327 +839,6 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Bóng đổ THẬT (cast shadow) của một vật: lấy đúng hình dáng
-  /// (silhouette) của vật, chiếu xuống-phải theo hướng đèn.
-  ///
-  /// Cách tính — ánh sáng chính ấm từ trên-trái, bóng hắt
-  /// xuống-phải. Một điểm trên vật ở độ cao h so với mặt bàn thì
-  /// bóng của nó dời (h*kx, h*ky) theo hướng đèn: điểm càng cao
-  /// thì bóng càng xa chân vật. Trong tọa độ widget (y tăng xuống
-  /// dưới), điểm ở đỉnh vật (y nhỏ) dời nhiều hơn điểm ở chân
-  /// (y lớn). Ma trận thực hiện đúng hình chiếu đó: neo ở
-  /// bottomCenter (chân vật đứng yên), nghiêng setEntry(0, 1, -kx)
-  /// để đỉnh vật ngả sang phải, rồi dịch cả bóng xuống-phải.
-  /// (Matrix4 của vector_math không có skewX — nghiêng bằng
-  /// setEntry(0, 1, s) cho x' = x + s*y.)
-  /// Silhouette lấy từ chính ảnh cắt của vật (ColorFiltered đen,
-  /// BlendMode.srcIn) nên bóng có đúng hình dáng vật — gai thạch
-  /// anh, thân nến, lư hương, đế cầu — không phải ellipse chung
-  /// chung. Làm mờ bằng ImageFiltered (blur) cho viền mềm (bán
-  /// dạ). Quả cầu pha lê trong suốt nên bóng nhạt hơn (vật trong
-  /// suốt cho ánh sáng xuyên qua, chỉ đế và viền đổ bóng đậm).
-  /// Độ mờ và độ sắc: bóng thật trên bàn là một vùng tối MỀM
-  /// và NHẠT — ánh sáng bị chặn một phần, vân gỗ/vân vải vẫn
-  /// thấy qua, viền loang dần chứ không phải mảng đen đặc.
-  /// Blur sigma 5.0 cho viền thật mềm (ánh sáng khuếch tán),
-  /// độ mờ 0.25 để bóng chỉ là vùng tối nhẹ, không thành vệt
-  /// mực đen. Nghiêng rất nhẹ (kx 0.10) và chiếu NGẮN
-  /// (dịch 0.18w, 0.09h): bóng của vật nhỏ trên bàn, dưới đèn
-  /// ấm treo cao, là một vùng tối ngắn sát chân vật, hình dáng
-  /// gần như vật — không phải vệt dài kéo lê. Bóng dài + đậm
-  /// (§29–§31) trông như vết mực loang trên khăn sáng, xấu.
-  /// Quả cầu 0.18 (vẫn nhạt nhất vì trong suốt).
-  /// Trả về một Positioned.fill để đặt trong Stack của vật
-  /// (Stack phải có clipBehavior: Clip.none để bóng tràn ra
-  /// ngoài khung vật, xuống-phải mặt khăn).
-  Widget _realCastShadow({
-    required String asset,
-    required double boxWidth,
-    required double boxHeight,
-    double opacity = 0.25,
-  }) {
-    const kx = 0.10; // nghiêng rất nhẹ theo hướng đèn (giữ hình dáng)
-    return Positioned.fill(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-        child: Transform(
-          alignment: Alignment.bottomCenter,
-          transform: Matrix4.identity()
-            ..translate(boxWidth * 0.18, boxHeight * 0.09)
-            ..setEntry(0, 1, -kx) // nghiêng: x' = x - kx*y (đỉnh ngả phải)
-            ..scale(1.06, 0.96),
-          child: Opacity(
-            opacity: opacity,
-            child: ColorFiltered(
-              colorFilter:
-                  const ColorFilter.mode(Colors.black, BlendMode.srcIn),
-              child: Image.asset(asset, fit: BoxFit.contain),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Phụ kiện trên mép xa của bàn PC: các ảnh CẮT TRONG SUỐT (chỉ
-  /// giữ vật thể, nền đã tách) đặt theo tọa độ phân số CỐ ĐỊNH
-  /// trong code (xem _decorCutoutRect — một nguồn sự thật duy
-  /// nhất, không đo ngược pixel), tính theo PHÂN SỐ CỦA TRANH
-  /// GỐC (1920x1280) rồi qua _paintingCoverTransform (đúng phép
-  /// cover của nền gỗ/khăn) nên luôn khớp khăn ở mọi viewport,
-  /// kể cả khi co kéo đổi tỉ lệ màn hình. Bóng tiếp xúc vẽ bằng
-  /// code ngay dưới chân mỗi vật (xem _buildDesktopDecorCutout): KHÔNG ClipOval,
-  /// KHÔNG nền đen sau ảnh, KHÔNG xếp hàng đều, KHÔNG thu nhỏ
-  /// theo chiều sâu. Khung của mỗi vật tính theo CHIỀU RỘNG, chiều
-  /// cao suy từ tỉ lệ thật của ảnh — KHÔNG BoxFit.fill (khung phân
-  /// số trên viewport 16:9 có tỉ lệ khác ảnh gốc nên vật bị kéo
-  /// méo).
-  Widget _buildDesktopDecorCutouts(List<String> items) {
-    // Key theo danh sách món đã chọn để AnimatedSwitcher ở trên
-    // nhận ra khi decor đổi và chạy hiệu ứng mờ/scale.
-    return LayoutBuilder(
-      key: ValueKey(items.join(',')),
-      builder: (context, constraints) {
-        final w = constraints.maxWidth;
-        final h = constraints.maxHeight;
-        return Stack(
-          children: [
-            for (final item in items)
-              _buildDesktopDecorCutout(item, w, h),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Một món decor đặt theo tọa độ phân số cố định trong code
-  /// (xem _decorCutoutRect — PHÂN SỐ CỦA TRANH GỐC, qua
-  /// _paintingCoverTransform mới ra tọa độ widget): neo góc
-  /// trên-trái tại (x, y) phân số của tranh. KHUNG TÍNH THEO
-  /// CHIỀU RỘNG (rộng = w phân số tranh x 1920 x scale cover),
-  /// _decorCutoutAspect) — KHÔNG BAO GIỜ BoxFit.fill: khung phân
-  /// số trên viewport 16:9 có tỉ lệ khác ảnh gốc nên vật bị kéo
-  /// méo. Ảnh trong suốt vẽ bằng BoxFit.contain trong khung đúng
-  /// tỉ lệ. Bóng tiếp xúc là một ellipse đen mờ vẽ bằng code NGAY
-  /// DƯỚI CHÂN vật (dưới đáy khung) để vật "đứng trên" mặt gỗ.
-  Widget _buildDesktopDecorCutout(String item, double w, double h) {
-    final asset = _decorCutoutAsset(item);
-    final rect = _decorCutoutRect(item);
-    if (asset == null || rect == null) {
-      // Món chưa có ảnh cắt vẽ (hiện là 'Lá Khô'): KHÔNG vẽ gì cả.
-      // Tuyệt đối không dùng icon phẳng (Icons.eco) làm fallback —
-      // người dùng đã từ chối icon Material cho decor, và icon cũ
-      // còn đè đúng ô của Hương Trầm (x .52, y .10) nên hai món
-      // chồng lên nhau khi chọn cả hai. Muốn hiện món này thì vẽ
-      // ảnh cắt thật rồi thêm vào _decorCutoutAsset/_decorCutoutRect.
-      return const SizedBox.shrink();
-    }
-    // Tọa độ trong Rect là PHÂN SỐ CỦA TRANH GỐC — phải qua
-    // _paintingCoverTransform (đúng phép cover của nền gỗ/khăn)
-    // thì vật mới bám đúng mặt bàn ở mọi tỉ lệ màn hình.
-    // Rộng theo phân số tranh; cao suy từ tỉ lệ thật của ảnh.
-    final t = _paintingCoverTransform(w, h);
-    final boxWidth = rect.width * 1920 * t.scale;
-    final boxHeight = boxWidth * _decorCutoutAspect(item);
-    return Positioned(
-      left: rect.left * 1920 * t.scale + t.dx,
-      top: rect.top * 1280 * t.scale + t.dy,
-      width: boxWidth,
-      height: boxHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Bóng ĐỔ THẬT: silhouette của chính vật, chiếu
-          // xuống-phải theo hướng đèn (xem _realCastShadow).
-          // Ellipse radial-gradient cũ là đốm mờ chung chung,
-          // không khớp hình dáng vật nên nhìn xấu. Quả cầu pha
-          // lê trong suốt nên bóng nhạt hơn.
-          _realCastShadow(
-            asset: asset,
-            boxWidth: boxWidth,
-            boxHeight: boxHeight,
-            opacity: item == 'Quả Cầu' ? 0.18 : 0.25,
-          ),
-          // Bóng tiếp xúc vẽ bằng code: ellipse đen mờ nằm NGAY
-          // DƯỚI CHÂN vật, chạm vào đáy khung — vật "đứng trên"
-          // mặt gỗ thay vì lơ lửng. (Ảnh cắt trong suốt nên bóng
-          // cũ trong tranh đã mất theo nền khi tách.)
-          Positioned(
-            left: boxWidth * 0.08,
-            right: boxWidth * 0.08,
-            bottom: 0,
-            height: boxHeight * 0.16,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    Colors.black.withOpacity(0.55),
-                    Colors.black.withOpacity(0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Ảnh cắt trong suốt: chỉ vật thể, không nền, không
-          // hộp đen sau lưng — đặt lên bàn là hòa vào tranh.
-          Positioned.fill(
-            child: Image.asset(asset, fit: BoxFit.contain),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Tỉ lệ cao/rộng của ảnh cắt từng món — dùng để tính chiều cao
-  /// khung từ chiều rộng (KHÔNG dùng BoxFit.fill: khung phân số
-  /// trên viewport 16:9 có tỉ lệ khác ảnh gốc nên vật bị kéo méo).
-  double _decorCutoutAspect(String item) {
-    switch (item) {
-      case 'Đá Thạch Anh':
-        return 205 / 221; // cut_crystal.png 221x205
-      case 'Quả Cầu':
-        return 239 / 206; // cut_ball.png 206x239
-      case 'Hương Trầm':
-        return 345 / 250; // cut_incense.png 250x345
-      case 'Nến Đen':
-        return 307 / 220; // cut_candle.png 220x307
-      default:
-        return 1.0;
-    }
-  }
-
-  /// Ảnh cắt (cut-out) của từng món decor trong tranh bàn gốc,
-  /// null = chưa có ảnh cắt: món đó không được chọn trong dialog
-  /// và không vẽ gì trên bàn (tuyệt đối không dùng icon fallback).
-  String? _decorCutoutAsset(String item) {
-    switch (item) {
-      case 'Đá Thạch Anh':
-        return 'assets/images/cut_crystal.png';
-      case 'Quả Cầu':
-        return 'assets/images/cut_ball.png';
-      case 'Hương Trầm':
-        return 'assets/images/cut_incense.png';
-      case 'Nến Đen':
-        return 'assets/images/cut_candle.png';
-      default:
-        return null; // 'Lá Khô': chưa có ảnh cắt.
-    }
-  }
-
-  /// Phép biến đổi BoxFit.cover của tranh bàn gốc (1920x1280)
-  /// trong một khung w x h — ĐÚNG phép mà nền gỗ (DecorationImage)
-  /// và khăn (Image cover) đang dùng. Trả về tỉ lệ scale và độ
-  /// dời (dx, dy) để đổi một điểm phân số của tranh sang tọa độ
-  /// widget: x = fx*1920*scale + dx, y = fy*1280*scale + dy.
-  /// Dùng phép này thì decor + xấp bài + ô gợi ý luôn bám đúng
-  /// mặt bàn khi co kéo màn hình (tỉ lệ khung hình đổi → tranh
-  /// bị cắt khác đi, vật dời theo đúng tỉ lệ đó), thay vì neo
-  /// cứng vào góc/khung màn hình rồi rơi ra ngoài bàn.
-  ({double scale, double dx, double dy}) _paintingCoverTransform(
-      double w, double h) {
-    const pw = 1920.0;
-    const ph = 1280.0;
-    final scale = w / pw > h / ph ? w / pw : h / ph;
-    final dx = (w - pw * scale) / 2;
-    final dy = (h - ph * scale) / 2;
-    return (scale: scale, dx: dx, dy: dy);
-  }
-
-  /// Tọa độ LỚP (layout constants) của từng món decor — PHÂN SỐ
-  /// CỦA TRANH GỐC (1920x1280), MỘT NGUỒN SỰ THẬT DUY NHẤT cho
-  /// vị trí vật trên bàn (HyperFrames: bố cục định trong code
-  /// trước, ảnh trong suốt chỉ đặt vào đúng tọa độ này). Đáy khung
-  /// (chân vật) neo vào mép xa của khăn, hàng decor dời sang phải
-  /// một chút để nhường góc trên-trái cho xấp bài. Chiều cao
-  /// trong Rect này KHÔNG dùng để đặt khung nữa (khung tính từ
-  /// chiều rộng + tỉ lệ thật của ảnh, xem _decorCutoutAspect);
-  /// nó chỉ còn là vị trí gốc đã đo từ tranh master. Khi vẽ
-  /// (_buildDesktopDecorCutout) phải qua _paintingCoverTransform
-  /// thì vật mới bám đúng mặt bàn ở mọi tỉ lệ màn hình.
-  Rect? _decorCutoutRect(String item) {
-    // Đáy của cả 4 món CÙNG nằm trên một đường sâu (y=0.43 của
-    // tranh) — vật nào cũng đứng trên cùng một mặt bàn, hàng decor
-    // thẳng hàng, không món nào lún cao/thấp hơn món khác. (Trước
-    // đây đáy lệch nhau 0.423–0.443 nên hàng nhìn hơi xộc xệch.)
-    // Top = 0.43 − chiều cao khung (khung tính từ chiều rộng +
-    // tỉ lệ thật của ảnh, xem _decorCutoutAspect).
-    switch (item) {
-      case 'Đá Thạch Anh':
-        return const Rect.fromLTWH(0.305, 0.291, 0.10, 0.139);
-      case 'Quả Cầu':
-        return const Rect.fromLTWH(0.428, 0.273, 0.09, 0.157);
-      case 'Hương Trầm':
-        return const Rect.fromLTWH(0.58, 0.202, 0.11, 0.228);
-      case 'Nến Đen':
-        return const Rect.fromLTWH(0.685, 0.221, 0.10, 0.209);
-      default:
-        return null;
-    }
-  }
-
-  /// Một sprite phụ kiện: ảnh CẮT VẼ (cut_*.png, trong suốt) như
-  /// PC — không còn sprite cũ (decor_*_painted.png) trong ô đen.
-  /// Ảnh cắt trong suốt nên KHÔNG có nền đen sau ảnh; vật hòa vào
-  /// mặt bàn như một bức ảnh hoàn chỉnh. Món chưa có ảnh cắt
-  /// (Lá Khô) KHÔNG vẽ gì cả — tuyệt đối không dùng icon phẳng
-  /// làm fallback. Vật thể BÁM SÁT mặt bàn:
-  /// KHÔNG còn bóng đổ lơ lửng quanh sprite (boxShadow offset).
-  /// Thay vào đó là một ellipse đen nằm NGAY DƯỚI CHÂN vật, chạm
-  /// vào đáy sprite — vật "đứng trên" mặt gỗ/khăn, chân đặt đúng
-  /// đường mặt bàn.
-  Widget _buildDecorSprite(String item, double size) {
-    final asset = _decorCutoutAsset(item);
-    if (asset == null) {
-      // Món chưa có ảnh cắt vẽ (hiện là 'Lá Khô'): không vẽ gì —
-      // không icon phẳng, không ô đen (xem _buildDesktopDecorCutout).
-      return const SizedBox.shrink();
-    }
-    final body = Image.asset(asset,
-        fit: BoxFit.contain, width: size, height: size);
-    return SizedBox(
-      width: size,
-      height: size + 12,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Bóng đổ THẬT: silhouette của chính vật, chiếu
-          // xuống-phải theo hướng đèn (xem _realCastShadow).
-          // Ellipse radial-gradient cũ là đốm mờ chung chung,
-          // không khớp hình dáng vật nên nhìn xấu. Quả cầu pha
-          // lê trong suốt nên bóng nhạt hơn.
-          _realCastShadow(
-            asset: asset,
-            boxWidth: size,
-            boxHeight: size,
-            opacity: item == 'Quả Cầu' ? 0.18 : 0.25,
-          ),
-          // Bóng tiếp xúc: ellipse đen ngay dưới chân vật.
-          Positioned(
-            left: size * 0.05,
-            right: size * 0.05,
-            bottom: 0,
-            height: 12,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.black.withOpacity(0.55),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.45),
-                    blurRadius: 6,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(top: 0, left: 0, child: body),
-        ],
-      ),
-    );
-  }
-
   Widget _buildDesktopEmptyHint(dynamic theme, {bool hasDrawnCards = false}) {
     final settings = context.watch<SettingsProvider>();
     // Ô gợi ý đặt ở TÂM TẤM KHĂN (phân số tranh 0.5, 0.55),
@@ -1375,16 +1009,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// ngay vì màn hình chính có watch, nên dialog trông như "chọn
   /// mà không ăn".
   ///
-  /// Chỉ món/kiểu CÓ TRANH VẼ mới được chọn ở đây (xem
-  /// _tableStyleHasPaintedArt / _decorCutoutAsset): 'Đá Cổ' /
-  /// 'Vũ Trụ' chưa có tranh bàn vẽ, 'Lá Khô' chưa có ảnh cắt —
-  /// chọn chúng cũng không đổi được gì trên bàn, nên không hiện
-  /// làm lựa chọn. Danh sách gốc trong UserPreferencesModel giữ
-  /// nguyên (không đổi tên giá trị đã lưu).
+  /// Chỉ 5 cảnh CÓ ẢNH VẼ mới được chọn ở đây (§46): mỗi cảnh là
+  /// một ảnh toàn khung (bàn + khăn + decor + xấp bài vẽ sẵn).
+  /// Danh sách gốc trong UserPreferencesModel giữ nguyên (không
+  /// đổi tên giá trị đã lưu — `cloth_style` giờ chọn cảnh).
 /// Chip labels for the table / cloth / decor option ids shown in
 /// the in-reading table dialog use the shared mapping in
 /// `core/display_labels.dart` (Worker A) — see `optionLabel` below.
-/// The option ids themselves ('Gỗ Sồi', 'Nhung Tím', …) are STORED
+/// The option ids themselves ('Gỗ Sồi', 'Nhung Xanh Ngọc', …) are STORED
 /// values and are never changed; only the chip LABEL is localized.
 /// Selection, callbacks and stored values compare against the raw
 /// id, never the label.
@@ -1405,20 +1037,15 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 13));
 
-            // Localized chip label for a table/cloth/decor option id,
-            // via the shared mapping in `core/display_labels.dart`
-            // (same keys as the old local map: table.oak, cloth.*,
-            // decor.*). Each helper returns the id unchanged when it
-            // does not know it, so the three are tried in turn; an
-            // unknown id (e.g. 'Đá Cổ' / 'Vũ Trụ' / 'Lá Khô', which
-            // are filtered out of the chip lists today) falls back to
-            // the raw id, exactly as before.
+            // Localized chip label cho tên cảnh, qua mapping dùng
+            // chung trong `core/display_labels.dart` (cloth.* — tên
+            // cảnh trùng tên 5 khăn cũ). Trả về id gốc nếu không
+            // biết key, đúng như trước.
             String optionLabel(String opt) {
-              var key = tableStyleDisplayKey(opt);
-              if (key == opt) key = clothDisplayKey(opt);
-              if (key == opt) key = decorDisplayKey(opt);
+              final key = clothDisplayKey(opt);
               return key == opt ? opt : settings.tr(key);
             }
+
 
             Widget optionChips({
               required List<String> options,
@@ -1454,66 +1081,6 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               );
             }
 
-            Widget decorChips() {
-              // Chỉ món có ảnh cắt vẽ thật mới hiện làm lựa chọn
-              // ('Lá Khô' chưa có ảnh cắt nên không có ở đây).
-              final availableDecor = UserPreferencesModel.decorOptions
-                  .where((item) => _decorCutoutAsset(item) != null)
-                  .toList();
-              return Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: availableDecor.map((item) {
-                  final selected = prefs.decorItems.contains(item);
-                  return FilterChip(
-                    selectedColor: theme.primaryColor.withOpacity(0.3),
-                    checkmarkColor: theme.primaryColor,
-                    label: Text(optionLabel(item),
-                        style: TextStyle(
-                            color: selected
-                                ? theme.primaryColor
-                                : theme.textColor,
-                            fontSize: 12)),
-                    selected: selected,
-                    visualDensity: VisualDensity.compact,
-                    onSelected: (v) {
-                      // Bỏ món không có ảnh vẽ ra khỏi danh sách đã
-                      // lưu TRƯỚC khi đếm: món đó không hiện trong
-                      // dialog và không vẽ trên bàn, nhưng vẫn chiếm
-                      // 1 trong 3 suất nếu còn sót trong decorItems
-                      // đã lưu (vd. đã chọn 'Lá Khô' từ bản cũ) —
-                      // không lọc thì người dùng không thêm được món
-                      // mới dù trên dialog chỉ thấy 2 món đã chọn.
-                      final current = prefs.decorItems
-                          .where((i) => _decorCutoutAsset(i) != null)
-                          .toList();
-                      if (v) {
-                        if (current.length <
-                            UserPreferencesModel.maxDecorItems) {
-                          current.add(item);
-                          settings.setDecorItems(current);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(settings
-                                    .tr('reading.maxDecor')
-                                    .replaceAll('{n}',
-                                        '${UserPreferencesModel.maxDecorItems}')),
-                                duration: const Duration(seconds: 1)),
-                          );
-                          // Danh sách không đổi -> không gọi setter
-                          // (trước đây vẫn gọi setDecorItems với
-                          // danh sách cũ, gây notify + ghi lại vô ích).
-                        }
-                      } else {
-                        current.remove(item);
-                        settings.setDecorItems(current);
-                      }
-                    },
-                  );
-                }).toList(),
-              );
-            }
 
             Widget layerSwitch({
               required String title,
@@ -1533,37 +1100,16 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               );
             }
 
-            // Kiểu bàn đang HIỆU LỰC trên bàn: giá trị đã lưu mà
-            // chưa có tranh vẽ ('Đá Cổ' / 'Vũ Trụ') thì bàn thực tế
-            // vẫn là gỗ vẽ, nên chip 'Gỗ Sồi' phải hiện là đã chọn
-            // chứ không phải không có chip nào được chọn.
-            final effectiveTableStyle =
-                _tableStyleHasPaintedArt(prefs.tableStyle)
-                    ? prefs.tableStyle
-                    : 'Gỗ Sồi';
-
-            final tableAndCloth = Column(
+            // CHỌN HÌNH NỀN (§46): mỗi cảnh là MỘT ảnh toàn khung —
+            // bàn gỗ + khăn + đồ decor + xấp bài vẽ sẵn trong một ảnh,
+            // đúng ảnh đã duyệt. `clothStyle` trong prefs giờ CHỌN
+            // CẢNH (giữ nguyên tên key và 5 giá trị đã lưu). Đổi ở
+            // đây đổi ngay hình nền (ảnh mới vẽ lại toàn khung).
+            final scenePicker = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                sectionTitle(settings.tr('reading.tableSurface')),
-                const SizedBox(height: 6),
-                optionChips(
-                  options: UserPreferencesModel.tableStyles
-                      .where(_tableStyleHasPaintedArt)
-                      .toList(),
-                  selected: effectiveTableStyle,
-                  onSelected: (v) => settings.setTableStyle(v),
-                ),
-                // KHÔNG còn ghi chú reading.tableNote ở đây: nó nói
-                // "áp dụng trên điện thoại / máy tính bảng, bản PC
-                // dùng tranh bàn gỗ trống" — sai cả hai vế, vì
-                // _buildTableBackground dùng tranh gỗ vẽ cho MỌI
-                // thiết bị và tableStyle không đổi được mặt bàn nào.
-                // Chỉ còn một kiểu bàn có tranh vẽ nên cũng không
-                // còn gì để giải thích thêm.
-                const SizedBox(height: 14),
-                sectionTitle(settings.tr('reading.tablecloth')),
+                sectionTitle(settings.tr('reading.background')),
                 const SizedBox(height: 6),
                 optionChips(
                   options: UserPreferencesModel.clothStyles,
@@ -1572,7 +1118,7 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  settings.tr('reading.clothNote'),
+                  settings.tr('reading.sceneNote'),
                   style: TextStyle(
                       color: theme.secondaryTextColor,
                       fontSize: 11,
@@ -1581,35 +1127,22 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               ],
             );
 
-            final decorAndLayers = Column(
+            // Lớp hiển thị: chỉ còn công tắc "Hiện mặt bàn" (tắt thì
+            // nền đen). Khăn và decor đã vẽ sẵn trong ảnh cảnh nên
+            // không còn công tắc riêng cho chúng nữa.
+            final layersSection = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                sectionTitle(settings
-                    .tr('reading.decor')
-                    .replaceAll(
-                        '{n}', '${UserPreferencesModel.maxDecorItems}')),
-                const SizedBox(height: 6),
-                decorChips(),
-                const SizedBox(height: 14),
                 sectionTitle(settings.tr('reading.showLayers')),
                 layerSwitch(
                   title: settings.tr('reading.showTable'),
                   value: prefs.showTable,
                   onChanged: (v) => settings.toggleTable(v),
                 ),
-                layerSwitch(
-                  title: settings.tr('reading.showCloth'),
-                  value: prefs.showCloth,
-                  onChanged: (v) => settings.toggleCloth(v),
-                ),
-                layerSwitch(
-                  title: settings.tr('reading.showDecor'),
-                  value: prefs.showDecor,
-                  onChanged: (v) => settings.toggleDecor(v),
-                ),
               ],
             );
+
 
             return AlertDialog(
               // scrollable: true để nút "Xong" (actions) luôn nằm
@@ -1626,11 +1159,10 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // PC: bàn là cảnh vẽ lớp — nền gỗ trống, khăn là
-                    // một ảnh cắt trong suốt toàn khung (vẽ thẳng trên
-                    // bàn gỗ rồi tách nền, khớp điểm tụ với bàn), phụ
-                    // kiện là ảnh cắt trong suốt đặt theo tọa độ cố
-                    // định. Đổi ở đây sẽ đổi ngay trên bàn (cross-fade).
+                    // PC: bàn là MỘT ẢNH CẢNH — bàn gỗ + khăn + đồ
+                    // decor + xấp bài vẽ sẵn trong cùng một ảnh, đúng
+                    // ảnh đã duyệt. Đổi hình nền ở đây đổi ngay trên
+                    // bàn. Chạm vào xấp bài vẽ trong cảnh để rút bài.
                     if (isDesktop)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -1642,20 +1174,9 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                               height: 1.5),
                         ),
                       ),
-                    if (isDesktop)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: tableAndCloth),
-                          const SizedBox(width: 20),
-                          Expanded(child: decorAndLayers),
-                        ],
-                      )
-                    else ...[
-                      tableAndCloth,
-                      const SizedBox(height: 16),
-                      decorAndLayers,
-                    ],
+                    scenePicker,
+                    const SizedBox(height: 16),
+                    layersSection,
                   ],
                 ),
               ),
@@ -2305,51 +1826,25 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
     );
   }
 
-  /// Nền bàn — cảnh vẽ LỚP (HyperFrames, bố cục định trong
-  /// code), cho MỌI thiết bị (PC + phone/tablet dùng chung tranh
-  /// vẽ): LỚP 1 là bàn gỗ TRỐNG `table_bare_wood.png` (BoxFit.
-  /// cover, chiếm toàn bộ viewport) — không còn gì vẽ sẵn trong
-  /// nền. LỚP 2 là khăn CẮT TRONG SUỐT toàn khung (cả 3 màu, vẽ
-  /// thẳng trên bàn gỗ trống rồi tách nền — xem _clothImageAsset),
-  /// đặt ngay trong Stack này (Positioned.fill, BoxFit.cover, cùng
-  /// box với nền) nên luôn khớp pixel với gỗ ở mọi viewport; đổi
-  /// màu thì cross-fade ngay (AnimatedSwitcher, chỉ mờ, không
-  /// scale). LỚP 3 phụ kiện cắt trong suốt (PC: xem
-  /// _buildDesktopDecorCutouts trong _buildDesktopTable;
-  /// phone/tablet: hàng ảnh cắt ở trên cùng). Trên bàn
-  /// không còn lá nào — lá đang đọc hiện trên màn hình (xem
-  /// _buildDesktopStage). KHÔNG còn ảnh bàn cũ, khăn màu phẳng cũ,
-  /// lớp phủ tối nặng cũ. Chỉ một vệt tối nhẹ sát mép dưới (sau khay
-  /// bài). Tắt "Hiện mặt bàn" thì tranh tắt, nền đen. Tắt "Hiện khăn"
-  /// thì lớp khăn ẩn, chỉ còn gỗ trống.
+  /// Nền bàn là MỘT ẢNH CẢNH (§46, "hệ chọn hình nền"): mỗi cảnh
+  /// là một ảnh toàn khung 1920x1280 — bàn gỗ + khăn + đồ decor +
+  /// xấp bài vẽ sẵn trong cùng một ảnh, đúng ảnh đã duyệt (xem
+  /// _sceneImageAsset). KHÔNG còn lớp gỗ riêng, lớp khăn cắt riêng,
+  /// lớp decor riêng — cả ba đã nằm trong ảnh cảnh. Trên bàn không
+  /// còn lá nào — lá đang đọc hiện trên màn hình (xem
+  /// _buildDesktopStage). Chỉ một vệt tối nhẹ sát mép dưới (sau khay
+  /// bài). Tắt "Hiện mặt bàn" thì tranh tắt, nền đen. Đổi cảnh thì
+  /// cross-fade ngay (AnimatedSwitcher, chỉ mờ, không scale).
+  /// `clothStyle` trong prefs giờ CHỌN CẢNH (giữ nguyên tên key và
+  /// giá trị đã lưu — 5 cảnh trùng tên 5 khăn cũ).
   Widget _buildTableBackground(UserPreferencesModel prefs, Widget child) {
-    // Nền bàn VẼ (HyperFrames) cho MỌI thiết bị — phone/tablet
-    // dùng đúng tranh vẽ như PC (gỗ trống + khăn cắt + decor cắt),
-    // KHÔNG còn ảnh cũ (ảnh chụp vân gỗ/đá/nền sao, khăn màu phẳng,
-    // sprite decor cũ trong ô đen). Kiểu bàn cũ (Đá Cổ / Vũ Trụ)
-    // không còn ảnh vẽ tương ứng nên mọi máy đều dùng bàn gỗ vẽ.
-    final isDesktop = Responsive.isDesktop(context);
-    // Ảnh nền bàn theo kiểu đã chọn; kiểu chưa có tranh vẽ thì
-    // RƠI VỀ gỗ vẽ (xem _tableImageAsset) — dialog chỉ cho chọn
-    // kiểu có tranh vẽ nên đây chỉ là lưới an toàn, không phải
-    // lựa chọn lặng lẽ.
-    final tableImage = _tableImageAsset(prefs.tableStyle) ??
-        'assets/images/table_bare_wood.png';
-
-    // PC: không build icon decor ở đây — phụ kiện là ảnh cắt trong
-    // suốt, đặt theo phân số tranh trên mép xa của bàn (xem
-    // _buildDesktopDecorCutouts trong _buildDesktopTable).
-    // Phone/tablet: decor đặt TRÊN BÀN (lớp 4 bên dưới, dùng phép
-    // cover để tìm mép trên của bàn) — không còn hàng sprite 40px
-    // ở sát mép trên màn hình (bé tí, bay trong vùng tối trên bàn).
-
     return Container(
       width: double.infinity,
       height: double.infinity,
       decoration: prefs.showTable
           ? BoxDecoration(
               image: DecorationImage(
-                image: AssetImage(tableImage),
+                image: AssetImage(_sceneImageAsset(prefs.clothStyle)),
                 fit: BoxFit.cover,
               ),
             )
@@ -2358,87 +1853,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             ),
       child: Stack(
         children: [
-          // LỚP KHĂN (HyperFrames, mọi thiết bị): khăn là ảnh CẮT
-          // TRONG SUỐT toàn khung (1920x1280) — vẽ thẳng trên bàn
-          // gỗ trống, khớp điểm tụ và góc độ với bàn, rồi tách nền
-          // chỉ còn khăn. Đặt ở ĐÂY (Positioned.fill, BoxFit.cover,
-          // cùng box với DecorationImage nền gỗ) nên khăn và gỗ luôn
-          // khớp pixel ở mọi viewport, không cần cắt hình thang
-          // bằng code nữa. Chỉ mờ đổi khi đổi màu (không scale —
-          // scale sẽ làm lệch khớp với gỗ trong lúc chuyển).
-          // KHÔNG còn khăn màu phẳng cũ (khối màu đặc bo tròn).
-          if (prefs.showCloth)
-            Positioned.fill(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400),
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: child,
-                  );
-                },
-                // Khăn TO RA (×1.45, giữ mép trên sát mép xa):
-                // khăn vẽ gốc chỉ chiếm 74% rộng × 51% cao của
-                // tranh nên nhìn bé tí, lọt thỏm giữa bàn. Phóng
-                // to 1.45 thì khăn phủ ~108% rộng × 73% cao — tràn
-                // nhẹ ra hai mép bàn như khăn thật rủ xuống, mép
-                // dưới xuống sát khung chạm khắc dưới. Scale
-                // quanh tâm đẩy mép trên lên QUÁ mép xa của bàn
-                // nên dịch xuống đúng phần vượt đó (tính qua phép
-                // cover) để mép trên vẫn sát mép xa, khăn mọc
-                // xuống và sang hai bên, mép dưới vẫn trên mặt
-                // bàn. Decor và ô gợi ý neo theo phân số tranh gỗ
-                // nên vẫn nằm trên khăn (xem _paintingCoverTransform).
-                child: LayoutBuilder(
-                  key: ValueKey('cloth-${prefs.clothStyle}'),
-                  builder: (context, constraints) {
-                    final t = _paintingCoverTransform(
-                        constraints.maxWidth, constraints.maxHeight);
-                    // Khăn neo theo TỌA ĐỘ TRANH (§37): hộp khăn =
-                    // hộp tranh (t.dx, t.dy, 1920*t.scale,
-                    // 1280*t.scale) phóng 1.45× quanh TÂM TRANH,
-                    // rồi dịch xuống để mép trên khăn vẫn sát mép
-                    // xa của bàn (0.218). Trước đây khăn dùng
-                    // BoxFit.cover + Transform.scale quanh TÂM MÀN
-                    // HÌNH nên khi đổi tỉ lệ màn hình, khăn lệch
-                    // khỏi bàn — cứng đờ, không co dãn theo mặt
-                    // bàn. Giờ khăn co dãn CÙNG mặt bàn ở mọi tỉ
-                    // lệ màn hình, dính cố định vào bàn.
-                    const clothScale = 1.45;
-                    final pw = 1920.0 * t.scale;
-                    final ph = 1280.0 * t.scale;
-                    final cx = t.dx + pw / 2;
-                    final cy = t.dy + ph / 2;
-                    final cw = pw * clothScale;
-                    final ch = ph * clothScale;
-                    final topY = 0.5 - 0.232 * clothScale;
-                    final over = 0.218 - topY; // > 0 khi vượt mép xa
-                    final shiftY = over > 0 ? over * 1280 * t.scale : 0.0;
-                    return Stack(
-                      children: [
-                        Positioned(
-                          left: cx - cw / 2,
-                          top: cy - ch / 2 + shiftY,
-                          width: cw,
-                          height: ch,
-                          child: Image.asset(
-                            _clothImageAsset(prefs.clothStyle),
-                            fit: BoxFit.fill,
-                            gaplessPlayback: true,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-
+          // Đổi cảnh: cross-fade giữa hai ảnh cảnh (chỉ mờ, không
+          // scale — scale sẽ làm lệch khớp với xấp bài trong lúc
+          // chuyển). Ảnh cảnh là DecorationImage của Container nên
+          // không AnimatedSwitcher được trực tiếp; đổi cảnh làm
+          // Container vẽ lại ảnh mới — hiệu ứng mờ dần do Image
+          // tự fade khi asset đổi (gaplessPlayback giữ ảnh cũ tới
+          // khi ảnh mới sẵn sàng, không nhấp nháy).
           // Lớp phủ tối: KHÔNG làm tối cả bức tranh — chỉ một vệt
           // tối nhẹ ở sát mép dưới (phía sau khay bài), cho MỌI
-          // thiết bị (trước đây phone/tablet phủ tối nặng cả màn,
-          // làm tranh vẽ bị mờ xỉn). Tranh giữ nguyên độ sáng và
-          // màu. Panel giải nghĩa đã có nền đen 0.72 riêng.
+          // thiết bị. Tranh giữ nguyên độ sáng và màu. Panel giải
+          // nghĩa đã có nền đen 0.72 riêng.
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -2454,141 +1879,32 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
             ),
           ),
 
-          // LỚP 4: Đồ trang trí — chỉ phone/tablet. Đặt TRƯỚC
-          // nội dung (LỚP 3) để decor nằm DƯỚI giao diện — decor
-          // là đồ trên mặt bàn (nền), không phải lớp phủ UI.
-          // Trước đây decor ở SAU nội dung nên khi mở khay chọn
-          // bài trên điện thoại, decor đè lên nút lọc bộ bài và
-          // thẻ bài trong khay. Ẩn decor khi khay chọn bài đang
-          // mở để nó không lộ qua panel kính (GlassPanel chỉ mờ
-          // 0.7, decor vẫn thấy mờ mờ sau panel). Trước đây là
-          // hàng sprite 40px ở sát mép trên màn hình (top: 0) nên
-          // đồ bé tí và bay trong vùng tối PHÍA TRÊN bàn (mép trên
-          // của bàn nằm sâu hơn, khoảng y=0.218 của tranh). Giờ đặt
-          // đồ TRÊN BÀN: dùng đúng phép cover để tìm mép trên của
-          // bàn, đặt đáy hàng decor ngay dưới mép đó (trên mặt gỗ).
-          // Đồ CO DÃN CÙNG BÀN: cỡ món tính theo tỉ lệ cover của
-          // tranh (t.scale) — khi co kéo màn hình, bàn to ra/nhỏ
-          // lại thì đồ cũng to ra/nhỏ lại theo đúng tỉ lệ đó, vị
-          // trí và kích thước tương quan với bàn không đổi. Trước
-          // đây cỡ món chỉ theo chiều rộng màn hình nên đổi chiều
-          // cao thì bàn đổi mà đồ không đổi, trông lệch hẳn.
-          // PC: không có gì ở đây, phụ kiện là ảnh cắt đặt theo
-          // phân số tranh trên mép xa của bàn (xem
-          // _buildDesktopDecorCutouts trong _buildDesktopTable).
-          if (prefs.showDecor && !isDesktop && !_showSelectionPanel)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final t = _paintingCoverTransform(
-                        constraints.maxWidth, constraints.maxHeight);
-                    // Mép trên của bàn trong tranh (0.218) đổi sang
-                    // tọa độ widget; đáy hàng decor đặt ngay dưới
-                    // mép đó 10px, trên mặt gỗ.
-                    final tableTopY = 0.218 * 1280 * t.scale + t.dy;
-                    final itemSize = (106.0 * t.scale)
-                        .clamp(56.0, 120.0)
-                        .toDouble();
-                    final rowTop = tableTopY + 10 - (itemSize + 12);
-                    return Stack(
-                      children: [
-                        Positioned(
-                          top: rowTop < 0 ? 0.0 : rowTop,
-                          left: 0,
-                          right: 0,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: _buildDynamicDecorWidgets(
-                                  prefs.decorItems, itemSize),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-
-          // LỚP 3: Nội dung của ứng dụng
+          // Nội dung của ứng dụng
           child,
         ],
       ),
     );
   }
 
-  /// Ảnh nền bàn theo kiểu đã chọn, null = kiểu đó chưa có tranh
-  /// vẽ. Hiện chỉ 'Gỗ Sồi' có tranh vẽ (`table_bare_wood.png`);
-  /// 'Đá Cổ' / 'Vũ Trụ' chưa có tranh vẽ tương ứng nên chọn cũng
-  /// không đổi được mặt bàn — đó là lý do dialog chỉ cho chọn
-  /// kiểu có tranh vẽ (xem _tableStyleHasPaintedArt).
-  String? _tableImageAsset(String tableStyle) {
-    switch (tableStyle) {
-      case 'Gỗ Sồi':
-        return 'assets/images/table_bare_wood.png';
-      default:
-        return null; // 'Đá Cổ' / 'Vũ Trụ': chưa có tranh vẽ.
-    }
-  }
-
-  /// Kiểu mặt bàn nào CÓ tranh vẽ: chỉ 'Gỗ Sồi'. Dùng để lọc lựa
-  /// chọn trong dialog đổi bàn (xem _showTableSettingsDialog).
-  bool _tableStyleHasPaintedArt(String style) => style == 'Gỗ Sồi';
-
-  /// Ảnh khăn theo kiểu đã chọn: khăn CẮT TRONG SUỐT toàn khung,
-  /// vẽ thẳng trên bàn gỗ trống rồi tách nền — chỉ còn khăn, khớp
-  /// điểm tụ và góc độ với bàn.
-  String _clothImageAsset(String clothStyle) {
+  /// Ảnh cảnh (hình nền) theo kiểu đã chọn (§46): MỘT ảnh toàn
+  /// khung 1920x1280 cho mỗi cảnh — bàn gỗ + khăn + đồ decor +
+  /// xấp bài vẽ sẵn trong cùng một ảnh, đúng ảnh đã duyệt.
+  String _sceneImageAsset(String clothStyle) {
     switch (clothStyle) {
-      case 'Lụa Vàng':
-        return 'assets/images/cloth_gold_cut.png';
-      case 'Thảm Đen':
-        return 'assets/images/cloth_black_cut.png';
-      case 'Nhung Tím':
+      case 'Nhung Xanh Rừng':
+        return 'assets/images/scene_green.jpg';
+      case 'Linen Be':
+        return 'assets/images/scene_beige.jpg';
+      case 'Nhung Đỏ Rượu':
+        return 'assets/images/scene_burgundy.jpg';
+      case 'Nhung Xanh Đêm':
+        return 'assets/images/scene_blue.jpg';
+      case 'Nhung Xanh Ngọc':
       default:
-        return 'assets/images/cloth_purple_cut.png';
+        return 'assets/images/scene_teal.jpg';
     }
   }
 
-  /// Các món trang trí (phone/tablet): chỉ trả về widget, vị trí
-  /// do hàng ở trên cùng của _buildTableBackground quyết định.
-  /// Món nào có ảnh cắt vẽ (thạch anh, quả cầu, trầm, nến) dùng
-  /// ảnh CẮT trong suốt (_buildDecorSprite + _decorCutoutAsset,
-  /// như PC); món chưa có ảnh cắt (Lá Khô) không vẽ gì.
-  /// Bản PC dùng ảnh cắt đặt đúng vị trí (xem
-  /// _buildDesktopDecorCutouts).
-  List<Widget> _buildDynamicDecorWidgets(List<String> items, [double size = 40]) {
-    final widgets = <Widget>[];
-    for (final item in items) {
-      if (item == 'Hương Trầm') {
-        // Trầm: ảnh thật + khói bay lên phía trên.
-        widgets.add(Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            _buildDecorSprite(item, size),
-            Positioned(
-              top: -30,
-              child: SizedBox(
-                width: 40,
-                height: 50,
-                child: SmokeParticleEffect(
-                  enableSmoke: true,
-                  child: const SizedBox.shrink(),
-                ),
-              ),
-            ),
-          ],
-        ));
-      } else {
-        widgets.add(_buildDecorSprite(item, size));
-      }
-    }
-    return widgets;
-  }
 
   void _showEditTitleDialog(BuildContext context, ReadingProvider readingProvider) {
     final controller = TextEditingController(text: readingProvider.currentReadingTitle);
@@ -2629,6 +1945,49 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
 }
 
 /// Widget mô phỏng Xấp bài Tarot úp rực rỡ (tỉ lệ 5:8, theo breakpoint).
+/// Phép biến đổi BoxFit.cover của tranh cảnh gốc (1920x1280)
+/// trong một khung w x h — ĐÚNG phép mà nền cảnh (DecorationImage)
+/// đang dùng. Trả về tỉ lệ scale và độ dời (dx, dy) để đổi một
+/// điểm phân số của tranh sang tọa độ widget:
+/// x = fx*1920*scale + dx, y = fy*1280*scale + dy.
+/// Dùng phép này thì xấp bài + ô gợi ý luôn bám đúng mặt bàn khi
+/// co kéo màn hình (tỉ lệ khung hình đổi → tranh bị cắt khác đi,
+/// vật dời theo đúng tỉ lệ đó), thay vì neo cứng vào góc/khung
+/// màn hình rồi rơi ra ngoài bàn.
+/// Hàm top-level (§46) để CardStackWidget (StatelessWidget riêng)
+/// cũng gọi được.
+({double scale, double dx, double dy}) _paintingCoverTransform(
+    double w, double h) {
+  const pw = 1920.0;
+  const ph = 1280.0;
+  final scale = w / pw > h / ph ? w / pw : h / ph;
+  final dx = (w - pw * scale) / 2;
+  final dy = (h - ph * scale) / 2;
+  return (scale: scale, dx: dx, dy: dy);
+}
+
+/// Vùng chạm của xấp bài vẽ trong cảnh (§46): hộp bao quanh xấp
+/// bài (lá trên cùng + mép giấy kem) trong từng cảnh, đo bằng mắt
+/// từ đúng ảnh cảnh đã duyệt (1920x1280) rồi đổi sang phân số
+/// tranh — xem DECK_RECTS.md. Chạm vào vùng này = rút bài.
+/// Mép dưới của hộp teal cắt ngắn 10px so với đáy xấp thật để
+/// nhãn "Xấp bài" nằm dưới hộp không đè lên đầu cụm thạch anh.
+Rect deckRectForScene(String clothStyle) {
+  switch (clothStyle) {
+    case 'Nhung Xanh Rừng':
+      return const Rect.fromLTWH(0.2917, 0.2734, 0.1771, 0.2305);
+    case 'Linen Be':
+      return const Rect.fromLTWH(0.2760, 0.2852, 0.2318, 0.2031);
+    case 'Nhung Đỏ Rượu':
+      return const Rect.fromLTWH(0.2396, 0.2617, 0.2578, 0.2422);
+    case 'Nhung Xanh Đêm':
+      return const Rect.fromLTWH(0.2370, 0.2773, 0.2813, 0.2266);
+    case 'Nhung Xanh Ngọc':
+    default:
+      return const Rect.fromLTWH(0.2396, 0.2500, 0.2031, 0.2422);
+  }
+}
+
 /// Một chuyến bay về khay: lá nào, bay từ rect nào (sân khấu) về
 /// rect nào (ô của nó trong khay). Rect tính theo tọa độ của lớp
 /// bay (Stack bọc body desktop).
@@ -2639,218 +1998,64 @@ class _TrayFlight {
   const _TrayFlight({required this.card, required this.from, required this.to});
 }
 
-/// Khung xấp bài (§37): một khung hình thang phối cảnh bám sát
-/// mép lá bài (tỉ lệ bộ bài cơ bản 5:8, cạnh xa ngắn hơn cạnh
-/// gần), bên trong là ẢNH MẶT LƯNG của bộ bài đang chọn — scale
-/// khớp vào khung mặc định. Mỗi bộ bài up lên kèm 1 ảnh mặt lưng
-/// (TarotDeckModel.backImageUrl); chọn bộ nào thì xấp hiện lưng
-/// bộ đó. Chưa có ảnh lưng thì dùng ảnh lưng mặc định
-/// (deck_back_default.png). Mép giấy kem + bóng đổ mềm làm xấp
-/// có khối, đặt thật trên bàn.
-class _DeckStackFrame extends StatelessWidget {
-  final double width;
-  final String? backImageUrl;
-
-  const _DeckStackFrame({required this.width, this.backImageUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    final w = width;
-    final fh = w * 8 / 5 * 0.42; // Mặt trên: lá bài cơ bản 5:8,
-    // nhưng chiều cao (hướng sâu của bàn) bị phối cảnh nén mạnh
-    // 0.42 — khung xấp RỘNG HƠN CAO (cao/rộng tổng ≈ 0,74) nên ở
-    // cỡ xem thường cũng đọc là NẰM PHẲNG, không còn như sách dựng
-    // (0.55 cho khung gần vuông 0,94 — vẫn đọc như chân dung).
-    const dx = 7.0; // Chiều dày xấp lộ sang phải.
-    const dy = 12.0; // Chiều dày xấp lộ xuống dưới.
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          // Bóng đổ mềm, nhạt như bóng thật (§32).
-          // Bóng đổ rõ, tối, sắc nét (§42: bóng 0.55 vẫn lẫn vào nếp vải).
-          BoxShadow(
-            color: Colors.black.withOpacity(0.70),
-            blurRadius: 8,
-            spreadRadius: 2,
-            offset: const Offset(14, 16),
-          ),
-        ],
-      ),
-      child: SizedBox(
-        width: w + dx,
-        height: fh + dy,
-        child: Stack(
-          children: [
-            // Mép giấy kem (cạnh xấp): dải trước + dải phải.
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _DeckEdgePainter(w, fh, dx, dy),
-              ),
-            ),
-            // Mặt trên: ảnh mặt lưng, cắt theo hình thang phối cảnh.
-            Positioned(
-              left: 0,
-              top: 0,
-              width: w,
-              height: fh,
-              child: ClipPath(
-                clipper: _DeckTopClipper(),
-                child: _backImage(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // BoxFit.fill: ÉP DẸT ảnh lưng theo đúng phối cảnh nằm phẳng.
-  // (BoxFit.cover chỉ crop ảnh nên vòng tròn/ngôi sao vẫn tròn —
-  // xấp đọc như dựng đứng. Fill ép dọc 0.55 nên sao thành ellipse dẹt.)
-  Widget _backImage() {
-    final url = backImageUrl;
-    if (url != null && url.isNotEmpty) {
-      return Image.network(
-        url,
-        fit: BoxFit.fill,
-        errorBuilder: (_, __, ___) => Image.asset(
-          'assets/images/deck_back_default.png',
-          fit: BoxFit.fill,
-        ),
-      );
-    }
-    return Image.asset(
-      'assets/images/deck_back_default.png',
-      fit: BoxFit.fill,
-    );
-  }
-}
-
-/// Cắt ảnh mặt lưng theo hình thang phối cảnh: cạnh xa (trên)
-/// ngắn hơn cạnh gần (dưới) — 68% chiều rộng đáy.
-class _DeckTopClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final w = size.width;
-    final h = size.height;
-    final topW = w * 0.68;
-    final x0 = (w - topW) / 2;
-    return Path()
-      ..moveTo(x0, 0)
-      ..lineTo(x0 + topW, 0)
-      ..lineTo(w, h)
-      ..lineTo(0, h)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-/// Vẽ mép giấy của xấp bài: dải trước (dưới) + dải phải, màu kem,
-/// có vạch ngang gợi các lớp bài xếp chồng.
-class _DeckEdgePainter extends CustomPainter {
-  final double w;
-  final double fh;
-  final double dx;
-  final double dy;
-
-  _DeckEdgePainter(this.w, this.fh, this.dx, this.dy);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final topW = w * 0.68;
-    final x0 = (w - topW) / 2;
-    // Dải trước (dưới): hình thang kem.
-    final front = Path()
-      ..moveTo(0, fh)
-      ..lineTo(w, fh)
-      ..lineTo(w + dx, fh + dy)
-      ..lineTo(dx, fh + dy)
-      ..close();
-    canvas.drawPath(front, Paint()..color = const Color(0xFFD9CDB4));
-    // Dải phải: hình thang kem sẫm hơn một chút.
-    final right = Path()
-      ..moveTo(x0 + topW, 0)
-      ..lineTo(w, fh)
-      ..lineTo(w + dx, fh + dy)
-      ..lineTo(x0 + topW + dx, dy)
-      ..close();
-    canvas.drawPath(right, Paint()..color = const Color(0xFFBFAF90));
-    // Vạch lớp bài trên dải trước.
-    final linePaint = Paint()
-      ..color = const Color(0xFF8A7F68)
-      ..strokeWidth = 1.0;
-    for (final f in [0.3, 0.55, 0.8]) {
-      final y = fh + dy * f;
-      canvas.drawLine(Offset(dx * f, y), Offset(w + dx * f, y), linePaint);
-    }
-    // Vạch lớp bài trên dải phải (song song mép phải).
-    for (final f in [0.3, 0.55, 0.8]) {
-      canvas.drawLine(
-        Offset(x0 + topW + dx * f, dy * f),
-        Offset(w + dx * f, fh + dy * f),
-        linePaint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DeckEdgePainter old) =>
-      old.w != w || old.fh != fh || old.dx != dx || old.dy != dy;
-}
-
+/// Xấp bài đã vẽ sẵn trong ảnh cảnh (bàn + khăn + decor + xấp
+/// trong một ảnh) nên widget này KHÔNG vẽ gì cả: nó chỉ là một
+/// GestureDetector trong suốt đúng vị trí + kích cỡ của xấp vẽ
+/// trong cảnh đang chọn (xem deckRectForScene) + nhãn "Xấp bài"
+/// ngay dưới. Chạm vào xấp vẽ = rút bài (onTap mở khay chọn bài,
+/// giữ nguyên logic rút bài cũ). KHÔNG còn khung xấp vẽ bằng code,
+/// KHÔNG còn ảnh mặt lưng riêng.
+/// Dùng trong hai chỗ: _buildDesktopTable (đặt trên bàn, neo theo
+/// phép cover của tranh) và _buildEmptyTable (phone, đặt giữa màn
+/// hình — hộp chạm vẫn theo đúng tỉ lệ cảnh, chỉ không neo vị trí).
 class CardStackWidget extends StatelessWidget {
   final VoidCallback onTap;
   final dynamic theme;
 
-  const CardStackWidget({Key? key, required this.onTap, required this.theme}) : super(key: key);
+  /// Kích cỡ hộp chạm (px widget). Desktop: _buildDesktopTable tính
+  /// từ deckRectForScene + phép cover rồi truyền vào — hộp chạm
+  /// khớp đúng xấp vẽ trong cảnh. Null: dùng cỡ mặc định theo
+  /// thiết bị (phone: _buildEmptyTable, hộp chạm ở giữa màn hình).
+  final Size? tapSize;
+
+  const CardStackWidget({Key? key, required this.onTap, required this.theme, this.tapSize})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
-    // Xấp bài ở góc bàn — to và rõ để thấy và chạm: PC 84 rộng,
-    // tablet 100, phone 84. Đây là CỠ MẶT TRÊN của xấp bài; chiều
-    // dày (cạnh xấp) vẽ thêm sang phải/xuống dưới trong painter.
-    final stackWidth = Responsive.isDesktop(context)
-        ? 96.0
-        : Responsive.isTablet(context)
-            ? 108.0
-            : 84.0;
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Xấp bài = KHUNG + ẢNH MẶT LƯNG (§37): khung là hình
-          // thang phối cảnh bám sát mép lá bài (tỉ lệ bộ bài cơ
-          // bản 5:8, cạnh xa ngắn hơn cạnh gần), bên trong khung
-          // là ẢNH MẶT LƯNG của bộ bài đang chọn — scale khớp vào
-          // khung mặc định. Mỗi bộ bài up lên kèm 1 ảnh mặt lưng;
-          // chọn bộ nào thì xấp hiện lưng bộ đó. Chưa có ảnh lưng
-          // thì dùng ảnh lưng mặc định (deck_back_default.png).
-          // Mép giấy kem + bóng đổ mềm làm xấp có khối, đặt thật
-          // trên bàn. Không còn vẽ mặt lưng bằng code nữa.
-          _DeckStackFrame(
-            width: stackWidth,
-            backImageUrl: context
-                .watch<DeckProvider>()
-                .selectedDeck
-                ?.backImageUrl,
+    // Cỡ hộp chạm mặc định = cỡ xấp bài cũ (rộng × 8/5): PC 96,
+    // tablet 108, phone 84. Chỉ dùng khi không truyền tapSize.
+    final size = tapSize ??
+        (Responsive.isDesktop(context)
+            ? const Size(96, 153.6)
+            : Responsive.isTablet(context)
+                ? const Size(108, 172.8)
+                : const Size(84, 134.4));
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Hộp chạm trong suốt đúng vị trí + cỡ xấp vẽ trong cảnh.
+        // Không vẽ gì — xấp bài đã nằm trong ảnh cảnh phía dưới.
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: size.width,
+            height: size.height,
+            color: Colors.transparent,
           ),
-          const SizedBox(height: 6),
-          Text(
-            settings.tr('reading.deckStack'),
-            style: TextStyle(
-              color: theme.primaryColor,
-              fontSize: Responsive.isDesktop(context) ? 11 : 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.8,
-            ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          settings.tr('reading.deckStack'),
+          style: TextStyle(
+            color: theme.primaryColor,
+            fontSize: Responsive.isDesktop(context) ? 11 : 12,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.8,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
