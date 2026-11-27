@@ -604,6 +604,41 @@ class AppStrings {
       AppLanguage.ko: "퍼플 벨벳",
       AppLanguage.ja: "パープルベルベット",
     },
+    'cloth.tealVelvet': {
+      AppLanguage.vi: "Nhung Xanh Ngọc",
+      AppLanguage.en: "Teal Velvet",
+      AppLanguage.zh: "青色天鹅绒",
+      AppLanguage.ko: "틸 벨벳",
+      AppLanguage.ja: "ティールベルベット",
+    },
+    'cloth.forestGreenVelvet': {
+      AppLanguage.vi: "Nhung Xanh Rừng",
+      AppLanguage.en: "Forest Green Velvet",
+      AppLanguage.zh: "森林绿天鹅绒",
+      AppLanguage.ko: "포레스트 그린 벨벳",
+      AppLanguage.ja: "フォレストグリーンベルベット",
+    },
+    'cloth.beigeLinen': {
+      AppLanguage.vi: "Linen Be",
+      AppLanguage.en: "Beige Linen",
+      AppLanguage.zh: "米色亚麻",
+      AppLanguage.ko: "베이지 린넨",
+      AppLanguage.ja: "ベージュリネン",
+    },
+    'cloth.wineRedVelvet': {
+      AppLanguage.vi: "Nhung Đỏ Rượu",
+      AppLanguage.en: "Wine Red Velvet",
+      AppLanguage.zh: "酒红天鹅绒",
+      AppLanguage.ko: "와인 레드 벨벳",
+      AppLanguage.ja: "ワインレッドベルベット",
+    },
+    'cloth.midnightBlueVelvet': {
+      AppLanguage.vi: "Nhung Xanh Đêm",
+      AppLanguage.en: "Midnight Blue Velvet",
+      AppLanguage.zh: "午夜蓝天鹅绒",
+      AppLanguage.ko: "미드나이트 블루 벨벳",
+      AppLanguage.ja: "ミッドナイトブルーベルベット",
+    },
     'common.cancel': {
       AppLanguage.vi: "Hủy",
       AppLanguage.en: "Cancel",
@@ -1262,6 +1297,13 @@ class AppStrings {
       AppLanguage.ko: "테이블에서 바로 바뀝니다. 식탁보는 나무 위에 깔린 별도의 크고 평평한 레이어입니다.",
       AppLanguage.ja: "テーブル上でそのまま変わります。クロスは木の上に敷かれた独立した大きく平らな層です。",
     },
+    'reading.sceneNote': {
+      AppLanguage.vi: "Mỗi hình nền là một cảnh vẽ sẵn: bàn gỗ, khăn, đồ decor và xấp bài trong cùng một ảnh. Đổi hình nền là đổi cả bàn.",
+      AppLanguage.en: "Each background is a ready-painted scene: wood table, cloth, decor and deck in a single image. Changing the background changes the whole table.",
+      AppLanguage.zh: "每张背景都是一幅现成的画：木桌、桌布、配饰和牌堆都在同一张图里。更换背景即更换整张桌子。",
+      AppLanguage.ko: "각 배경은 미리 그려진 하나의 장면입니다. 나무 테이블, 식탁보, 장식, 덱이 한 장의 이미지에 들어 있습니다. 배경을 바꾸면 테이블 전체가 바뀝니다.",
+      AppLanguage.ja: "各背景はあらかじめ描かれた一つの場面です。木のテーブル、クロス、装飾、デッキが一枚の画像に入っています。背景を変えるとテーブル全体が変わります。",
+    },
     'reading.deckStack': {
       AppLanguage.vi: "XẤP BÀI",
       AppLanguage.en: "DECK",
@@ -1277,11 +1319,11 @@ class AppStrings {
       AppLanguage.ja: "装飾（最大{n}個）",
     },
     'reading.desktopTableIntro': {
-      AppLanguage.vi: "Bản PC là bàn vẽ nhiều lớp: nền gỗ trống, khăn là ảnh cắt trong suốt vẽ thẳng trên bàn (khớp điểm tụ và góc độ với bàn), phụ kiện là ảnh cắt trong suốt đặt đúng vị trí trên mép bàn. Đổi màu khăn hay phụ kiện ở đây sẽ đổi ngay trên bàn.",
-      AppLanguage.en: "On PC the table is a layered painting: bare wood background, a transparent cut-out cloth painted right onto the table (matching its vanishing point and angle), and transparent cut-out accessories placed along the far edge. Changing the cloth color or accessories here updates the table right away.",
-      AppLanguage.zh: "PC 版桌面是多层画作：原木背景、直接画在桌面上的透明镂空桌布（与桌面的消失点和角度一致），以及沿桌子远缘摆放的透明镂空配饰。在此更换桌布颜色或配饰会立即反映在桌面上。",
-      AppLanguage.ko: "PC 버전의 테이블은 여러 겹의 그림입니다. 빈 나무 배경, 테이블 위에 직접 그려진 투명 컷아웃 식탁보(테이블의 소실점과 각도에 맞춤), 그리고 테이블 먼 쪽 가장자리에 배치된 투명 컷아웃 장식품으로 이루어져 있습니다. 여기서 식탁보 색상이나 장식품을 바꾸면 테이블에 바로 반영됩니다.",
-      AppLanguage.ja: "PC版のテーブルは多層の絵画です。素木の背景、テーブルに直接描かれた透明な切り抜きクロス（テーブルの消失点と角度に一致）、そしてテーブルの奥の縁に置かれた透明な切り抜き小物で構成されています。ここでクロスの色や小物を変えると、テーブルにすぐ反映されます。",
+      AppLanguage.vi: "Bản PC là một ảnh cảnh vẽ sẵn: bàn gỗ, khăn, đồ decor và xấp bài đều nằm trong cùng một ảnh. Đổi hình nền ở đây sẽ đổi cả bàn ngay. Chạm vào xấp bài vẽ trong cảnh để rút bài.",
+      AppLanguage.en: "On PC the table is a single ready-painted scene: the wood table, cloth, decor and deck are all in one image. Changing the background here changes the whole table right away. Tap the deck painted in the scene to draw a card.",
+      AppLanguage.zh: "PC 版桌面是一幅现成的画：木桌、桌布、配饰和牌堆都在同一张图里。在此更换背景会立即更换整张桌子。点按画面中的牌堆即可抽牌。",
+      AppLanguage.ko: "PC 버전의 테이블은 미리 그려진 하나의 장면입니다. 나무 테이블, 식탁보, 장식, 덱이 모두 한 장의 이미지에 들어 있습니다. 여기서 배경을 바꾸면 테이블 전체가 바로 바뀝니다. 장면 속 덱을 탭하면 카드를 뽑습니다.",
+      AppLanguage.ja: "PC版のテーブルはあらかじめ描かれた一つの場面です。木のテーブル、クロス、装飾、デッキがすべて一枚の画像に入っています。ここで背景を変えるとテーブル全体がすぐ変わります。場面の中のデッキをタップするとカードを引けます。",
     },
     'reading.drawnCount': {
       AppLanguage.vi: "Đã rút {n} lá",
@@ -1485,6 +1527,13 @@ class AppStrings {
       AppLanguage.zh: "桌面",
       AppLanguage.ko: "테이블 상판",
       AppLanguage.ja: "テーブル面",
+    },
+    'reading.background': {
+      AppLanguage.vi: "Hình nền",
+      AppLanguage.en: "Background",
+      AppLanguage.zh: "背景",
+      AppLanguage.ko: "배경",
+      AppLanguage.ja: "背景",
     },
     'reading.tablecloth': {
       AppLanguage.vi: "Khăn trải bàn",
@@ -1913,3 +1962,4 @@ class AppStrings {
     return key;
   }
 }
+
