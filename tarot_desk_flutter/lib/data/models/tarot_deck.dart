@@ -4,9 +4,11 @@ class TarotDeckModel {
   final String name;
   final DateTime createdDate;
   // Ảnh mặt lưng của bộ bài (được up kèm khi tạo bộ bài). Xấp bài
-  // trên bàn trải sẽ hiển thị ảnh này (scale khớp vào khung xấp
-  // mặc định); nếu bộ bài chưa có ảnh lưng thì dùng ảnh lưng mặc
-  // định (assets/images/deck_back_default.png).
+  // trên bàn trải KHÔNG hiển thị ảnh này nữa (§46): xấp bài đã vẽ
+  // sẵn trong ảnh cảnh (hình nền) — bàn + khăn + decor + xấp bài
+  // trong cùng một ảnh, đúng ảnh đã duyệt. Ảnh lưng riêng của bộ
+  // bài vẫn là thuộc tính hợp lệ của bộ bài, có thể hiện trong
+  // thư viện / màn chi tiết bộ bài.
   final String? backImageUrl;
 
   TarotDeckModel({
@@ -34,3 +36,4 @@ class TarotDeckModel {
     );
   }
 }
+
