@@ -537,30 +537,15 @@ class SettingsScreen extends StatelessWidget {
     // cách lọc như dialog đổi bàn trong new_reading_screen.dart).
     // Nếu kiểu đã lưu không có tranh vẽ, hiển thị 'Gỗ Sồi' là đã chọn
     // (đó mới là mặt bàn thật đang vẽ).
-    final effectiveTableStyle =
-        settings.userPrefs.tableStyle == 'Gỗ Sồi'
-            ? settings.userPrefs.tableStyle
-            : 'Gỗ Sồi';
-
+    // §46: chỉ còn bộ chọn HÌNH NỀN (mỗi hình nền là một cảnh vẽ
+    // sẵn: bàn gỗ + khăn + decor + xấp bài trong một ảnh). Chất
+    // liệu mặt bàn riêng và khăn riêng không còn nữa — cảnh quyết
+    // định cả bàn.
     final tableAndCloth = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _fieldLabel(theme, settings.tr('settings.tableMaterialLabel')),
-        const SizedBox(height: 6),
-        _optionChips(
-          theme: theme,
-          options: UserPreferencesModel.tableStyles
-              .where((s) => s == 'Gỗ Sồi')
-              .toList(),
-          selected: effectiveTableStyle,
-          onSelected: (val) => settings.setTableStyle(val),
-          labelFor: (opt) => settings.tr(tableStyleDisplayKey(opt)),
-        ),
-        const SizedBox(height: 4),
-        _hintText(theme, settings.tr('settings.tableHint')),
-        const SizedBox(height: 14),
-        _fieldLabel(theme, settings.tr('settings.clothLabel')),
+        _fieldLabel(theme, settings.tr('reading.background')),
         const SizedBox(height: 6),
         _optionChips(
           theme: theme,
@@ -570,73 +555,17 @@ class SettingsScreen extends StatelessWidget {
           labelFor: (opt) => settings.tr(clothDisplayKey(opt)),
         ),
         const SizedBox(height: 4),
-        _hintText(theme, settings.tr('settings.clothHint')),
+        _hintText(theme, settings.tr('reading.sceneNote')),
       ],
     );
 
+    // §46: chỉ còn công tắc Hiện mặt bàn (ẩn/hiện cả cảnh nền).
+    // Đồ decor đã vẽ sẵn trong cảnh nên không còn mục chọn decor;
+    // công tắc Hiện khăn / Hiện decor thành no-op nên đã bỏ.
     final decorAndLayers = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _fieldLabel(
-            theme,
-            settings.tr('settings.decorLabel').replaceAll(
-                '{n}', '${UserPreferencesModel.maxDecorItems}')),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          // Chỉ món có ảnh cắt vẽ thật mới hiện làm lựa chọn
-          // ('Lá Khô' chưa có ảnh cắt nên không có ở đây — cùng
-          // cách lọc như dialog đổi bàn trong new_reading_screen.dart).
-          children: UserPreferencesModel.decorOptions
-              .where((item) => item != 'Lá Khô')
-              .map((item) {
-            final isSelected =
-                settings.userPrefs.decorItems.contains(item);
-            return FilterChip(
-              selectedColor: theme.primaryColor.withOpacity(0.3),
-              checkmarkColor: theme.primaryColor,
-              label: Text(settings.tr(decorDisplayKey(item)),
-                  style: TextStyle(
-                      color: isSelected
-                          ? theme.primaryColor
-                          : theme.textColor,
-                      fontSize: 12)),
-              selected: isSelected,
-              visualDensity: VisualDensity.compact,
-              onSelected: (selected) {
-                // Bỏ món không có ảnh vẽ ra khỏi danh sách đã lưu
-                // TRƯỚC khi đếm: 'Lá Khô' đã chọn từ bản cũ không
-                // hiện trong Cài đặt và không vẽ trên bàn, nhưng vẫn
-                // chiếm 1 trong 3 suất nếu còn sót trong decorItems.
-                final current = settings.userPrefs.decorItems
-                    .where((i) => i != 'Lá Khô')
-                    .toList();
-                if (selected) {
-                  if (current.length <
-                      UserPreferencesModel.maxDecorItems) {
-                    current.add(item);
-                    settings.setDecorItems(current);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(settings
-                              .tr('settings.decorLimit')
-                              .replaceAll('{n}',
-                                  '${UserPreferencesModel.maxDecorItems}')),
-                          duration: const Duration(seconds: 1)),
-                    );
-                  }
-                } else {
-                  current.remove(item);
-                  settings.setDecorItems(current);
-                }
-              },
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 14),
         _fieldLabel(theme, settings.tr('settings.layersLabel')),
         const SizedBox(height: 2),
         _toggleTile(
@@ -645,20 +574,6 @@ class SettingsScreen extends StatelessWidget {
           subtitle: settings.tr('settings.showTableSubtitle'),
           value: settings.userPrefs.showTable,
           onChanged: (val) => settings.toggleTable(val),
-        ),
-        _toggleTile(
-          theme: theme,
-          title: settings.tr('settings.showClothTitle'),
-          subtitle: settings.tr('settings.showClothSubtitle'),
-          value: settings.userPrefs.showCloth,
-          onChanged: (val) => settings.toggleCloth(val),
-        ),
-        _toggleTile(
-          theme: theme,
-          title: settings.tr('settings.showDecorTitle'),
-          subtitle: settings.tr('settings.showDecorSubtitle'),
-          value: settings.userPrefs.showDecor,
-          onChanged: (val) => settings.toggleDecor(val),
         ),
       ],
     );
@@ -820,3 +735,4 @@ class _AccountActions extends StatelessWidget {
     );
   }
 }
+
