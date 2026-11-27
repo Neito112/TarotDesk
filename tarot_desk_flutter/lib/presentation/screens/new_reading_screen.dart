@@ -494,6 +494,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
           key: _flightLayerKey,
           children: [
             Column(
+              // §47: stretch — panel/bàn luôn chiếm đủ chiều rộng khả
+              // dụng, không để GridView tính cột theo chiều rộng lớn
+              // hơn vùng hiển thị rồi bị cắt lá ở mép phải khi
+              // toàn màn hình ngang.
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Align(
                   alignment: Alignment.centerRight,
@@ -1620,23 +1625,37 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
   /// (~400px) nên hàng 2 bị cắt ở đáy; 12 cột thì lá ~164px,
   /// 2 hàng ~336px, vừa thoải mái (nhóm Ẩn Chính 22 lá cũng vừa
   /// hết trong 2 hàng).
+  /// §47: khe giữa các lá 8→6 (ngang + dọc) để lưới có biên an toàn,
+  /// không chạm sát mép panel rồi cắt lá cuối hàng khi toàn màn
+  /// hình ngang; bo góc lá 8/7→4/4 để góc bo không cắt mất chữ ở
+  /// góc ảnh (vd chữ J của JUSTICE ở góc dưới-trái).
+  /// Desktop dùng MaxCrossAxisExtent (tối đa ~150px/lá) thay cho
+  /// số cột cố định — lưới tự tính số cột theo chiều rộng thật
+  /// nhận được, không bao giờ tràn ngang dù cửa sổ rộng bao nhiêu.
   Widget _buildCardGrid(List<TarotCardModel> cards, ReadingProvider readingProvider, dynamic theme) {
-    final crossAxisCount = Responsive.isDesktop(context)
-        ? 12 // PC: 12 cột để 2 hàng lá hiện trọn.
-        : Responsive.isTablet(context)
-            ? 5
-            : 4;
+    final SliverGridDelegate gridDelegate;
+    if (Responsive.isDesktop(context)) {
+      // PC: rộng bao nhiêu cũng vừa — tự tính số cột theo bề rộng thật.
+      gridDelegate = const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 150,
+        childAspectRatio: 0.625, // 5:8
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 6,
+      );
+    } else {
+      gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: Responsive.isTablet(context) ? 5 : 4,
+        childAspectRatio: 0.625, // 5:8
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 6,
+      );
+    }
     return ScrollConfiguration(
       behavior: MouseDragScrollBehavior(),
       child: GridView.builder(
         key: ValueKey(cards.hashCode),
         physics: const AlwaysScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          childAspectRatio: 0.625, // 5:8
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-        ),
+        gridDelegate: gridDelegate,
         itemCount: cards.length,
         itemBuilder: (context, index) {
           final card = cards[index];
@@ -1648,14 +1667,14 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
               decoration: BoxDecoration(
                 // Nền đen: ảnh lá 7:12 hiện trọn (contain) trong ô 5:8.
                 color: Colors.black,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(4),
                 border: Border.all(
                   color: isAlreadyDrawn ? Colors.white24 : theme.glassBorderColor,
                   width: 1,
                 ),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(4),
                 child: TarotCardImage(card: card, fit: BoxFit.contain),
               ),
             ),
@@ -1675,11 +1694,11 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
                 height: 102,
                 decoration: BoxDecoration(
                   color: Colors.black,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: theme.primaryColor, width: 2),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
+                  borderRadius: BorderRadius.circular(4),
                   child: TarotCardImage(card: card, fit: BoxFit.contain),
                 ),
               ),
@@ -1807,15 +1826,17 @@ class _NewReadingScreenState extends State<NewReadingScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         decoration: BoxDecoration(
           // Nền đen cho contain: hai viền đen mỏng hai bên lá.
+          // §47: bo góc 8/6→4/4 như lưới chọn bài — góc bo không
+          // cắt mất chữ ở góc ảnh (vd chữ J của JUSTICE).
           color: Colors.black,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(4),
           border: Border.all(
             color: theme.glassBorderColor,
             width: 1,
           ),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(4),
           child: AspectRatio(
             aspectRatio: 5 / 8,
             child: TarotCardImage(card: card, fit: BoxFit.contain),
